@@ -15,7 +15,7 @@
     "docs:start": "pnpm --filter docs start"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.2.2",
+    "@hookform/resolvers": "^5.4.0",
     "@radix-ui/react-slot": "^1.2.4",
     "axios": "^1.15.2",
     "class-variance-authority": "^0.7.1",
