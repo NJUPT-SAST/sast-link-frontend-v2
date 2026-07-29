@@ -2,37 +2,31 @@
 
 import useSWR from "swr";
 
+import { mapProfile } from "@/lib/api/mappers";
 import { getUserProfile } from "@/lib/api/user";
-import { getToken } from "@/lib/token";
-import { useUserProfileStore } from "@/store/use-user-profile-store";
-import { useAuthStore } from "@/store/use-auth-store";
+import { getSession } from "@/lib/token";
 import { useUserListStore } from "@/store/use-user-list-store";
+import { useUserProfileStore } from "@/store/use-user-profile-store";
 
-/**
- * Hook that fetches user profile and populates Zustand stores.
- * Replaces the @getInfo parallel route anti-pattern.
- */
 export function useFetchProfile() {
-  const setProfile = useUserProfileStore((s) => s.setProfile);
-  const setCurrentUser = useAuthStore((s) => s.setCurrentUser);
-  const updateAccount = useUserListStore((s) => s.updateAccount);
+  const setProfile = useUserProfileStore((state) => state.setProfile);
+  const updateAccount = useUserListStore((state) => state.updateAccount);
 
   return useSWR(
-    () => (getToken() ? "getProfile" : null),
+    () => (getSession() ? "user-profile" : null),
     async () => {
-      const res = await getUserProfile();
-      if (res.data.Success) {
-        const data = res.data.Data;
-        setProfile(data);
-        setCurrentUser({ username: data.nickname, email: data.email });
-        updateAccount({
-          email: data.email,
-          nickName: data.nickname,
-          avatar: data.avatar,
-        });
-        return data;
-      }
-      throw new Error("Failed to fetch profile");
+      const response = await getUserProfile();
+      const data = response.data.data;
+      const profile = mapProfile(data);
+
+      setProfile(profile);
+      updateAccount({
+        userId: profile.id,
+        name: profile.nickname,
+        loginEmail: data.login_email,
+        avatar: profile.avatar,
+      });
+      return profile;
     },
     { revalidateOnFocus: false },
   );

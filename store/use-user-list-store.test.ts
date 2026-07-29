@@ -1,56 +1,60 @@
 import { useUserListStore } from "./use-user-list-store";
 
 const alice = {
-  token: "token-1",
+  userId: 1,
+  loginEmail: "alice@example.com",
+  name: "Alice",
   avatar: null,
-  nickName: "Alice",
-  email: "alice@example.com",
-  userId: "user-1",
+  session: {
+    accessToken: "access-1",
+    refreshToken: "refresh-1",
+    expiresAt: 1000,
+  },
 };
 
 const bob = {
-  token: "token-2",
+  userId: 2,
+  loginEmail: "bob@example.com",
+  name: "Bob",
   avatar: "/bob.png",
-  nickName: "Bob",
-  email: "bob@example.com",
-  userId: "user-2",
+  session: {
+    accessToken: "access-2",
+    refreshToken: "refresh-2",
+    expiresAt: 2000,
+  },
 };
 
 describe("useUserListStore", () => {
-  beforeEach(() => {
-    useUserListStore.setState({ accounts: [] });
-  });
+  beforeEach(() => useUserListStore.setState({ accounts: [] }));
 
-  it("adds accounts and ignores duplicates by userId", () => {
+  it("adds accounts and replaces duplicates by userId", () => {
     useUserListStore.getState().addAccount(alice);
-    useUserListStore.getState().addAccount(alice);
+    useUserListStore.getState().addAccount({ ...alice, name: "Alicia" });
     useUserListStore.getState().addAccount(bob);
 
-    expect(useUserListStore.getState().accounts).toEqual([alice, bob]);
-  });
-
-  it("updates the matching account by email", () => {
-    useUserListStore.setState({ accounts: [alice, bob] });
-
-    useUserListStore.getState().updateAccount({
-      email: "bob@example.com",
-      nickName: "Bobby",
-      avatar: "/new-bob.png",
-    });
-
     expect(useUserListStore.getState().accounts).toEqual([
-      alice,
-      {
-        ...bob,
-        nickName: "Bobby",
-        avatar: "/new-bob.png",
-      },
+      { ...alice, name: "Alicia" },
+      bob,
     ]);
   });
 
-  it("removes accounts by either index or email", () => {
+  it("updates the matching account by userId", () => {
     useUserListStore.setState({ accounts: [alice, bob] });
+    useUserListStore.getState().updateAccount({
+      userId: 2,
+      name: "Bobby",
+      avatar: "/new-bob.png",
+    });
 
+    expect(useUserListStore.getState().accounts[1]).toEqual({
+      ...bob,
+      name: "Bobby",
+      avatar: "/new-bob.png",
+    });
+  });
+
+  it("removes accounts by index or login email", () => {
+    useUserListStore.setState({ accounts: [alice, bob] });
     useUserListStore.getState().removeAccount(0);
     expect(useUserListStore.getState().accounts).toEqual([bob]);
 
