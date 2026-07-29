@@ -28,7 +28,7 @@ describe("message", () => {
     expect(toast.error).toHaveBeenCalledWith("boom", { duration: 3000 });
     expect(toast.warning).toHaveBeenCalledWith("warn", { duration: 3000 });
     expect(toast.info).toHaveBeenCalledWith("note", { duration: 3000 });
-    expect(toast.loading).toHaveBeenCalledWith("wait", { duration: 3000 });
+    expect(toast.loading).toHaveBeenCalledWith("wait", { duration: Infinity });
   });
 
   it("uses the custom duration when provided", () => {

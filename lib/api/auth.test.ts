@@ -1,111 +1,71 @@
 jest.mock("./client", () => ({
   apiClient: {
-    get: jest.fn(),
     post: jest.fn(),
   },
 }));
 
 import { apiClient } from "./client";
 import {
-  getFeishuLoginStatus,
-  getGithubLoginStatus,
+  changePassword,
+  completeRegister,
+  forgotPasswordSendCode,
+  logout,
+  passwordLogin,
+  registerSendCode,
+  registerVerifyCode,
   resetPassword,
-  sendMail,
-  userRegister,
-  verifyCaptcha,
-  verifyLoginAccount,
-  verifyRegistAccount,
-  verifyResetAccount,
 } from "./auth";
 
-describe("lib/api/auth", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+const registration = {
+  register_ticket: "reg-ticket",
+  password: "Password123",
+  name: "张三",
+  phone_number: "13800138000",
+  qq_number: "123456789",
+  college: "计算机学院、软件学院、网络空间安全学院" as const,
+  major: "软件工程",
+  student_id: "B24040001",
+};
 
-  it("calls verify account endpoints with the correct flag", () => {
-    verifyRegistAccount("foo");
-    verifyLoginAccount("bar");
-    verifyResetAccount("baz");
+describe("lib/api/auth v2", () => {
+  beforeEach(() => jest.clearAllMocks());
 
-    expect(apiClient.get).toHaveBeenNthCalledWith(1, "/verify/account", {
-      params: { username: "foo", flag: 0 },
+  it("uses the OpenAPI auth routes and JSON bodies", () => {
+    registerSendCode("student@njupt.edu.cn");
+    registerVerifyCode("student@njupt.edu.cn", "123456");
+    completeRegister(registration);
+    passwordLogin("student@njupt.edu.cn", "Password123");
+    forgotPasswordSendCode("student@njupt.edu.cn");
+    resetPassword("student@njupt.edu.cn", "123456", "NewPassword123");
+    changePassword("OldPassword123", "NewPassword123");
+    logout("refresh-token");
+
+    expect(apiClient.post).toHaveBeenNthCalledWith(1, "/auth/register/send-code", {
+      login_email: "student@njupt.edu.cn",
     });
-    expect(apiClient.get).toHaveBeenNthCalledWith(2, "/verify/account", {
-      params: { username: "bar", flag: 1 },
+    expect(apiClient.post).toHaveBeenNthCalledWith(2, "/auth/register/verify-code", {
+      login_email: "student@njupt.edu.cn",
+      code: "123456",
     });
-    expect(apiClient.get).toHaveBeenNthCalledWith(3, "/verify/account", {
-      params: { username: "baz", flag: 2 },
+    expect(apiClient.post).toHaveBeenNthCalledWith(3, "/auth/register", registration);
+    expect(apiClient.post).toHaveBeenNthCalledWith(4, "/user/login", {
+      login_email: "student@njupt.edu.cn",
+      password: "Password123",
     });
-  });
-
-  it("chooses the correct header when sending mail or captcha", () => {
-    sendMail("ticket-a");
-    sendMail("ticket-b", "reset");
-    verifyCaptcha("ticket-c", "123456");
-    verifyCaptcha("ticket-d", "654321", "reset");
-
-    expect(apiClient.get).toHaveBeenNthCalledWith(1, "/sendEmail", {
-      headers: { "REGISTER-TICKET": "ticket-a" },
+    expect(apiClient.post).toHaveBeenNthCalledWith(5, "/auth/forgot-password/send-code", {
+      login_email: "student@njupt.edu.cn",
     });
-    expect(apiClient.get).toHaveBeenNthCalledWith(2, "/sendEmail", {
-      headers: { "RESETPWD-TICKET": "ticket-b" },
+    expect(apiClient.post).toHaveBeenNthCalledWith(6, "/auth/reset-password", {
+      login_email: "student@njupt.edu.cn",
+      code: "123456",
+      new_password: "NewPassword123",
     });
-    expect(apiClient.post).toHaveBeenNthCalledWith(
-      1,
-      "/verify/captcha",
-      "captcha=S-123456",
-      {
-        headers: {
-          "REGISTER-TICKET": "ticket-c",
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-        },
-      },
-    );
-    expect(apiClient.post).toHaveBeenNthCalledWith(
-      2,
-      "/verify/captcha",
-      "captcha=S-654321",
-      {
-        headers: {
-          "RESETPWD-TICKET": "ticket-d",
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-        },
-      },
-    );
-  });
-
-  it("posts register and reset payloads with the expected body and headers", () => {
-    userRegister("secret", "register-ticket");
-    resetPassword("new-secret", "reset-ticket");
-
-    expect(apiClient.post).toHaveBeenNthCalledWith(
-      1,
-      "/user/register",
-      "password=secret",
-      {
-        headers: { "REGISTER-TICKET": "register-ticket" },
-      },
-    );
-    expect(apiClient.post).toHaveBeenNthCalledWith(
-      2,
-      "/user/resetPassword",
-      "newPassword=new-secret",
-      {
-        headers: { "RESETPWD-TICKET": "reset-ticket" },
-      },
-    );
-  });
-
-  it("passes OAuth callback params through unchanged", () => {
-    getFeishuLoginStatus("code-1", "state-1");
-    getGithubLoginStatus("code-2", "state-2");
-
-    expect(apiClient.get).toHaveBeenNthCalledWith(1, "/login/lark/callback", {
-      params: { code: "code-1", state: "state-1" },
+    expect(apiClient.post).toHaveBeenNthCalledWith(7, "/auth/change-password", {
+      old_password: "OldPassword123",
+      new_password: "NewPassword123",
     });
-    expect(apiClient.get).toHaveBeenNthCalledWith(2, "/login/github/callback", {
-      params: { code: "code-2", state: "state-2" },
+    expect(apiClient.post).toHaveBeenNthCalledWith(8, "/auth/logout", {
+      refresh_token: "refresh-token",
     });
   });
 });

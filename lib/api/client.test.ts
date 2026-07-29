@@ -4,64 +4,42 @@ describe("lib/api/client", () => {
     jest.clearAllMocks();
   });
 
-  it("creates the axios client with the configured base URL and registers an interceptor", async () => {
-    const use = jest.fn();
+  it("uses /apis and attaches the Bearer access token", async () => {
+    const requestUse = jest.fn();
+    const responseUse = jest.fn();
     const create = jest.fn(() => ({
       interceptors: {
-        request: {
-          use,
-        },
+        request: { use: requestUse },
+        response: { use: responseUse },
       },
     }));
 
     jest.doMock("axios", () => ({
       __esModule: true,
-      default: { create },
-    }));
-    jest.doMock("@/lib/token", () => ({
-      getToken: jest.fn(() => "token-123"),
-    }));
-
-    const { apiClient } = await import("./client");
-
-    expect(create).toHaveBeenCalledWith({ baseURL: "" });
-    expect(apiClient.interceptors.request.use).toBe(use);
-    expect(use).toHaveBeenCalledTimes(1);
-
-    const interceptor = use.mock.calls[0][0] as (config: {
-      headers: Record<string, string>;
-    }) => { headers: Record<string, string> };
-
-    const config = interceptor({ headers: {} });
-    expect(config.headers.Token).toBe("token-123");
-  });
-
-  it("leaves request headers untouched when no token is available", async () => {
-    const use = jest.fn();
-    const create = jest.fn(() => ({
-      interceptors: {
-        request: {
-          use,
-        },
+      AxiosHeaders: {
+        from: (headers: Record<string, string>) => ({
+          ...headers,
+          set(key: string, value: string) {
+            Object.assign(this, { [key]: value });
+          },
+        }),
       },
-    }));
-
-    jest.doMock("axios", () => ({
-      __esModule: true,
       default: { create },
     }));
     jest.doMock("@/lib/token", () => ({
-      getToken: jest.fn(() => null),
+      clearSession: jest.fn(),
+      getSession: jest.fn(() => ({ accessToken: "access-token" })),
+      setSession: jest.fn(),
     }));
 
     await import("./client");
 
-    const interceptor = use.mock.calls[0][0] as (config: {
-      headers: Record<string, string>;
-    }) => { headers: Record<string, string> };
+    expect(create).toHaveBeenNthCalledWith(1, { baseURL: "/apis" });
+    expect(requestUse).toHaveBeenCalledTimes(1);
+    expect(responseUse).toHaveBeenCalledTimes(1);
 
-    const config = { headers: {} };
-    expect(interceptor(config)).toBe(config);
-    expect(config.headers).toEqual({});
+    const interceptor = requestUse.mock.calls[0][0];
+    const config = interceptor({ headers: {} });
+    expect(config.headers.Authorization).toBe("Bearer access-token");
   });
 });

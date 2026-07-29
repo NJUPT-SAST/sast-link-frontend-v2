@@ -1,99 +1,76 @@
 import { http, HttpResponse } from "msw";
 
-import { getTicketEntry, deleteTicket } from "../data/tickets";
-import { findUserByToken, findUserByUsername } from "../data/users";
+import { API_BASE_URL } from "@/lib/config/public";
+import type { UpdateProfileRequest } from "@/lib/api/types";
+import { bindTickets } from "../data/tickets";
+import { findUserByAccessToken, identity } from "../data/users";
+import { DEFAULT_AVATAR } from "@/lib/constants/profile";
 
-const BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "http://118.25.23.101:8081/api/v1";
-
-function success<T>(data: T) {
-  return HttpResponse.json({ Success: true, Data: data });
-}
-
-function error(code: number, msg: string) {
-  return HttpResponse.json({
-    Success: false,
-    ErrCode: code,
-    ErrMsg: msg,
-    Data: null,
-  });
+function ok<T>(data: T) { return HttpResponse.json({ code: 0, message: "ok", data }); }
+function fail(status: number, code: number, message: string) { return HttpResponse.json({ code, message, data: null }, { status }); }
+function authenticated(request: Request) {
+  const value = request.headers.get("Authorization");
+  return value?.startsWith("Bearer ") ? findUserByAccessToken(value.slice(7)) : undefined;
 }
 
 export const userHandlers = [
-  // POST /user/login
-  http.post(`${BASE}/user/login`, async ({ request }) => {
-    const loginTicket = request.headers.get("LOGIN-TICKET");
-    if (!loginTicket) return error(401, "Missing LOGIN-TICKET");
-
-    const entry = getTicketEntry(loginTicket);
-    if (!entry) return error(401, "Invalid LOGIN-TICKET");
-
-    const user = findUserByUsername(entry.username);
-    if (!user) return error(404, "User not found");
-
-    const formData = await request.formData();
-    const password = formData.get("password");
-    if (password !== user.password) return error(401, "Invalid password");
-
-    deleteTicket(loginTicket);
-    return success({ loginToken: user.token });
+  http.get(`${API_BASE_URL}/user/profile`, ({ request }) => {
+    const user = authenticated(request);
+    return user ? ok(user.profile) : fail(401, 40100, "未登录");
   }),
-
-  // GET /user/info
-  http.get(`${BASE}/user/info`, ({ request }) => {
-    const token = request.headers.get("Token");
-    if (!token) return error(401, "Unauthorized");
-
-    const user = findUserByToken(token);
-    if (!user) return error(401, "Invalid token");
-
-    return success({ email: user.email, userId: user.userId });
+  http.put(`${API_BASE_URL}/user/profile`, async ({ request }) => {
+    const user = authenticated(request);
+    if (!user) return fail(401, 40100, "未登录");
+    const body = await request.json() as UpdateProfileRequest;
+    const rootFields = ["name", "phone_number", "qq_number", "college", "major", "student_id"] as const;
+    for (const field of rootFields) if (body[field] !== undefined) Object.assign(user.profile, { [field]: body[field] });
+    user.profile.profile ??= {};
+    const profileMap = { nickname: "nickname", department: "department", intro: "intro", email: "email", blog_url: "blog_url", github_url: "github_url" } as const;
+    for (const [source, target] of Object.entries(profileMap)) {
+      const value = body[source as keyof UpdateProfileRequest];
+      if (value !== undefined) Object.assign(user.profile.profile, { [target]: value });
+    }
+    return ok({ message: "个人信息更新成功", user: user.profile });
   }),
-
-  // POST /user/logout
-  http.post(`${BASE}/user/logout`, () => {
-    return success(null);
+  http.put(`${API_BASE_URL}/user/avatar`, async ({ request }) => {
+    const user = authenticated(request);
+    if (!user) return fail(401, 40100, "未登录");
+    const data = await request.formData();
+    const file = data.get("file");
+    if (!(file instanceof File) || !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) return fail(400, 40000, "头像格式或大小不符合要求");
+    const avatarUrl = DEFAULT_AVATAR;
+    user.profile.profile ??= {};
+    user.profile.profile.avatar = avatarUrl;
+    return ok({ avatar_url: avatarUrl });
   }),
-
-  // GET /profile/getProfile
-  http.get(`${BASE}/profile/getProfile`, ({ request }) => {
-    const token = request.headers.get("Token");
-    if (!token) return error(401, "Unauthorized");
-
-    const user = findUserByToken(token);
-    if (!user) return error(401, "Invalid token");
-
-    return success(user.profile);
+  http.get(`${API_BASE_URL}/user/identities`, ({ request }) => {
+    const user = authenticated(request);
+    return user ? ok({ identities: user.profile.identities }) : fail(401, 40100, "未登录");
   }),
-
-  // POST /profile/changeProfile
-  http.post(`${BASE}/profile/changeProfile`, ({ request }) => {
-    const token = request.headers.get("Token");
-    if (!token) return error(401, "Unauthorized");
-
-    const user = findUserByToken(token);
-    if (!user) return error(401, "Invalid token");
-
-    return success(null);
+  http.post(`${API_BASE_URL}/user/identities/email`, async ({ request }) => {
+    const user = authenticated(request);
+    if (!user) return fail(401, 40100, "未登录");
+    const { email } = await request.json() as { email: string };
+    const ticket = `bind-${user.id}-${Date.now()}`;
+    bindTickets.set(ticket, email);
+    return ok({ bind_ticket: ticket });
   }),
-
-  // POST /profile/uploadAvatar
-  http.post(`${BASE}/profile/uploadAvatar`, ({ request }) => {
-    const token = request.headers.get("Token");
-    if (!token) return error(401, "Unauthorized");
-
-    return success({ filePath: "/defaultAvatar.png" });
+  http.post(`${API_BASE_URL}/user/identities/email/verify`, async ({ request }) => {
+    const user = authenticated(request);
+    if (!user) return fail(401, 40100, "未登录");
+    const { bind_ticket, code } = await request.json() as { bind_ticket: string; code: string };
+    const email = bindTickets.get(bind_ticket);
+    if (!email || code !== "123456") return fail(400, 40000, "验证码错误");
+    const next = identity(Date.now(), "other_mail", email);
+    user.profile.identities.push(next);
+    return ok({ identity: next });
   }),
-
-  // GET /profile/bindStatus
-  http.get(`${BASE}/profile/bindStatus`, ({ request }) => {
-    const token = request.headers.get("Token");
-    if (!token) return error(401, "Unauthorized");
-
-    const user = findUserByToken(token);
-    if (!user) return error(401, "Invalid token");
-
-    return success(user.bindStatus);
+  http.delete(`${API_BASE_URL}/user/identities/:id`, async ({ request, params }) => {
+    const user = authenticated(request);
+    if (!user) return fail(401, 40100, "未登录");
+    const { password } = await request.json() as { password: string };
+    if (password !== user.password) return fail(422, 42200, "当前密码错误");
+    user.profile.identities = user.profile.identities.filter((item) => item.id !== Number(params.id));
+    return ok({ message: "解绑成功" });
   }),
 ];
