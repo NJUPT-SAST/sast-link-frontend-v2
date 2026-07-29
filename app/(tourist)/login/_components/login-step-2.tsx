@@ -3,155 +3,108 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { userLogin, getUserInfo } from "@/lib/api/user";
-import { setToken } from "@/lib/token";
+import { passwordLogin } from "@/lib/api/auth";
+import { toApiError } from "@/lib/api/errors";
+import { createSession, setSession } from "@/lib/token";
 import { useUserListStore } from "@/store/use-user-list-store";
 import {
   type LoginPasswordFormValues,
   loginPasswordFormSchema,
 } from "@/lib/validations/auth";
 import { AuthFormField } from "@/components/auth/auth-form-field";
+import { LoginSuccessOverlay } from "@/components/animation/login-success-overlay";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { PageTransition } from "@/components/animation/page-transition";
-import { Footer } from "@/components/layout/footer";
 
 interface LoginStep2Props {
-  loginTicket: string;
+  loginEmail: string;
   onBack: () => void;
 }
 
-export default function LoginStep2({ loginTicket, onBack }: LoginStep2Props) {
+export default function LoginStep2({ loginEmail, onBack }: LoginStep2Props) {
   const router = useRouter();
-  const urlParams = useSearchParams();
-  const addAccount = useUserListStore((s) => s.addAccount);
+  const addAccount = useUserListStore((state) => state.addAccount);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const form = useForm<LoginPasswordFormValues>({
     resolver: zodResolver(loginPasswordFormSchema),
-    defaultValues: {
-      password: "",
-    },
+    defaultValues: { password: "" },
   });
-
-  const redirectUri = urlParams.get("redirect")
-    ? atob(urlParams.get("redirect")!)
-    : "";
 
   const handleSubmit = form.handleSubmit(async ({ password }) => {
     setLoading(true);
-
     try {
-      const res = await userLogin(password, loginTicket, urlParams.get("oauthTicket"));
-      if (res.data.Success) {
-        const token = res.data.Data.loginToken;
-        setToken(token);
-
-        const infoRes = await getUserInfo();
-        if (infoRes.data.Success) {
-          const data = infoRes.data.Data;
-          addAccount({
-            nickName: "NJUPTer",
-            email: data.email,
-            token,
-            userId: data.userId,
-          });
-          router.push(redirectUri || "/home");
-          return;
-        }
-
-        form.setError("password", {
-          message: infoRes.data.ErrMsg,
-        });
-        return;
-      }
-
-      if (res.data.ErrCode === 20007) {
-        onBack();
-        return;
-      }
-
-      form.setError("password", {
-        message: res.data.ErrMsg,
+      const response = await passwordLogin(loginEmail, password);
+      const data = response.data.data;
+      const session = createSession(
+        data.access_token,
+        data.refresh_token,
+        data.expires_in,
+      );
+      setSession(session);
+      addAccount({
+        userId: data.user.id,
+        loginEmail: data.user.login_email,
+        name: data.user.name,
+        avatar: null,
+        session,
       });
-    } catch (err) {
-      if ((err as { response?: { status?: number } })?.response?.status === 401) {
-        form.setError("password", {
-          message: "密码错误，请重新输入密码",
-        });
-      } else {
-        form.setError("password", {
-          message: "网络错误",
-        });
-      }
+      setSuccess(true);
+    } catch (error) {
+      form.setError("password", { message: toApiError(error).message });
     } finally {
       setLoading(false);
     }
   });
 
+  if (success) {
+    return <LoginSuccessOverlay onDone={() => router.replace("/home")} />;
+  }
+
   return (
-    <PageTransition className="flex w-full flex-col items-center gap-4 px-8 pt-8">
+    <PageTransition className="flex w-full flex-col">
+      <div className="mb-8 flex flex-col gap-2.5">
+        <h2 className="type-title1">输入密码</h2>
+        <p className="text-[15px] text-muted-foreground">正在登录 {loginEmail}</p>
+      </div>
       <Form {...form}>
-        <form onSubmit={handleSubmit} className="flex w-full flex-col items-center gap-6">
+        <form onSubmit={handleSubmit} className="flex flex-col">
           <FormField
             control={form.control}
             name="password"
             render={({ field, fieldState }) => (
-              <FormItem className="w-full space-y-2">
+              <FormItem>
                 <AuthFormField
                   {...field}
                   ref={field.ref}
                   label="密码"
                   type="password"
                   placeholder="密码"
-                  autoComplete={urlParams.get("oauthTicket") ? "new-password" : "current-password"}
+                  autoComplete="current-password"
                   invalid={!!fieldState.error}
-                  description="请勿在公共设备保存密码，输入后我们会继续完成当前登录流程。"
                 />
-                <div className="flex justify-end">
-                  <Link
-                    href="/reset"
-                    className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-                  >
+                <div className="mt-1.5 flex justify-end">
+                  <Link href="/reset" className="text-xs text-link hover:underline">
                     忘记密码
                   </Link>
                 </div>
-                <FormMessage />
+                <div className="min-h-5 text-xs [&_p]:text-destructive"><FormMessage /></div>
               </FormItem>
             )}
           />
-
-          <Footer>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="h-[42px] w-[314px] rounded-[10px] border-[3px] border-primary text-base font-semibold sm:text-xl"
-            >
-              {loading ? (
-                <DotLoading />
-              ) : redirectUri ? (
-                "登录并前往授权"
-              ) : (
-                "登录 SAST Link"
-              )}
+          <div className="mt-2 flex flex-col gap-3">
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? <DotLoading /> : "登录 SAST Link"}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onBack}
-              className="h-[42px] w-[314px] rounded-[10px] border-[3px] border-primary bg-background text-base font-semibold text-foreground hover:bg-accent sm:text-xl"
-            >
+            <Button type="button" variant="outline" onClick={onBack} className="w-full">
               返回上一步
             </Button>
-          </Footer>
+          </div>
         </form>
       </Form>
     </PageTransition>

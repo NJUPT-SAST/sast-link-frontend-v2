@@ -1,158 +1,104 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { useSearchParams } from "next/navigation";
+import { useForm, Controller } from "react-hook-form";
 import Link from "next/link";
 
-import { verifyLoginAccount } from "@/lib/api/auth";
-import { message } from "@/lib/message";
+import { buildOAuthLoginUrl } from "@/lib/api/oauth";
 import {
   type LoginAccountFormValues,
   loginAccountFormSchema,
 } from "@/lib/validations/auth";
-import { AuthFormField } from "@/components/auth/auth-form-field";
-import { DotLoading } from "@/components/ui/dot-loading";
+import { LoginAccountField } from "./login-account-field";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormItem } from "@/components/ui/form";
 import { OtherLoginList } from "@/components/auth/other-login-list";
 import { GithubIcon, LarkIcon } from "@/components/icons/brand-icons";
 import { PageTransition } from "@/components/animation/page-transition";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-
 interface LoginStep1Props {
-  onNext: (ticket: string) => void;
+  onNext: (loginEmail: string) => void;
 }
 
 export default function LoginStep1({ onNext }: LoginStep1Props) {
   const [loading, setLoading] = useState(false);
-  const urlParams = useSearchParams();
   const form = useForm<LoginAccountFormValues>({
     resolver: zodResolver(loginAccountFormSchema),
     defaultValues: {
-      username: "",
+      account: { localPart: "", domain: "@njupt.edu.cn" },
     },
   });
-
   const oauthList = useMemo(
     () => [
       {
-        target:
-          typeof window !== "undefined"
-            ? `${API_BASE}/login/github?redirect_url=${window.location.protocol}//${window.location.host}/callback/github`
-            : "",
-        describe: "Github",
+        target: buildOAuthLoginUrl("github"),
+        describe: "GitHub",
         icon: <GithubIcon />,
       },
       {
-        target:
-          typeof window !== "undefined"
-            ? `${API_BASE}/login/lark?redirect_url=${window.location.protocol}//${window.location.host}/callback/feishu`
-            : "",
-        describe: "Feishu",
+        target: buildOAuthLoginUrl("lark"),
+        describe: "飞书",
         icon: <LarkIcon />,
       },
     ],
     [],
   );
 
-  useEffect(() => {
-    if (urlParams.get("oauthTicket")) {
-      message.warning("请先绑定账号");
-    }
-  }, [urlParams]);
-
-  const isOAuthBinding = !!urlParams.get("oauthTicket");
-
-  const handleSubmit = form.handleSubmit(async ({ username }) => {
+  const handleSubmit = form.handleSubmit(({ account }) => {
     setLoading(true);
-
     try {
-      const res = await verifyLoginAccount(username.trim());
-      if (res.data.Success) {
-        onNext(res.data.Data.loginTicket);
-        return;
-      }
-
-      form.setError("username", {
-        message: res.data.ErrMsg,
-      });
-    } catch {
-      form.setError("username", {
-        message: "网络错误",
-      });
+      onNext(`${account.localPart.trim()}${account.domain}`);
     } finally {
       setLoading(false);
     }
   });
 
   return (
-    <PageTransition className="flex w-full flex-col items-center gap-4 px-8 pt-8">
+    <PageTransition className="flex w-full flex-col">
+      <div className="mb-8 flex flex-col gap-2.5">
+        <h2 className="type-title1">登录</h2>
+        <p className="text-[15px] text-muted-foreground">使用学号或登录邮箱继续。</p>
+      </div>
       <Form {...form}>
-        <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
-          <FormField
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          <Controller
             control={form.control}
-            name="username"
-            render={({ field, fieldState }) => (
-              <FormItem className="space-y-2">
-                <AuthFormField
-                  {...field}
-                  ref={field.ref}
-                  label="账户"
-                  placeholder="学号或邮箱"
-                  autoComplete="username"
-                  invalid={!!fieldState.error}
-                  description="请输入 9 位学号或常用邮箱地址。"
-                />
-                <div className="flex justify-end">
-                  <Link
-                    href="/reset"
-                    className="text-sm text-[#808080] hover:underline"
-                  >
-                    忘记密码
-                  </Link>
-                </div>
-                {/* Reserve a fixed line so the error message does not shift
-                    the button down (the layout jump left a ghost of the
-                    button behind the framer-motion transform layer). */}
-                <div className="min-h-5">
-                  <FormMessage />
-                </div>
-              </FormItem>
-            )}
+            name="account"
+            render={({ field, fieldState }) => {
+              const errorMessage =
+                (fieldState.error as { localPart?: { message?: string } } | undefined)
+                  ?.localPart?.message ??
+                fieldState.error?.message;
+              return (
+                <FormItem>
+                  <LoginAccountField
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={errorMessage}
+                  />
+                  <div className="mt-1.5 flex justify-end">
+                    <Link href="/reset" className="text-xs text-link hover:underline">
+                      忘记密码
+                    </Link>
+                  </div>
+                </FormItem>
+              );
+            }}
           />
-
-          <Button
-            type="submit"
-            disabled={loading}
-            className="h-[42px] w-[314px] self-center rounded-[10px] border-[3px] border-[#1c1f23] text-base font-semibold sm:text-xl"
-          >
-            {loading ? (
-              <DotLoading />
-            ) : isOAuthBinding ? (
-              "绑定账号"
-            ) : (
-              "下一步"
-            )}
+          <Button type="submit" disabled={loading} className="mt-2 w-full">
+            继续
           </Button>
         </form>
       </Form>
-
-      {!isOAuthBinding && <OtherLoginList list={oauthList} />}
-
-      <div className="text-sm">
-        没有账号？
-        <Link href="/register" className="text-[#0a96d6] hover:underline">
-          注册
-        </Link>
+      <div className="my-7 flex items-center gap-3.5 text-xs text-tertiary">
+        <span className="h-px flex-1 bg-hairline" />或<span className="h-px flex-1 bg-hairline" />
       </div>
+      <OtherLoginList list={oauthList} />
+      <p className="mt-7 text-center text-sm text-muted-foreground">
+        没有账号？
+        <Link href="/register" className="text-link hover:underline">注册</Link>
+      </p>
     </PageTransition>
   );
 }

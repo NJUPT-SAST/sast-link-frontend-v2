@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 
 import { cn } from "@/lib/utils";
 
-interface VeriCodeProps {
+interface VerificationCodeInputProps {
   onResend: () => Promise<void>;
 }
 
-export function VeriCode({ onResend }: VeriCodeProps) {
+export function VerificationCodeInput({ onResend }: VerificationCodeInputProps) {
   const [clickable, setClickable] = useState(false);
   const [count, setCount] = useState(60);
 
@@ -31,20 +31,24 @@ export function VeriCode({ onResend }: VeriCodeProps) {
 
   const handleResend = useCallback(async () => {
     setClickable(false);
-    await onResend();
+    try {
+      await onResend();
+    } catch {
+      setClickable(true);
+    }
   }, [onResend]);
 
   return (
-    <span
-      onClick={clickable ? handleResend : undefined}
+    <button
+      type="button"
+      disabled={!clickable}
+      onClick={handleResend}
       className={cn(
-        "text-base font-semibold",
-        clickable
-          ? "cursor-pointer text-primary"
-          : "pointer-events-none text-muted-foreground",
+        "appearance-none border-0 bg-transparent p-0 text-base font-semibold",
+        clickable ? "cursor-pointer text-primary" : "text-muted-foreground",
       )}
     >
       {clickable ? "" : `${count}s 后`}重新发送
-    </span>
+    </button>
   );
 }

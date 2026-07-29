@@ -2,43 +2,39 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import LoginStep1 from "./login-step-1";
-import { verifyLoginAccount } from "@/lib/api/auth";
 
-jest.mock("@/lib/api/auth", () => ({
-  verifyLoginAccount: jest.fn(),
-}));
-
-jest.mock("@/lib/message", () => ({
-  message: {
-    warning: jest.fn(),
-  },
-}));
+jest.mock(
+  "next/link",
+  () =>
+    function Link({ children }: { children: React.ReactNode }) {
+      return <>{children}</>;
+    },
+);
 
 describe("LoginStep1", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+  it("submits a student id with the default njupt domain", async () => {
+    const onNext = jest.fn();
+    render(<LoginStep1 onNext={onNext} />);
+    await userEvent.type(screen.getByLabelText("账户"), "B24040001");
+    await userEvent.click(screen.getByRole("button", { name: "继续" }));
+    expect(onNext).toHaveBeenCalledWith("B24040001@njupt.edu.cn");
   });
 
-  it("rejects account values that are neither student ids nor emails", async () => {
-    const user = userEvent.setup();
-
-    render(<LoginStep1 onNext={jest.fn()} />);
-
-    await user.type(screen.getByLabelText("账户"), "bad account");
-    await user.click(screen.getByRole("button", { name: "下一步" }));
-
-    expect(verifyLoginAccount).not.toHaveBeenCalled();
-    expect(screen.getByText("请输入学号或邮箱")).toBeInTheDocument();
+  it("submits an arbitrary prefix when sast.fun is selected", async () => {
+    const onNext = jest.fn();
+    render(<LoginStep1 onNext={onNext} />);
+    await userEvent.click(screen.getByRole("button", { name: "选择邮箱域名" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "@sast.fun" }));
+    await userEvent.type(screen.getByLabelText("账户"), "foo");
+    await userEvent.click(screen.getByRole("button", { name: "继续" }));
+    expect(onNext).toHaveBeenCalledWith("foo@sast.fun");
   });
 
-  it("offers only GitHub and Feishu as third-party logins", () => {
-    render(<LoginStep1 onNext={jest.fn()} />);
-
-    expect(screen.getByTitle("Github")).toBeInTheDocument();
-    expect(screen.getByTitle("Feishu")).toBeInTheDocument();
-    expect(screen.queryByTitle("QQ")).not.toBeInTheDocument();
-    expect(screen.queryByTitle("Microsoft")).not.toBeInTheDocument();
-    // Feishu moved into the icon row; the old text link is gone.
-    expect(screen.queryByText("SAST 飞书登录")).not.toBeInTheDocument();
+  it("submits an arbitrary prefix with the default njupt domain", async () => {
+    const onNext = jest.fn();
+    render(<LoginStep1 onNext={onNext} />);
+    await userEvent.type(screen.getByLabelText("账户"), "alice");
+    await userEvent.click(screen.getByRole("button", { name: "继续" }));
+    expect(onNext).toHaveBeenCalledWith("alice@njupt.edu.cn");
   });
 });

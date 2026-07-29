@@ -1,63 +1,36 @@
 "use client";
 
-import { Suspense, useCallback, useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { PageTransition } from "@/components/animation/page-transition";
 import RegisterStep1 from "./_components/register-step-1";
 import RegisterStep2 from "./_components/register-step-2";
 import RegisterStep3 from "./_components/register-step-3";
-import RegisterStep4 from "./_components/register-step-4";
 
-export default function RegisterPage() {
-  const [step, setStep] = useState(1);
+const STEP_META = {
+  1: { tech: "Register / 01 of 03" },
+  2: { tech: "Register / 02 of 03" },
+  3: { tech: "Register / 03 of 03" },
+} as const;
+
+function RegisterFlow() {
+  const searchParams = useSearchParams();
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [loginEmail, setLoginEmail] = useState("");
   const [registerTicket, setRegisterTicket] = useState("");
-  const [username, setUsername] = useState("");
-
-  const nextStep = useCallback(() => setStep((s) => s + 1), []);
-  const prevStep = useCallback(() => setStep((s) => s - 1), []);
+  const meta = STEP_META[step];
 
   return (
-    <AuthShell
-      title="<Register>"
-      description="完成邮箱验证与密码设置后即可开始使用 SAST Link。"
-    >
-      <Suspense>
-        {step === 1 && (
-          <PageTransition>
-            <RegisterStep1
-              onNext={nextStep}
-              onTicket={setRegisterTicket}
-              onUsername={setUsername}
-            />
-          </PageTransition>
-        )}
-        {step === 2 && (
-          <PageTransition>
-            <RegisterStep2
-              username={username}
-              ticket={registerTicket}
-              onTicket={setRegisterTicket}
-              onNext={nextStep}
-              onBack={prevStep}
-            />
-          </PageTransition>
-        )}
-        {step === 3 && (
-          <PageTransition>
-            <RegisterStep3
-              ticket={registerTicket}
-              onNext={nextStep}
-              onBack={prevStep}
-            />
-          </PageTransition>
-        )}
-        {step === 4 && (
-          <PageTransition>
-            <RegisterStep4 />
-          </PageTransition>
-        )}
-      </Suspense>
+    <AuthShell tech={meta.tech}>
+      {step === 1 && <PageTransition><RegisterStep1 onNext={(email) => { setLoginEmail(email); setStep(2); }} /></PageTransition>}
+      {step === 2 && <PageTransition><RegisterStep2 loginEmail={loginEmail} onNext={(ticket) => { setRegisterTicket(ticket); setStep(3); }} onBack={() => setStep(1)} /></PageTransition>}
+      {step === 3 && <PageTransition><RegisterStep3 loginEmail={loginEmail} ticket={registerTicket} registrationState={searchParams.get("registration_state") ?? undefined} oauthState={searchParams.get("state") ?? undefined} defaultName={searchParams.get("name") ?? ""} onBack={() => setStep(2)} /></PageTransition>}
     </AuthShell>
   );
+}
+
+export default function RegisterPage() {
+  return <Suspense><RegisterFlow /></Suspense>;
 }
