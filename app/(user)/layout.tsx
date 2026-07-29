@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import { getToken } from "@/lib/token";
+import { getSession } from "@/lib/token";
 
 export default function UserLayout({
   children,
@@ -13,8 +13,8 @@ export default function UserLayout({
   const router = useRouter();
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
+    const session = getSession();
+    if (!session) {
       router.replace("/login");
     }
   }, [router]);

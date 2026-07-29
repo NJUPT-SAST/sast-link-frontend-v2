@@ -6,7 +6,7 @@ import { ThemeToggle } from "./theme-toggle";
 const setTheme = jest.fn();
 let currentTheme = "system";
 
-jest.mock("next-themes", () => ({
+jest.mock("@/lib/theme", () => ({
   useTheme: () => ({
     theme: currentTheme,
     setTheme,

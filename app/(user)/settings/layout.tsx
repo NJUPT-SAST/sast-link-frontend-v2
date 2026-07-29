@@ -5,13 +5,13 @@ import type { ReactNode } from "react";
 import { TopBar } from "@/components/layout/top-bar";
 import { useFetchProfile } from "@/hooks/use-fetch-profile";
 
-export default function HomeLayout({ children }: { children: ReactNode }) {
+export default function SettingsLayout({ children }: { children: ReactNode }) {
   useFetchProfile();
 
   return (
-    <div className="h-screen overflow-y-auto snap-y snap-mandatory">
+    <div className="min-h-screen">
       <TopBar />
-      {children}
+      <div className="pt-16">{children}</div>
     </div>
   );
 }

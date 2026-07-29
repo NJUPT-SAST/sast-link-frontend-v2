@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { Laptop, Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/lib/theme";
 
 import {
   DropdownMenu,
@@ -39,10 +39,9 @@ export function ThemeToggle() {
       <Button
         variant="ghost"
         size="icon"
-        className="rounded-full"
         aria-label="主题切换加载中"
         title="主题切换加载中"
-        disabled
+        className="size-10 rounded-none border-0 bg-transparent p-0 text-foreground/70 shadow-none hover:-translate-y-px hover:bg-transparent hover:text-foreground"
       >
         <Laptop />
       </Button>
@@ -55,9 +54,9 @@ export function ThemeToggle() {
         <Button
           variant="ghost"
           size="icon"
-          className="rounded-full"
           aria-label="主题模式"
           title={`当前主题：${THEME_LABELS[currentTheme]}`}
+          className="size-10 rounded-none border-0 bg-transparent p-0 text-foreground/70 shadow-none hover:-translate-y-px hover:bg-transparent hover:text-foreground"
         >
           <CurrentIcon />
         </Button>
@@ -68,7 +67,7 @@ export function ThemeToggle() {
         <DropdownMenuGroup>
           <DropdownMenuRadioGroup
             value={currentTheme}
-            onValueChange={(value) => setTheme(value)}
+            onValueChange={(value) => setTheme(value as "light" | "dark" | "system")}
           >
             <DropdownMenuRadioItem value="light">
               <Sun />

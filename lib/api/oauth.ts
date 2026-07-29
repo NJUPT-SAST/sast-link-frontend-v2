@@ -8,8 +8,9 @@ export function buildOAuthLoginUrl(provider: OAuthProvider) {
   return `${API_BASE_URL}/oauth/${provider}`;
 }
 
-export function exchangeLoginCode(code: string) {
+export function exchangeLoginCode(code: string, state?: string) {
   return apiClient.post<ApiEnvelope<AuthResultData>>("/oauth/exchange-code", {
     code,
+    state,
   });
 }

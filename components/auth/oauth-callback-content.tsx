@@ -62,7 +62,7 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
 
     if (!code) return;
 
-    exchangeLoginCode(code)
+    exchangeLoginCode(code, searchParams.get("state") ?? undefined)
       .then((response) => {
         const data = response.data.data;
         const session = createSession(
