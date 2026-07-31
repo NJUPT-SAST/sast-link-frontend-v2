@@ -24,7 +24,7 @@ The main configuration lives in:
 Important current config details:
 
 - `collectCoverage` is `false` by default in config, but `pnpm test:coverage` enables it from the CLI.
-- Coverage is collected from `app/`, `components/`, and `lib/`.
+- Coverage is collected from `app/`, `components/`, `hooks/`, `lib/`, and `store/`.
 - Coverage thresholds are configured globally:
   - branches: 60
   - functions: 60
@@ -76,12 +76,12 @@ pnpm test -- --testNamePattern="login"
 
 Representative examples:
 
-- `components/account/account-panel.test.tsx`
 - `components/animation/page-transition.test.tsx`
+- `components/auth/auth-shell.test.tsx`
+- `components/auth/verification-code-input.test.tsx`
 - `components/auth/other-login-list.test.tsx`
 - `components/layout/top-bar.test.tsx`
 - `components/navigation/back-button.test.tsx`
-- `components/profile/bind-app-item.test.tsx`
 - `components/ui/button.test.tsx`
 
 ### Hooks
@@ -90,7 +90,6 @@ Representative examples:
 
 ### Libraries and API wrappers
 
-- `lib/form-helpers.test.ts`
 - `lib/message.test.ts`
 - `lib/token.test.ts`
 - `lib/utils.test.ts`
@@ -98,12 +97,11 @@ Representative examples:
 - `lib/api/client.test.ts`
 - `lib/api/oauth.test.ts`
 - `lib/api/user.test.ts`
-- `lib/constants/department.test.ts`
+- `lib/validations/auth.test.ts`
 - `lib/validations/profile.test.ts`
 
 ### Zustand stores
 
-- `store/use-auth-store.test.ts`
 - `store/use-panel-store.test.ts`
 - `store/use-user-list-store.test.ts`
 - `store/use-user-profile-store.test.ts`
@@ -181,8 +179,8 @@ pnpm build
 
 Clear transient output if needed:
 
-```powershell
-Remove-Item -Recurse -Force .next, coverage -ErrorAction SilentlyContinue
+```bash
+rm -rf .next coverage
 ```
 
 ### Module alias resolution issues

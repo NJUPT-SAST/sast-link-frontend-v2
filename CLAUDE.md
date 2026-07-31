@@ -20,16 +20,24 @@ This repository is the current SAST Link Next implementation, not a generic star
 
 - `/` account switcher and quick-login entry
 - `/login` two-step login
-- `/register` four-step registration
-- `/reset` four-step password reset
-- `/callback/feishu` Feishu OAuth callback
-- `/callback/github` GitHub OAuth callback
+- `/register` three-step registration
+- `/reset` password reset
+- `/oauth/callback` third-party OAuth login landing page (exchanges the login code, or forwards new accounts to register)
 
 ### Authenticated flows
 
 - `/home` user homepage overview
-- `/home/edit` profile editing and avatar upload/cropping
-- `/home/edit/safety` safety settings
+- `/settings` account settings and profile overview
+- `/settings/edit` profile editing and avatar upload/cropping
+- `/oauth/bind/lark` / `/oauth/bind/github` third-party bind callbacks (frontend assembles the authorize URL; the provider bounces back here)
+
+### Admin flows
+
+- `/admin/users` user search, filtering, editing, deletion, and restoration
+- `/admin/oauth-clients` OAuth client registration and status management
+- `/admin/audit-logs` audit log filtering and pagination
+
+`admin` can access all three routes. `lecturer` has read-only access to user management.
 
 ## Runtime Model
 
@@ -108,6 +116,5 @@ import { useAuthStore } from "@/store/use-auth-store";
 
 - Always use `pnpm`.
 - Do not assume this repo is still a starter; inspect the real route groups and state/API modules first.
-- `NEXT_PUBLIC_API_BASE_URL` is the backend base URL.
-- `NEXT_PUBLIC_API_MOCKING=true` enables MSW bootstrap in `app/providers.tsx`.
+- `NEXT_PUBLIC_API_BASE_URL` is the backend base URL — local dev points straight at the backend (e.g. `http://localhost:8080`), no `/apis` prefix.
 - The npm package name still uses starter-style naming; treat current code/config as source of truth rather than marketing labels.

@@ -20,19 +20,20 @@ Core stack:
 - `app/(tourist)/login/page.tsx`: two-step login
 - `app/(tourist)/register/page.tsx`: four-step registration
 - `app/(tourist)/reset/page.tsx`: four-step password reset
-- `app/(tourist)/callback/feishu/page.tsx`: Feishu callback
-- `app/(tourist)/callback/github/page.tsx`: GitHub callback
+- `app/(tourist)/oauth/callback/page.tsx`: third-party login landing page (reads `provider` query to show which account it is)
+- `app/(tourist)/register/page.tsx`: registration (reads `oauth_state` from the login callback, not `state`)
+- `app/(user)/oauth/bind/lark/page.tsx` · `github/page.tsx`: third-party bind callbacks (token-guarded)
 
 ### Authenticated routes
 
 - `app/(user)/home/page.tsx`: homepage overview
 - `app/(user)/home/layout.tsx`: top bar + profile/info side panels + profile fetch bootstrap
-- `app/(user)/home/edit/page.tsx`: profile editing and avatar crop/upload
-- `app/(user)/home/edit/safety/page.tsx`: safety settings
+- `app/(user)/settings/page.tsx`: account settings and third-party identity management
+- `app/(user)/settings/edit/page.tsx`: profile editing and avatar crop/upload
 
 ### Shared runtime modules
 
-- `app/providers.tsx`: SWR config, optional MSW bootstrap, global message panel
+- `app/providers.tsx`: SWR config, global message panel
 - `lib/api/client.ts`: Axios instance with `Token` header injection
 - `lib/api/auth.ts`: auth/registration/reset helpers
 - `lib/api/user.ts`: login/profile/avatar/bind-status helpers
@@ -101,5 +102,4 @@ import { Button } from "@/components/ui/button";
 
 - TypeScript is strict and uses `@/*` alias mapping from repo root.
 - The package name in `package.json` still says `react-quick-starter`, but UI/product semantics are SAST Link.
-- `NEXT_PUBLIC_API_BASE_URL` configures the backend base URL.
-- `NEXT_PUBLIC_API_MOCKING=true` enables MSW bootstrap.
+- `NEXT_PUBLIC_API_BASE_URL` configures the backend base URL — local dev points straight at the backend (e.g. `http://localhost:8080`).
