@@ -4,133 +4,66 @@ import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-import { verifyCaptcha, verifyRegistAccount, sendMail } from "@/lib/api/auth";
+import { registerSendCode, registerVerifyCode } from "@/lib/api/auth";
+import { toApiError } from "@/lib/api/errors";
+import { message } from "@/lib/message";
 import {
   type VerificationCodeFormValues,
   verificationCodeFormSchema,
 } from "@/lib/validations/auth";
 import { AuthFormField } from "@/components/auth/auth-form-field";
+import { VerificationCodeInput } from "@/components/auth/verification-code-input";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormMessage,
-} from "@/components/ui/form";
-import { VeriCode } from "@/components/auth/verification-code-input";
-import { Footer } from "@/components/layout/footer";
+import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
 
-interface Props {
-  username: string;
-  ticket: string;
-  onTicket: (ticket: string) => void;
-  onNext: () => void;
+interface RegisterStep2Props {
+  loginEmail: string;
+  onNext: (ticket: string) => void;
   onBack: () => void;
 }
 
-export default function RegisterStep2({
-  username,
-  ticket,
-  onTicket,
-  onNext,
-  onBack,
-}: Props) {
+export default function RegisterStep2({ loginEmail, onNext, onBack }: RegisterStep2Props) {
   const [loading, setLoading] = useState(false);
   const form = useForm<VerificationCodeFormValues>({
     resolver: zodResolver(verificationCodeFormSchema),
-    defaultValues: {
-      captcha: "",
-    },
+    defaultValues: { captcha: "" },
   });
 
   const handleSubmit = form.handleSubmit(async ({ captcha }) => {
     setLoading(true);
-
     try {
-      const res = await verifyCaptcha(ticket, captcha);
-      if (res.data.Success) {
-        onNext();
-        return;
-      }
-
-      form.setError("captcha", {
-        message: res.data.ErrMsg,
-      });
-    } catch {
-      form.setError("captcha", {
-        message: "网络错误",
-      });
+      const response = await registerVerifyCode(loginEmail, captcha);
+      onNext(response.data.data.register_ticket);
+    } catch (error) {
+      form.setError("captcha", { message: toApiError(error).message });
     } finally {
       setLoading(false);
     }
   });
 
-  const handleResend = async () => {
-    const res = await verifyRegistAccount(username);
-    if (res.data.Success) {
-      const newTicket = res.data.Data.registerTicket;
-      onTicket(newTicket);
-      await sendMail(newTicket);
-    }
-  };
-
   return (
-    <Form {...form}>
-      <form
-        onSubmit={handleSubmit}
-        className="flex w-full flex-col items-center gap-6 px-8 pt-8"
-      >
-        <FormField
-          control={form.control}
-          name="captcha"
-          render={({ field, fieldState }) => {
-            const { ref, ...fieldProps } = field;
-
-            return (
-              <FormItem className="w-full space-y-2">
-                <div className="flex items-start gap-1">
-                  <span className="pt-[30px] text-xl font-semibold text-[#1c1f23]">
-                    S-
-                  </span>
-                  <AuthFormField
-                    {...fieldProps}
-                    ref={ref}
-                    containerClassName="flex-1"
-                    label="验证码"
-                    placeholder="5 位验证码"
-                    autoComplete="one-time-code"
-                    inputMode="numeric"
-                    maxLength={5}
-                    invalid={!!fieldState.error}
-                    suffix={<VeriCode onResend={handleResend} />}
-                    description={`验证码已发送至 ${username}，该验证码短时有效，且仅应由邮箱持有人使用。`}
-                  />
-                </div>
-                <FormMessage />
-              </FormItem>
-            );
-          }}
-        />
-
-        <Footer>
-          <Button
-            type="submit"
-            disabled={loading}
-            className="h-[42px] w-[314px] rounded-[10px] border-[3px] border-[#1c1f23] text-base font-semibold sm:text-xl"
-          >
-            {loading ? <DotLoading /> : "下一步"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onBack}
-            className="h-[42px] w-[314px] rounded-[10px] border-[3px] border-primary bg-background text-base font-semibold text-foreground hover:bg-accent sm:text-xl"
-          >
-            返回上一步
-          </Button>
-        </Footer>
-      </form>
-    </Form>
+    <div className="flex w-full flex-col">
+      <div className="mb-8 flex flex-col gap-2.5">
+        <h2 className="type-title1">输入验证码</h2>
+        <p className="text-[15px] text-muted-foreground">已发送至 {loginEmail}</p>
+      </div>
+      <Form {...form}>
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          <FormField control={form.control} name="captcha" render={({ field, fieldState }) => (
+            <FormItem>
+              <AuthFormField {...field} ref={field.ref} label="验证码" placeholder="6 位验证码" autoComplete="one-time-code" inputMode="numeric" maxLength={6} invalid={!!fieldState.error} suffix={<VerificationCodeInput onResend={async () => { try { await registerSendCode(loginEmail); } catch (error) { message.error(toApiError(error).message); throw error; } }} />} />
+              <div className="min-h-5 text-xs [&_p]:text-destructive"><FormMessage /></div>
+            </FormItem>
+          )} />
+          <div className="mt-2 flex flex-col gap-3">
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? <DotLoading /> : "验证并继续"}
+            </Button>
+            <Button type="button" variant="outline" onClick={onBack} className="w-full">返回上一步</Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 }

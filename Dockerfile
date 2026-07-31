@@ -3,17 +3,14 @@ FROM node:20-alpine AS builder
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@10 --activate
+RUN corepack enable && corepack prepare pnpm@11.15.1 --activate
 
 WORKDIR /app
 
-# Build-time env vars - override via --build-arg or compose args
-# Use ARG so callers can inject values via `--build-arg` or docker-compose build args.
-ARG NEXT_PUBLIC_API_BASE_URL=/apis
-ARG NEXT_PUBLIC_API_MOCKING=false
-# Expose the build args as ENV for the runtime image layer that follows the build
+# The frontend talks to the backend directly. The API base URL is injected at
+# build time so the same image can move between environments.
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
-ENV NEXT_PUBLIC_API_MOCKING=${NEXT_PUBLIC_API_MOCKING}
 
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile

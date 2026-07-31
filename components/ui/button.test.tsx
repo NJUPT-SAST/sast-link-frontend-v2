@@ -9,7 +9,7 @@ describe("Button", () => {
     expect(button).toBeInTheDocument();
     expect(button).toHaveAttribute("data-slot", "button");
     expect(button).toHaveClass("bg-primary");
-    expect(button).toHaveClass("h-9");
+    expect(button).toHaveClass("h-12");
   });
 
   it("applies variant and size classes", () => {
@@ -21,7 +21,7 @@ describe("Button", () => {
 
     const button = screen.getByRole("button", { name: "Delete" });
     expect(button).toHaveClass("bg-destructive");
-    expect(button).toHaveClass("h-10");
+    expect(button).toHaveClass("h-12");
   });
 
   it("supports asChild composition", () => {
@@ -41,6 +41,6 @@ describe("buttonVariants", () => {
   it("returns classes for a given variant and size", () => {
     const className = buttonVariants({ variant: "outline", size: "sm" });
     expect(className).toContain("border");
-    expect(className).toContain("h-8");
+    expect(className).toContain("h-9");
   });
 });

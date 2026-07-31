@@ -8,24 +8,23 @@ import LoginStep2 from "./_components/login-step-2";
 
 export default function LoginPage() {
   const [step, setStep] = useState<1 | 2>(1);
-  const [loginTicket, setLoginTicket] = useState<string | null>(null);
+  const [loginEmail, setLoginEmail] = useState<string | null>(null);
 
   return (
     <AuthShell
-      title="<Login>"
-      description="使用你的 SAST Link 账号继续，支持学号或邮箱登录。"
+      tech={step === 1 ? "Sign in / 01" : "Sign in / 02"}
     >
       <Suspense>
         {step === 1 ? (
           <LoginStep1
-            onNext={(ticket) => {
-              setLoginTicket(ticket);
+            onNext={(email) => {
+              setLoginEmail(email);
               setStep(2);
             }}
           />
         ) : (
           <LoginStep2
-            loginTicket={loginTicket!}
+            loginEmail={loginEmail!}
             onBack={() => setStep(1)}
           />
         )}

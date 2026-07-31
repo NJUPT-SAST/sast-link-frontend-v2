@@ -1,73 +1,46 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 
 import { PageTransition } from "./page-transition";
 
-jest.mock("framer-motion", () => ({
-  motion: {
-    div: ({
-      children,
-      initial,
-      animate,
-      exit,
-      transition,
-      ...props
-    }: React.HTMLAttributes<HTMLDivElement> & {
-      initial?: unknown;
-      animate?: unknown;
-      exit?: unknown;
-      transition?: unknown;
-    }) => (
-      <div
-        data-testid="motion-div"
-        data-initial={JSON.stringify(initial)}
-        data-animate={JSON.stringify(animate)}
-        data-exit={JSON.stringify(exit)}
-        data-transition={JSON.stringify(transition)}
-        {...props}
-      >
-        {children}
-      </div>
-    ),
-  },
-}));
-
 describe("PageTransition", () => {
-  it("renders children with the default right-to-left animation", () => {
-    render(<PageTransition>content</PageTransition>);
-
-    const motionDiv = screen.getByTestId("motion-div");
-    expect(motionDiv).toHaveTextContent("content");
-    expect(motionDiv).toHaveAttribute(
-      "data-initial",
-      JSON.stringify({ opacity: 0, x: 10, y: 0 }),
-    );
-    expect(motionDiv).toHaveAttribute(
-      "data-exit",
-      JSON.stringify({ opacity: 0, x: -10, y: 0 }),
-    );
+  it("renders children with the transition class and default offset", () => {
+    const { container } = render(<PageTransition>content</PageTransition>);
+    const div = container.querySelector("div")!;
+    expect(div).toHaveClass("pt-transition");
+    expect(div).toHaveTextContent("content");
+    expect(div.style.getPropertyValue("--pt-x")).toBe("10px");
+    expect(div.style.getPropertyValue("--pt-y")).toBe("0");
   });
 
-  it("passes style, className and the selected variant to motion.div", () => {
-    render(
-      <PageTransition
-        position="topToBottom"
-        className="panel"
-        style={{ opacity: 0.5 }}
-      >
+  it("passes style, className and the selected position offset", () => {
+    const { container } = render(
+      <PageTransition position="topToBottom" className="panel" style={{ opacity: 0.5 }}>
         animated
       </PageTransition>,
     );
+    const div = container.querySelector("div")!;
+    expect(div).toHaveClass("pt-transition");
+    expect(div).toHaveClass("panel");
+    expect(div).toHaveStyle({ opacity: "0.5" });
+    expect(div.style.getPropertyValue("--pt-x")).toBe("0");
+    expect(div.style.getPropertyValue("--pt-y")).toBe("-10px");
+  });
 
-    const motionDiv = screen.getByTestId("motion-div");
-    expect(motionDiv).toHaveClass("panel");
-    expect(motionDiv).toHaveStyle({ opacity: "0.5" });
-    expect(motionDiv).toHaveAttribute(
-      "data-initial",
-      JSON.stringify({ opacity: 0, x: 0, y: -10 }),
-    );
-    expect(motionDiv).toHaveAttribute(
-      "data-animate",
-      JSON.stringify({ opacity: 1, x: 0, y: 0 }),
-    );
+  it.each([
+    ["slide", "pt-transition"],
+    ["rise", "pt-rise"],
+    ["blur", "pt-blur"],
+    ["fade", "pt-fade"],
+    ["zoom", "pt-zoom"],
+  ] as const)("uses %s variant -> %s class", (variant, cls) => {
+    const { container } = render(<PageTransition variant={variant}>x</PageTransition>);
+    expect(container.querySelector("div")).toHaveClass(cls);
+  });
+
+  it("does not emit slide offset vars for non-slide variants", () => {
+    const { container } = render(<PageTransition variant="blur">x</PageTransition>);
+    const div = container.querySelector("div")!;
+    expect(div.style.getPropertyValue("--pt-x")).toBe("");
+    expect(div.style.getPropertyValue("--pt-y")).toBe("");
   });
 });

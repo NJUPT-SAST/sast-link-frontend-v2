@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import { getToken } from "@/lib/token";
+import { getSession } from "@/lib/token";
 
 export default function UserLayout({
   children,
@@ -13,10 +13,13 @@ export default function UserLayout({
   const router = useRouter();
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      router.replace("/login");
-    }
+    const check = () => {
+      if (!getSession()) router.replace("/login");
+    };
+    check();
+    // Cross-tab: another tab logged out and cleared the token.
+    window.addEventListener("storage", check);
+    return () => window.removeEventListener("storage", check);
   }, [router]);
 
   return <>{children}</>;

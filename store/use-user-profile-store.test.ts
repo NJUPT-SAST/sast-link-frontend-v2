@@ -1,70 +1,18 @@
-import { useUserProfileStore } from "./use-user-profile-store";
+import { useUserProfileStore, initialProfile } from "./use-user-profile-store";
 
-const initialProfile = {
-  nickname: "~",
-  email: "~",
-  dep: null,
-  org: null,
-  avatar: null,
-  bio: null,
-  link: null,
-  badge: null,
-  hide: null,
-};
+const alice = { ...initialProfile, id: 1, nickname: "Alice", name: "Alice", email: "alice@example.com", intro: "Hello" };
 
 describe("useUserProfileStore", () => {
-  beforeEach(() => {
-    useUserProfileStore.setState({ profile: initialProfile });
+  beforeEach(() => useUserProfileStore.setState({ profile: initialProfile }));
+
+  it("sets and partially updates v2 profile fields", () => {
+    useUserProfileStore.getState().setProfile(alice);
+    useUserProfileStore.getState().updateProfile({ intro: "Updated", blogUrl: "https://example.com" });
+    expect(useUserProfileStore.getState().profile).toEqual({ ...alice, intro: "Updated", blogUrl: "https://example.com" });
   });
 
-  it("replaces the profile with setProfile", () => {
-    const profile = {
-      ...initialProfile,
-      nickname: "Alice",
-      email: "alice@example.com",
-      bio: "Hello",
-    };
-
-    useUserProfileStore.getState().setProfile(profile);
-
-    expect(useUserProfileStore.getState().profile).toEqual(profile);
-  });
-
-  it("merges editable fields into the existing profile", () => {
-    useUserProfileStore.setState({
-      profile: {
-        ...initialProfile,
-        nickname: "Alice",
-        email: "alice@example.com",
-        bio: "Hello",
-        link: ["https://old.example.com"],
-      },
-    });
-
-    useUserProfileStore.getState().updateProfile({
-      nickname: "Alicia",
-      bio: "Updated bio",
-      link: ["https://new.example.com"],
-    });
-
-    expect(useUserProfileStore.getState().profile).toEqual({
-      ...initialProfile,
-      nickname: "Alicia",
-      email: "alice@example.com",
-      bio: "Updated bio",
-      link: ["https://new.example.com"],
-    });
-  });
-
-  it("resets back to the initial placeholder profile", () => {
-    useUserProfileStore.setState({
-      profile: {
-        ...initialProfile,
-        nickname: "Alice",
-        email: "alice@example.com",
-      },
-    });
-
+  it("resets the profile", () => {
+    useUserProfileStore.getState().setProfile(alice);
     useUserProfileStore.getState().resetProfile();
     expect(useUserProfileStore.getState().profile).toEqual(initialProfile);
   });

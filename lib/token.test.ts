@@ -1,25 +1,45 @@
-describe("token helpers", () => {
+describe("session helpers", () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  it("reads, writes and clears the token from localStorage", async () => {
-    const { getToken, setToken, clearToken } = await import("./token");
+  it("reads, writes and clears a token pair", async () => {
+    const { clearSession, getSession, setSession } = await import("./token");
+    const session = {
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+      expiresAt: Date.now() + 3600_000,
+    };
 
-    expect(getToken()).toBeNull();
+    expect(getSession()).toBeNull();
+    setSession(session);
+    expect(getSession()).toEqual(session);
 
-    setToken("abc");
-    expect(localStorage.getItem("Token")).toBe(JSON.stringify("abc"));
-    expect(getToken()).toBe("abc");
-
-    clearToken();
-    expect(getToken()).toBeNull();
+    clearSession();
+    expect(getSession()).toBeNull();
   });
 
-  it("returns null for invalid JSON payloads", async () => {
-    const { getToken } = await import("./token");
+  it("keeps expired sessions so the refresh interceptor can rotate them", async () => {
+    const { getSession, setSession } = await import("./token");
+    const session = {
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+      expiresAt: Date.now() - 1000,
+    };
+    setSession(session);
+    expect(getSession()).toEqual(session);
+    expect(localStorage.getItem("Token")).not.toBeNull();
+  });
+
+  it("removes legacy and malformed token payloads", async () => {
+    const { getSession } = await import("./token");
+
+    localStorage.setItem("Token", JSON.stringify("legacy-token"));
+    expect(getSession()).toBeNull();
+    expect(localStorage.getItem("Token")).toBeNull();
 
     localStorage.setItem("Token", "not-json");
-    expect(getToken()).toBeNull();
+    expect(getSession()).toBeNull();
+    expect(localStorage.getItem("Token")).toBeNull();
   });
 });

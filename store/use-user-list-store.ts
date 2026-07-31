@@ -3,15 +3,18 @@ import { persist } from "zustand/middleware";
 
 import type { UserAccount } from "@/lib/api/types";
 
+interface AccountUpdate {
+  userId: number;
+  name?: string;
+  loginEmail?: string;
+  avatar?: string | null;
+  session?: UserAccount["session"];
+}
+
 interface UserListState {
   accounts: UserAccount[];
   addAccount: (account: UserAccount) => void;
-  updateAccount: (update: {
-    email: string;
-    nickName: string;
-    avatar: string | null;
-  }) => void;
-  /** Remove account by index or email */
+  updateAccount: (update: AccountUpdate) => void;
   removeAccount: (identifier: number | string) => void;
 }
 
@@ -22,33 +25,52 @@ export const useUserListStore = create<UserListState>()(
 
       addAccount: (account) =>
         set((state) => {
-          const exists = state.accounts.some(
-            (a) => a.userId === account.userId,
+          const index = state.accounts.findIndex(
+            (item) => item.userId === account.userId,
           );
-          if (exists) return state;
-          return { accounts: [...state.accounts, account] };
+          if (index < 0) return { accounts: [...state.accounts, account] };
+
+          return {
+            accounts: state.accounts.map((item, itemIndex) =>
+              itemIndex === index ? account : item,
+            ),
+          };
         }),
 
-      updateAccount: ({ email, nickName, avatar }) =>
+      updateAccount: (update) =>
         set((state) => ({
-          accounts: state.accounts.map((a) =>
-            a.email === email ? { ...a, nickName, avatar } : a,
+          accounts: state.accounts.map((account) =>
+            account.userId === update.userId
+              ? { ...account, ...update }
+              : account,
           ),
         })),
 
-      // BUG FIX: Original had missing return in filter callback
       removeAccount: (identifier) =>
-        set((state) => {
-          if (typeof identifier === "number") {
-            return {
-              accounts: state.accounts.filter((_, i) => i !== identifier),
-            };
-          }
-          return {
-            accounts: state.accounts.filter((a) => a.email !== identifier),
-          };
-        }),
+        set((state) => ({
+          accounts: state.accounts.filter((account, index) =>
+            typeof identifier === "number"
+              ? index !== identifier
+              : account.loginEmail !== identifier,
+          ),
+        })),
     }),
-    { name: "user-list-store" },
+    {
+      name: "user-list-store",
+      version: 2,
+      migrate: () => ({ accounts: [] }),
+      // Drop accounts whose session token is structurally invalid. Expired
+      // access tokens can still be refreshed, so we keep them in the picker.
+      onRehydrateStorage: () => (state) => {
+        if (!state?.accounts) return;
+        state.accounts = state.accounts.filter(
+          (account) =>
+            account.session &&
+            typeof account.session.accessToken === "string" &&
+            typeof account.session.refreshToken === "string" &&
+            typeof account.session.expiresAt === "number",
+        );
+      },
+    },
   ),
 );

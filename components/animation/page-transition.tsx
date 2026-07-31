@@ -1,50 +1,46 @@
-"use client";
+import type { CSSProperties, ReactNode } from "react";
 
-import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 type Position = "rightToLeft" | "leftToRight" | "topToBottom" | "bottomToTop";
+type Variant = "slide" | "rise" | "blur" | "fade" | "zoom";
 
-const slideVariants = {
-  rightToLeft: {
-    initial: { opacity: 0, x: 10, y: 0 },
-    animate: { opacity: 1, x: 0, y: 0 },
-    exit: { opacity: 0, x: -10, y: 0 },
-    transition: { duration: 0.5 },
-  },
-  leftToRight: {
-    initial: { opacity: 0, x: -10, y: 0 },
-    animate: { opacity: 1, x: 0, y: 0 },
-    exit: { opacity: 0, x: 10, y: 0 },
-    transition: { duration: 0.5 },
-  },
-  topToBottom: {
-    initial: { opacity: 0, x: 0, y: -10 },
-    animate: { opacity: 1, x: 0, y: 0 },
-    exit: { opacity: 0, x: 0, y: 10 },
-    transition: { duration: 0.5 },
-  },
-  bottomToTop: {
-    initial: { opacity: 0, x: 0, y: 10 },
-    animate: { opacity: 1, x: 0, y: 0 },
-    exit: { opacity: 0, x: 0, y: -10 },
-    transition: { duration: 0.5 },
-  },
+const offsets: Record<Position, { x: string; y: string }> = {
+  rightToLeft: { x: "10px", y: "0" },
+  leftToRight: { x: "-10px", y: "0" },
+  topToBottom: { x: "0", y: "-10px" },
+  bottomToTop: { x: "0", y: "10px" },
+};
+
+const variantClass: Record<Variant, string> = {
+  slide: "pt-transition",
+  rise: "pt-rise",
+  blur: "pt-blur",
+  fade: "pt-fade",
+  zoom: "pt-zoom",
 };
 
 export function PageTransition({
   children,
+  variant = "slide",
   position = "rightToLeft",
   style,
   className,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
+  variant?: Variant;
   position?: Position;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
   className?: string;
 }) {
+  const { x, y } = offsets[position];
+  const slideVars = variant === "slide" ? { "--pt-x": x, "--pt-y": y } : {};
   return (
-    <motion.div {...slideVariants[position]} style={style} className={className}>
+    <div
+      className={cn(variantClass[variant], className)}
+      style={{ ...slideVars, ...style } as CSSProperties}
+    >
       {children}
-    </motion.div>
+    </div>
   );
 }

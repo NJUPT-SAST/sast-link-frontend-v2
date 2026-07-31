@@ -1,9 +1,9 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { VeriCode } from "./verification-code-input";
+import { VerificationCodeInput } from "./verification-code-input";
 
-describe("VeriCode", () => {
+describe("VerificationCodeInput", () => {
   beforeEach(() => {
     jest.useFakeTimers();
   });
@@ -16,7 +16,7 @@ describe("VeriCode", () => {
   });
 
   it("counts down before allowing resend", () => {
-    render(<VeriCode onResend={jest.fn().mockResolvedValue(undefined)} />);
+    render(<VerificationCodeInput onResend={jest.fn().mockResolvedValue(undefined)} />);
 
     expect(screen.getByText("60s 后重新发送")).toBeInTheDocument();
 
@@ -32,7 +32,7 @@ describe("VeriCode", () => {
     const onResend = jest.fn().mockResolvedValue(undefined);
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
-    render(<VeriCode onResend={onResend} />);
+    render(<VerificationCodeInput onResend={onResend} />);
 
     act(() => {
       jest.advanceTimersByTime(61_000);
@@ -48,11 +48,11 @@ describe("VeriCode", () => {
 
   it("uses semantic foreground colors for disabled and enabled states", () => {
     const { rerender } = render(
-      <VeriCode onResend={jest.fn().mockResolvedValue(undefined)} />,
+      <VerificationCodeInput onResend={jest.fn().mockResolvedValue(undefined)} />,
     );
 
+    expect(screen.getByText("60s 后重新发送")).toBeDisabled();
     expect(screen.getByText("60s 后重新发送")).toHaveClass(
-      "pointer-events-none",
       "text-muted-foreground",
     );
 
@@ -60,7 +60,7 @@ describe("VeriCode", () => {
       jest.advanceTimersByTime(61_000);
     });
 
-    rerender(<VeriCode onResend={jest.fn().mockResolvedValue(undefined)} />);
+    rerender(<VerificationCodeInput onResend={jest.fn().mockResolvedValue(undefined)} />);
 
     expect(screen.getByText("重新发送")).toHaveClass(
       "cursor-pointer",

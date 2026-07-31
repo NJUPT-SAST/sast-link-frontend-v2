@@ -1,28 +1,66 @@
-import { getToken } from "@/lib/token";
+import * as publicConfig from "@/lib/config/public";
+import type { ApiEnvelope, AuthResultData } from "./types";
+import { apiClient } from "./client";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+export type OAuthProvider = "github" | "lark";
 
-interface OAuthParams {
-  client_id: string | null;
-  code_challenge: string | null;
-  code_challenge_method: string | null;
-  redirect_uri: string | null;
-  response_type: string | null;
-  scope: string | null;
-  state: string | null;
+export function buildOAuthLoginUrl(provider: OAuthProvider) {
+  return `${publicConfig.API_BASE_URL}/oauth/${provider}`;
 }
 
-/** Build OAuth authorize URL and redirect */
-export function oAuth(data: OAuthParams) {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(data)) {
-    if (value) params.append(key, value);
-  }
+export function exchangeLoginCode(code: string) {
+  return apiClient.post<ApiEnvelope<AuthResultData>>("/oauth/exchange-code", {
+    code,
+  });
+}
 
-  const token = getToken();
-  if (token) {
-    params.append("part", token);
+/**
+ * Bind-leg OAuth settings. The bind callback is a frontend route (not a backend
+ * callback), so the authorize URL is assembled here from public values: the
+ * client_id is handed to the browser by design, and the redirect_uri is the
+ * frontend page the provider bounces back to.
+ */
+function bindSettings(provider: OAuthProvider): {
+  clientId?: string;
+  redirectUri?: string;
+} {
+  if (provider === "lark") {
+    return {
+      clientId: publicConfig.FEISHU_CLIENT_ID,
+      redirectUri: publicConfig.FEISHU_BIND_REDIRECT_URI,
+    };
   }
+  return {
+    clientId: publicConfig.GITHUB_CLIENT_ID,
+    redirectUri: publicConfig.GITHUB_BIND_REDIRECT_URI,
+  };
+}
 
-  window.location.href = `${API_BASE_URL}/oauth2/authorize?${params.toString()}`;
+/** sessionStorage key holding the pending bind `state` for one provider. */
+export const BIND_STATE_KEY = "sast:oauth-bind:state";
+
+export function buildBindOAuthUrl(provider: OAuthProvider): string | null {
+  const { clientId, redirectUri } = bindSettings(provider);
+  if (!clientId || !redirectUri) return null;
+
+  const state = crypto.getRandomValues(new Uint8Array(16)).join("");
+  sessionStorage.setItem(`${BIND_STATE_KEY}:${provider}`, state);
+
+  const encodedRedirect = encodeURIComponent(redirectUri);
+  if (provider === "lark") {
+    return `https://open.feishu.cn/open-apis/authen/v1/authorize?app_id=${clientId}&redirect_uri=${encodedRedirect}&state=${state}`;
+  }
+  return `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodedRedirect}&scope=read%3Auser&state=${state}&allow_signup=false&response_type=code`;
+}
+
+/**
+ * Verify the callback `state` against the one stored when the authorize URL was
+ * built, then consume it (a bind attempt happens once). Defends against CSRF on
+ * the bind callback.
+ */
+export function consumeBindState(provider: OAuthProvider, state: string | null): boolean {
+  const key = `${BIND_STATE_KEY}:${provider}`;
+  const stored = sessionStorage.getItem(key);
+  sessionStorage.removeItem(key);
+  return Boolean(state) && stored === state;
 }
