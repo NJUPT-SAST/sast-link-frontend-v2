@@ -5,10 +5,6 @@
 		level INFO
 	}
 
-	handle /apis/* {
-		reverse_proxy https://link.sast.fun
-	}
-
 	handle {
 		root * /var/www
 		file_server {

@@ -60,45 +60,6 @@ jobs:
           node -e "try { const c = require('./coverage/coverage-summary.json').total; console.log('Lines:     ' + String(c.lines.pct).padStart(5) + '%'); console.log('Statements:' + String(c.statements.pct).padStart(5) + '%'); console.log('Branches:  ' + String(c.branches.pct).padStart(5) + '%'); console.log('Functions: ' + String(c.functions.pct).padStart(5) + '%'); } catch(e) { console.log('Coverage summary not available'); }" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
-      # Optional: Upload coverage to Codecov (requires CODECOV_TOKEN secret)
-      # Uncomment the following steps to enable Codecov integration:
-      #
-      # - name: Upload coverage reports to Codecov
-      #   uses: codecov/codecov-action@v4
-      #   env:
-      #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      #   if: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/master') && env.CODECOV_TOKEN != '' }}
-      #   with:
-      #     token: ${{ env.CODECOV_TOKEN }}
-      #     files: ./coverage/lcov.info
-      #     flags: unittests
-      #     name: codecov-umbrella
-      #     fail_ci_if_error: false
-      #   continue-on-error: true
-      #
-      # - name: Code Coverage Report
-      #   uses: irongut/CodeCoverageSummary@v1.3.0
-      #   if: github.event_name == 'pull_request'
-      #   with:
-      #     filename: coverage/cobertura-coverage.xml
-      #     badge: true
-      #     fail_below_min: false
-      #     format: markdown
-      #     hide_branch_rate: false
-      #     hide_complexity: true
-      #     indicators: true
-      #     output: both
-      #     thresholds: '60 80'
-      #   continue-on-error: true
-      #
-      # - name: Add Coverage PR Comment
-      #   uses: marocchino/sticky-pull-request-comment@v2
-      #   if: github.event_name == 'pull_request'
-      #   with:
-      #     recreate: true
-      #     path: code-coverage-results.md
-      #   continue-on-error: true
-
       - name: Upload test results
         uses: actions/upload-artifact@v7
         if: always()
