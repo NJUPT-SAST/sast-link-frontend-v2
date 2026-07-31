@@ -1,15 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Settings } from "lucide-react";
 
 import { Logo } from "@/components/icons/logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export function TopBar() {
+  const pathname = usePathname();
+  const homeLabel = pathname === "/home" ? "首页" : "返回首页";
+
   return (
     <header className="fixed inset-x-0 top-0 z-10 flex h-16 items-center justify-between px-5 sm:px-8">
-      <Link href="/home" aria-label="返回首页" className="inline-flex shrink-0 text-foreground transition-opacity hover:opacity-80">
+      <Link href="/home" aria-label={homeLabel} className="inline-flex shrink-0 text-foreground transition-opacity hover:opacity-80">
         <Logo />
       </Link>
       <div className="flex items-center gap-3">

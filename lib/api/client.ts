@@ -6,6 +6,7 @@ import axios, {
 
 import { API_BASE_URL } from "@/lib/config/public";
 import { clearSession, getSession, setSession } from "@/lib/token";
+import { redirectToLogin } from "./redirect";
 import type { ApiEnvelope, TokenData } from "./types";
 
 interface RetryableConfig extends InternalAxiosRequestConfig {
@@ -82,6 +83,9 @@ apiClient.interceptors.response.use(
       return apiClient(config);
     } catch (refreshError) {
       clearSession();
+      // Session is unrecoverable - bounce to login instead of stranding the
+      // user on a page that will only keep 401-ing.
+      redirectToLogin();
       throw refreshError;
     }
   },

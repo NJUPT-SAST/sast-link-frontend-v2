@@ -10,6 +10,7 @@ import { toApiError } from "@/lib/api/errors";
 import { COLLEGES } from "@/lib/api/types";
 import { createSession, setSession } from "@/lib/token";
 import { useUserListStore } from "@/store/use-user-list-store";
+import { useUserProfileStore } from "@/store/use-user-profile-store";
 import {
   type RegisterDetailsFormValues,
   registerDetailsSchema,
@@ -32,6 +33,7 @@ interface RegisterStep3Props {
 export default function RegisterStep3({ loginEmail, ticket, registrationState, oauthState, defaultName = "", onBack }: RegisterStep3Props) {
   const router = useRouter();
   const addAccount = useUserListStore((state) => state.addAccount);
+  const resetProfile = useUserProfileStore((state) => state.resetProfile);
   const [loading, setLoading] = useState(false);
   const form = useForm<RegisterDetailsFormValues>({
     resolver: zodResolver(registerDetailsSchema),
@@ -58,6 +60,7 @@ export default function RegisterStep3({ loginEmail, ticket, registrationState, o
       const data = response.data.data;
       const session = createSession(data.access_token, data.refresh_token, data.expires_in);
       setSession(session);
+      resetProfile();
       addAccount({ userId: data.user.id, loginEmail: data.user.login_email, name: data.user.name, avatar: null, session });
       router.replace("/home");
     } catch (error) {
@@ -70,7 +73,7 @@ export default function RegisterStep3({ loginEmail, ticket, registrationState, o
   const fields: Array<{ name: "name" | "phoneNumber" | "qqNumber" | "major" | "studentId"; label: string; type?: string }> = [
     { name: "name", label: "真实姓名" }, { name: "studentId", label: "学号" },
     { name: "major", label: "专业" }, { name: "phoneNumber", label: "手机号", type: "tel" },
-    { name: "qqNumber", label: "QQ 号（选填）" },
+    { name: "qqNumber", label: "QQ 号" },
   ];
 
   return (

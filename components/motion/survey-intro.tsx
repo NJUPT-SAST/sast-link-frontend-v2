@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useHideCursor } from "@/hooks/use-hide-cursor";
 import { generateStars, type Star } from "@/lib/visual/starfield";
 
 const SEEN_KEY = "sast-survey-seen";
@@ -29,6 +30,8 @@ export function SurveyIntro() {
     () => generateStars(INTRO_SEED, 1440, 900).slice(0, STAR_COUNT),
     [],
   );
+  const playing = phase !== "hidden" && phase !== "done";
+  useHideCursor(playing);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

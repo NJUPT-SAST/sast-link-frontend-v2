@@ -10,6 +10,7 @@ import { forgotPasswordSendCode, resetPassword } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
 import { loginEmailSchema, resetPasswordFormSchema, type ResetPasswordFormValues } from "@/lib/validations/auth";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { PageTransition } from "@/components/animation/page-transition";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
@@ -43,41 +44,43 @@ export default function ResetPage() {
     <AuthShell
       tech={sent ? "Reset / 02 of 02" : "Reset / 01 of 02"}
     >
-      <div className="mb-8 flex flex-col gap-2.5">
-        <h2 className="type-title1">{sent ? "设置新密码" : "重置密码"}</h2>
-        <p className="text-[15px] text-muted-foreground">
-          {sent ? `验证码已发送至 ${loginEmail}` : "输入注册邮箱，我们发送验证码。"}
-        </p>
-      </div>
-      <Form {...form}>
-        <form onSubmit={submit} className="flex flex-col gap-4">
-          {!sent && (
-            <>
-              <AuthFormField label="邮箱" type="email" value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} placeholder="name@njupt.edu.cn" />
-              <Button type="button" onClick={sendCode} disabled={loading} className="w-full">
-                {loading ? <DotLoading /> : "发送验证码"}
-              </Button>
-            </>
-          )}
-          {sent && (
-            <>
-              <FormField control={form.control} name="code" render={({ field }) => <FormItem><AuthFormField {...field} ref={field.ref} label="验证码" maxLength={6} inputMode="numeric" /><div className="min-h-4 text-xs [&_p]:text-destructive"><FormMessage /></div></FormItem>} />
-              <FormField control={form.control} name="password" render={({ field }) => <FormItem><AuthFormField {...field} ref={field.ref} label="新密码" type="password" description="至少 8 位，建议混合字母与数字。" /><div className="min-h-4 text-xs [&_p]:text-destructive"><FormMessage /></div></FormItem>} />
-              <FormField control={form.control} name="confirmPassword" render={({ field, fieldState }) => <FormItem><AuthFormField {...field} ref={field.ref} label="确认新密码" type="password" invalid={!!fieldState.error} /><div className="min-h-4 text-xs [&_p]:text-destructive"><FormMessage /></div></FormItem>} />
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? <DotLoading /> : "重置密码"}
-              </Button>
-            </>
-          )}
-          <FormError message={form.formState.errors.root?.message} />
-        </form>
-      </Form>
-      {!sent && (
-        <p className="mt-7 text-center text-sm text-muted-foreground">
-          想起来了？
-          <Link href="/login" className="text-link hover:underline">返回登录</Link>
-        </p>
-      )}
+      <PageTransition variant="fade" key={sent ? "done" : "send"}>
+        <div className="mb-8 flex flex-col gap-2.5">
+          <h2 className="type-title1">{sent ? "设置新密码" : "重置密码"}</h2>
+          <p className="text-[15px] text-muted-foreground">
+            {sent ? `验证码已发送至 ${loginEmail}` : "输入注册邮箱，我们发送验证码。"}
+          </p>
+        </div>
+        <Form {...form}>
+          <form onSubmit={submit} className="flex flex-col gap-4">
+            {!sent && (
+              <>
+                <AuthFormField label="邮箱" type="email" value={loginEmail} onChange={(event) => setLoginEmail(event.target.value)} placeholder="name@njupt.edu.cn" />
+                <Button type="button" onClick={sendCode} disabled={loading} className="w-full">
+                  {loading ? <DotLoading /> : "发送验证码"}
+                </Button>
+              </>
+            )}
+            {sent && (
+              <>
+                <FormField control={form.control} name="code" render={({ field }) => <FormItem><AuthFormField {...field} ref={field.ref} label="验证码" maxLength={6} inputMode="numeric" /><div className="min-h-4 text-xs [&_p]:text-destructive"><FormMessage /></div></FormItem>} />
+                <FormField control={form.control} name="password" render={({ field }) => <FormItem><AuthFormField {...field} ref={field.ref} label="新密码" type="password" description="至少 8 位，建议混合字母与数字。" /><div className="min-h-4 text-xs [&_p]:text-destructive"><FormMessage /></div></FormItem>} />
+                <FormField control={form.control} name="confirmPassword" render={({ field, fieldState }) => <FormItem><AuthFormField {...field} ref={field.ref} label="确认新密码" type="password" invalid={!!fieldState.error} /><div className="min-h-4 text-xs [&_p]:text-destructive"><FormMessage /></div></FormItem>} />
+                <Button type="submit" disabled={loading} className="w-full">
+                  {loading ? <DotLoading /> : "重置密码"}
+                </Button>
+              </>
+            )}
+            <FormError message={form.formState.errors.root?.message} />
+          </form>
+        </Form>
+        {!sent && (
+          <p className="mt-7 text-center text-sm text-muted-foreground">
+            想起来了？
+            <Link href="/login" className="text-link hover:underline">返回登录</Link>
+          </p>
+        )}
+      </PageTransition>
     </AuthShell>
   );
 }

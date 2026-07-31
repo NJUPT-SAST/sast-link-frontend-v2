@@ -42,8 +42,8 @@ export function generateStars(seed: number, width: number, height: number): Star
   return stars;
 }
 
-export function twinkleOpacity(star: Star, timeSec: number): number {
-  return 0.15 + 0.85 * (0.5 + 0.5 * Math.sin((timeSec * 2 * Math.PI) / star.period + star.phase));
+export function twinkleOpacity(star: Star, timeSec: number, minOpacity = 0.15): number {
+  return minOpacity + (1 - minOpacity) * (0.5 + 0.5 * Math.sin((timeSec * 2 * Math.PI) / star.period + star.phase));
 }
 
 export interface DrawOptions {
@@ -54,6 +54,7 @@ export interface DrawOptions {
   offsetX: number; // -1..1 pointer, drives parallax
   offsetY: number;
   color: string;
+  minOpacity?: number;
 }
 
 export function drawStars(ctx: CanvasRenderingContext2D, stars: Star[], o: DrawOptions): void {
@@ -65,7 +66,7 @@ export function drawStars(ctx: CanvasRenderingContext2D, stars: Star[], o: DrawO
     const px = (x * o.width + o.offsetX * PARALLAX_PX[s.layer]) * o.dpr;
     const py = (y * o.height + o.offsetY * PARALLAX_PX[s.layer]) * o.dpr;
     const sz = s.size * o.dpr;
-    ctx.globalAlpha = twinkleOpacity(s, o.timeSec);
+    ctx.globalAlpha = twinkleOpacity(s, o.timeSec, o.minOpacity);
     ctx.fillRect(px, py, sz, sz);
     if (s.plus) {
       ctx.fillRect(px - sz, py, sz, sz);

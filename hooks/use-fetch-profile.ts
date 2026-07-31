@@ -12,8 +12,15 @@ export function useFetchProfile() {
   const setProfile = useUserProfileStore((state) => state.setProfile);
   const updateAccount = useUserListStore((state) => state.updateAccount);
 
-  return useSWR(
-    () => (getSession() ? "user-profile" : null),
+  const swr = useSWR(
+    () => {
+      const session = getSession();
+      if (!session) return null;
+      // Fingerprint the key by session so switching accounts or logging in
+      // again invalidates the previous account's cached profile instead of
+      // showing stale data under the new session.
+      return `user-profile:${session.accessToken.slice(0, 16)}`;
+    },
     async () => {
       const response = await getUserProfile();
       const data = response.data.data;
@@ -30,4 +37,6 @@ export function useFetchProfile() {
     },
     { revalidateOnFocus: false },
   );
+
+  return { ...swr, isLoading: swr.isLoading };
 }

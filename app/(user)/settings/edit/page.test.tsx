@@ -16,7 +16,7 @@ const profile = {
   state: "njupter" as const,
   emailType: "njupt_email" as const,
   createdAt: "2026-05-28T12:00:00Z",
-  department: "软件研发部" as const,
+  department: "software" as const,
   avatar: null,
   intro: "正在四处游荡中...",
   blogUrl: "https://blog.example.com",
@@ -25,15 +25,17 @@ const profile = {
 };
 
 const mockUpdateUserProfile = jest.fn();
-const mockUpdateProfile = jest.fn();
+const mockSetProfile = jest.fn();
 const mockMutate = jest.fn();
-const mockRouterBack = jest.fn();
+const mockRouterPush = jest.fn();
+const mockScrollToFirstError = jest.fn();
+const mockMapProfile = jest.fn((data) => data);
 
 jest.mock("@/store/use-user-profile-store", () => ({
   useUserProfileStore: (selector: (state: unknown) => unknown) => {
     const state = {
       profile,
-      updateProfile: mockUpdateProfile,
+      setProfile: mockSetProfile,
     };
     return selector(state);
   },
@@ -44,15 +46,20 @@ jest.mock("swr", () => ({
 }));
 
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ back: mockRouterBack }),
+  useRouter: () => ({ push: mockRouterPush }),
+}));
+
+jest.mock("@/lib/form", () => ({
+  scrollToFirstError: (errors: unknown, order: unknown) =>
+    mockScrollToFirstError(errors, order),
 }));
 
 jest.mock("@/lib/api/user", () => ({
   updateUserProfile: (...args: unknown[]) => mockUpdateUserProfile(...args),
 }));
 
-jest.mock("@/components/user/avatar-cropper-dialog", () => ({
-  AvatarCropperDialog: () => <div data-testid="avatar-cropper" />,
+jest.mock("@/lib/api/mappers", () => ({
+  mapProfile: (data: unknown) => mockMapProfile(data),
 }));
 
 jest.mock("@/components/navigation/back-button", () => ({
@@ -66,16 +73,17 @@ jest.mock("@/lib/message", () => ({
 describe("EditPage", () => {
   beforeEach(() => {
     mockUpdateUserProfile.mockReset();
-    mockUpdateProfile.mockReset();
+    mockSetProfile.mockReset();
     mockMutate.mockReset();
-    mockRouterBack.mockReset();
+    mockRouterPush.mockReset();
+    mockScrollToFirstError.mockReset();
+    mockMapProfile.mockReset().mockImplementation((data) => data);
   });
 
   it("renders all editable sections", () => {
     render(<EditPage />);
 
     expect(screen.getByText("头像")).toBeInTheDocument();
-    expect(screen.getByTestId("avatar-cropper")).toBeInTheDocument();
     expect(screen.getByText("基本资料")).toBeInTheDocument();
     expect(screen.getByText("学籍信息")).toBeInTheDocument();
     expect(screen.getByText("联系方式")).toBeInTheDocument();
@@ -98,7 +106,9 @@ describe("EditPage", () => {
   });
 
   it("submits valid form and calls updateUserProfile", async () => {
-    mockUpdateUserProfile.mockResolvedValueOnce({});
+    mockUpdateUserProfile.mockResolvedValueOnce({
+      data: { data: { user: profile } },
+    });
 
     render(<EditPage />);
 
@@ -113,6 +123,7 @@ describe("EditPage", () => {
     expect(payload.name).toBe("张三");
     expect(payload.college).toBe("计算机学院、软件学院、网络空间安全学院");
     expect(payload.major).toBe("软件工程");
+    expect(payload.department).toBe("software");
   });
 
   it("shows validation error when nickname is cleared", async () => {
@@ -142,17 +153,25 @@ describe("EditPage", () => {
       expect(screen.getByText("昵称已存在")).toBeInTheDocument();
     });
 
-    expect(mockRouterBack).not.toHaveBeenCalled();
+    expect(mockRouterPush).not.toHaveBeenCalled();
   });
 
   it("shows empty optional fields with empty pre-fill", () => {
-    const slim = { ...profile, phoneNumber: null, qqNumber: null, department: null, email: "b24040001@njupt.edu.cn", blogUrl: null, githubUrl: null };
+    const slim = {
+      ...profile,
+      phoneNumber: null,
+      qqNumber: null,
+      department: null,
+      email: "b24040001@njupt.edu.cn",
+      blogUrl: null,
+      githubUrl: null,
+    };
     jest.resetModules();
     jest.mock("@/store/use-user-profile-store", () => ({
       useUserProfileStore: (selector: (state: unknown) => unknown) => {
         const state = {
           profile: slim,
-          updateProfile: mockUpdateProfile,
+          setProfile: mockSetProfile,
         };
         return selector(state);
       },
@@ -162,17 +181,73 @@ describe("EditPage", () => {
     // Instead, just verify the default pre-fill handles nulls.
   });
 
-  it("updates store and navigates back on success", async () => {
-    mockUpdateUserProfile.mockResolvedValueOnce({});
+  it("updates store from backend response and navigates on success", async () => {
+    const backendUser = {
+      ...profile,
+      department: "media",
+      login_email: profile.loginEmail,
+      phone_number: profile.phoneNumber,
+      qq_number: profile.qqNumber,
+      student_id: "B24040001",
+      profile: {
+        nickname: profile.nickname,
+        department: "media",
+        intro: profile.intro,
+        email: profile.email,
+        avatar: profile.avatar,
+        blog_url: profile.blogUrl,
+        github_url: profile.githubUrl,
+      },
+      identities: [],
+      created_at: profile.createdAt,
+      updated_at: profile.createdAt,
+    };
+    mockUpdateUserProfile.mockResolvedValueOnce({
+      data: { data: { user: backendUser } },
+    });
+    mockMapProfile.mockImplementation((data) => ({
+      ...profile,
+      department: data.profile?.department ?? profile.department,
+    }));
 
     render(<EditPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
 
     await waitFor(() => {
-      expect(mockUpdateProfile).toHaveBeenCalled();
+      expect(mockSetProfile).toHaveBeenCalled();
       expect(mockMutate).toHaveBeenCalledWith("user-profile");
-      expect(mockRouterBack).toHaveBeenCalled();
+      expect(mockRouterPush).toHaveBeenCalledWith("/settings");
     });
+
+    const updatedProfile = mockSetProfile.mock.calls[0][0];
+    expect(updatedProfile.department).toBe("media");
+  });
+
+  it("calls scrollToFirstError when validation fails", async () => {
+    render(<EditPage />);
+
+    const input = screen.getByLabelText("昵称");
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("昵称不能为空")).toBeInTheDocument();
+    });
+
+    expect(mockScrollToFirstError).toHaveBeenCalled();
+    const [, order] = mockScrollToFirstError.mock.calls[0];
+    expect(order).toEqual([
+      "nickname",
+      "name",
+      "intro",
+      "major",
+      "college",
+      "department",
+      "phoneNumber",
+      "qqNumber",
+      "blogUrl",
+      "githubUrl",
+    ]);
   });
 });

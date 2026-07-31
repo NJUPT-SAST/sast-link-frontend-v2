@@ -95,4 +95,16 @@ describe("TargetCursor", () => {
     fireEvent.mouseUp(window);
     await waitFor(() => expect(arm.style.transform).not.toBe(duringPress));
   });
+
+  it("hides while a fullscreen overlay sets data-cursor-hidden", async () => {
+    mockPointer(true);
+    render(<TargetCursor />);
+    const root = await screen.findByTestId("target-cursor");
+
+    document.documentElement.setAttribute("data-cursor-hidden", "");
+    await waitFor(() => expect(root.style.visibility).toBe("hidden"));
+
+    document.documentElement.removeAttribute("data-cursor-hidden");
+    await waitFor(() => expect(root.style.visibility).toBe(""));
+  });
 });

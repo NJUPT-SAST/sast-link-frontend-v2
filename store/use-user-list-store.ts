@@ -59,6 +59,18 @@ export const useUserListStore = create<UserListState>()(
       name: "user-list-store",
       version: 2,
       migrate: () => ({ accounts: [] }),
+      // Drop accounts whose session token is structurally invalid. Expired
+      // access tokens can still be refreshed, so we keep them in the picker.
+      onRehydrateStorage: () => (state) => {
+        if (!state?.accounts) return;
+        state.accounts = state.accounts.filter(
+          (account) =>
+            account.session &&
+            typeof account.session.accessToken === "string" &&
+            typeof account.session.refreshToken === "string" &&
+            typeof account.session.expiresAt === "number",
+        );
+      },
     },
   ),
 );

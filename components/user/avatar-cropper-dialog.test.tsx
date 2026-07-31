@@ -46,4 +46,17 @@ describe("AvatarCropperDialog", () => {
 
     expect(screen.getByText("U")).toBeInTheDocument();
   });
+
+  it("has lift and press micro-interaction classes on the change button", () => {
+    render(
+      <AvatarCropperDialog
+        avatarUrl={null}
+        fallbackChar="U"
+        onUploaded={jest.fn()}
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: /更换头像/ });
+    expect(button).toHaveClass("hover:-translate-y-px", "active:scale-[.98]");
+  });
 });

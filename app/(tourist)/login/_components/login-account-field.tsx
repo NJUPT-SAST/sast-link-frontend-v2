@@ -10,8 +10,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const DOMAINS = ["@njupt.edu.cn", "@sast.fun"] as const;
+const DOMAINS = ["@njupt.edu.cn", "@sast.fun", "其他邮箱"] as const;
 type Domain = (typeof DOMAINS)[number];
+
+const OTHER_EMAIL = "其他邮箱";
 
 interface LoginAccountFieldProps {
   value: { localPart: string; domain: Domain };
@@ -21,6 +23,8 @@ interface LoginAccountFieldProps {
   autoComplete?: string;
   /** When true, typing @ does NOT auto-resolve the domain (e.g. register). */
   disableAtDetection?: boolean;
+  /** Restrict the available domains. Defaults to all domains. */
+  allowedDomains?: readonly Domain[];
 }
 
 export function LoginAccountField({
@@ -30,18 +34,23 @@ export function LoginAccountField({
   error,
   autoComplete = "username",
   disableAtDetection = false,
+  allowedDomains = DOMAINS,
 }: LoginAccountFieldProps) {
   const [focused, setFocused] = useState(false);
+  const domainOptions = useMemo(
+    () => DOMAINS.filter((d) => allowedDomains.includes(d)),
+    [allowedDomains],
+  );
   const atResolved = useMemo(() => {
-    if (disableAtDetection) return null;
+    if (disableAtDetection || value.domain === OTHER_EMAIL) return null;
     const atIndex = value.localPart.indexOf("@");
     if (atIndex < 0) return null;
     const suffix = value.localPart.slice(atIndex + 1);
-    return DOMAINS.find((d) => d.slice(1) === suffix) ?? null;
-  }, [value.localPart, disableAtDetection]);
+    return DOMAINS.find((d) => d !== OTHER_EMAIL && d.slice(1) === suffix) ?? null;
+  }, [value.localPart, value.domain, disableAtDetection]);
 
   const handleChange = (raw: string) => {
-    if (disableAtDetection) {
+    if (disableAtDetection || value.domain === OTHER_EMAIL) {
       onChange({ ...value, localPart: raw });
       return;
     }
@@ -52,7 +61,9 @@ export function LoginAccountField({
     }
     const prefix = raw.slice(0, atIndex);
     const suffix = raw.slice(atIndex + 1);
-    const matched = DOMAINS.find((d) => d.slice(1) === suffix);
+    const matched = DOMAINS.find(
+      (d) => d !== OTHER_EMAIL && d.slice(1) === suffix,
+    );
     if (matched) {
       onChange({ localPart: prefix, domain: matched });
     } else {
@@ -100,7 +111,7 @@ export function LoginAccountField({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[9rem]">
-              {DOMAINS.map((domain) => (
+              {domainOptions.map((domain) => (
                 <DropdownMenuItem
                   key={domain}
                   onClick={() => onChange({ ...value, domain })}
@@ -118,7 +129,17 @@ export function LoginAccountField({
       </div>
       {error ? (
         <p className="mt-1 min-h-4 text-xs text-destructive">{error}</p>
-      ) : null}
+      ) : value.localPart ? (
+        <p className="mt-1 min-h-4 text-xs text-muted-foreground">
+          将使用{" "}
+          {value.domain === OTHER_EMAIL || atResolved
+            ? value.localPart
+            : `${value.localPart}${value.domain}`}{" "}
+          继续
+        </p>
+      ) : (
+        <p className="mt-1 min-h-4" />
+      )}
     </div>
   );
 }

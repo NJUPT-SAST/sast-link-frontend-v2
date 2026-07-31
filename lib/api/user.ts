@@ -31,21 +31,24 @@ export function getUserIdentities() {
   );
 }
 
-// TODO: pending backend authorization contract; wire up in
-// app/(user)/profile/edit/safety/page.tsx once the bind/unbind endpoints ship.
-export function bindGithub(code: string) {
+/**
+ * Bind a third-party account to the current user. `redirectUri` must echo the
+ * one used when the authorize URL was built — the backend exchanges the code
+ * against it.
+ */
+export function bindGithub(code: string, redirectUri?: string) {
   return apiClient.post<ApiEnvelope<{ identity: Identity }>>(
     "/user/identities/github",
     null,
-    { params: { code } },
+    { params: { code, redirect_uri: redirectUri } },
   );
 }
 
-export function bindLark(code: string) {
+export function bindLark(code: string, redirectUri?: string) {
   return apiClient.post<ApiEnvelope<{ identity: Identity }>>(
     "/user/identities/lark",
     null,
-    { params: { code } },
+    { params: { code, redirect_uri: redirectUri } },
   );
 }
 

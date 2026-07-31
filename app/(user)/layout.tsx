@@ -13,10 +13,13 @@ export default function UserLayout({
   const router = useRouter();
 
   useEffect(() => {
-    const session = getSession();
-    if (!session) {
-      router.replace("/login");
-    }
+    const check = () => {
+      if (!getSession()) router.replace("/login");
+    };
+    check();
+    // Cross-tab: another tab logged out and cleared the token.
+    window.addEventListener("storage", check);
+    return () => window.removeEventListener("storage", check);
   }, [router]);
 
   return <>{children}</>;

@@ -34,8 +34,13 @@ jest.mock("@/store/use-user-profile-store", () => ({
 
 jest.mock("@/lib/api/user", () => ({ updateUserProfile: jest.fn() }));
 
+let lastObserverOptions: IntersectionObserverInit | undefined;
+
 beforeEach(() => {
   class IntersectionObserverMock {
+    constructor(_callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
+      lastObserverOptions = options;
+    }
     observe() {}
     disconnect() {}
   }
@@ -57,5 +62,11 @@ describe("ProfileCard", () => {
     render(<ProfileCard />);
     fireEvent.doubleClick(screen.getByText("你还没留下签名哦～"));
     expect(screen.getByRole("textbox", { name: "签名" })).toBeInTheDocument();
+  });
+
+  it("observes the card with a low threshold and top-bar root margin", () => {
+    render(<ProfileCard />);
+    expect(lastObserverOptions?.threshold).toBe(0.25);
+    expect(lastObserverOptions?.rootMargin).toBe("-64px 0px 0px 0px");
   });
 });

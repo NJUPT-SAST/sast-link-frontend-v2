@@ -48,7 +48,10 @@ export default function LoginStep1({ onNext }: LoginStep1Props) {
   const handleSubmit = form.handleSubmit(({ account }) => {
     setLoading(true);
     try {
-      onNext(`${account.localPart.trim()}${account.domain}`);
+      const loginEmail = account.domain.startsWith("@")
+        ? `${account.localPart.trim()}${account.domain}`
+        : account.localPart.trim();
+      onNext(loginEmail);
     } finally {
       setLoading(false);
     }

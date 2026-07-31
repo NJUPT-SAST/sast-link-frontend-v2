@@ -48,6 +48,7 @@
 
 :root {
   --radius: 0;
+  --starfield: #404040;
   --background: #fafafa;
   --foreground: #0a0a0a;
   --card: #fafafa;
@@ -82,6 +83,7 @@
 }
 
 .dark {
+  --starfield: #ffffff;
   --background: #060606;
   --foreground: #ffffff;
   --card: #060606;
@@ -118,6 +120,10 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 4rem;
   }
   body {
     @apply bg-background text-foreground;
@@ -157,6 +163,37 @@
 .pt-transition { opacity: 0; animation: pt-in 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) forwards; }
 @media (prefers-reduced-motion: reduce) { .pt-transition { animation: none; opacity: 1; } }
 
+/* page-transition variants: distinct entrance per route, shared curve */
+@keyframes pt-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pt-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes pt-blur { from { opacity: 0; filter: blur(8px); } to { opacity: 1; filter: none; } }
+@keyframes pt-zoom { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+.pt-fade, .pt-rise, .pt-blur, .pt-zoom {
+  opacity: 0;
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  animation-fill-mode: forwards;
+}
+.pt-fade { animation-name: pt-fade; }
+.pt-rise { animation-name: pt-rise; animation-delay: var(--d, 0s); }
+.pt-blur { animation-name: pt-blur; }
+.pt-zoom { animation-name: pt-zoom; }
+@media (prefers-reduced-motion: reduce) {
+  .pt-fade, .pt-rise, .pt-blur, .pt-zoom { animation: none; opacity: 1; filter: none; transform: none; }
+}
+
+/* staggered child rise: section/list entrances, reuses the rise keyframe */
+.stagger-rise > * { opacity: 0; animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) forwards; }
+.stagger-rise > *:nth-child(1) { animation-delay: 0s; }
+.stagger-rise > *:nth-child(2) { animation-delay: 0.07s; }
+.stagger-rise > *:nth-child(3) { animation-delay: 0.14s; }
+.stagger-rise > *:nth-child(4) { animation-delay: 0.21s; }
+.stagger-rise > *:nth-child(5) { animation-delay: 0.28s; }
+.stagger-rise > *:nth-child(6) { animation-delay: 0.35s; }
+.stagger-rise > *:nth-child(7) { animation-delay: 0.42s; }
+.stagger-rise > *:nth-child(8) { animation-delay: 0.49s; }
+@media (prefers-reduced-motion: reduce) { .stagger-rise > * { animation: none; opacity: 1; } }
+
 /* login-success overlay: full scrim flashes in then dissolves */
 @keyframes ls-scrim {
   0%   { opacity: 0; }
@@ -170,7 +207,12 @@
 }
 
 .rise { opacity: 0; animation: rise 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) forwards; animation-delay: var(--d, 0s); }
+@media (prefers-reduced-motion: reduce) { .rise { animation: none; opacity: 1; } }
 .status-dot-pulse { animation: pulse-dot 2.4s ease-in-out infinite; }
+.skeleton {
+  background-color: var(--muted);
+  border-radius: 2px;
+}
 .skeleton-shimmer {
   background-image: linear-gradient(90deg, transparent, color-mix(in srgb, var(--foreground) 6%, transparent), transparent);
   background-size: 200px 100%;
@@ -191,6 +233,7 @@
 
 /* ---------- starfield system ---------- */
 .tc-active, .tc-active * { cursor: none !important; }
+.tc-active input, .tc-active textarea, .tc-active select { cursor: text !important; }
 
 @keyframes glitch-in {
   0% { clip-path: inset(0 0 72% 0); transform: translateX(-4px); opacity: 0; }

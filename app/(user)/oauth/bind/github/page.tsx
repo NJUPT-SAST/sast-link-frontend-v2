@@ -2,14 +2,18 @@
 
 import { Suspense } from "react";
 
-import { OAuthCallbackContent } from "@/components/auth/oauth-callback-content";
+import { OAuthBindContent } from "@/components/auth/oauth-bind-content";
 import { GithubIcon } from "@/components/icons/brand-icons";
 
-export default function GithubCallbackPage() {
+export default function GithubBindPage() {
   return (
     <div className="grid min-h-screen w-full place-items-center px-6">
       <Suspense>
-        <OAuthCallbackContent provider={{ name: "GitHub", icon: <GithubIcon /> }} />
+        <OAuthBindContent
+          provider="github"
+          providerName="GitHub"
+          icon={<GithubIcon />}
+        />
       </Suspense>
     </div>
   );

@@ -5,7 +5,7 @@ import { COLLEGES } from "@/lib/api/types";
 const studentIdPattern = /^[A-Za-z]\d{8}$/;
 const emailPattern = /^[^\s@]+@(njupt\.edu\.cn|sast\.fun)$/i;
 const verificationCodePattern = /^\d{6}$/;
-const strongPasswordPattern = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+const passwordPattern = /^.{8,}$/;
 
 export const loginAccountSchema = z
   .string()
@@ -25,7 +25,31 @@ export const loginEmailSchema = z
   .regex(emailPattern, "仅支持 @njupt.edu.cn 或 @sast.fun 邮箱");
 
 export const registerAccountFormSchema = z.object({
-  loginEmail: loginEmailSchema,
+  account: z
+    .object({
+      localPart: z.string().trim(),
+      domain: z.enum(["@njupt.edu.cn", "@sast.fun"]),
+    })
+    .superRefine(({ localPart }, ctx) => {
+      if (localPart.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.too_small,
+          minimum: 1,
+          type: "string",
+          inclusive: true,
+          message: "账户不可为空",
+          path: ["localPart"],
+        });
+        return;
+      }
+      if (localPart.includes("@")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "邮箱前缀不能包含 @",
+          path: ["localPart"],
+        });
+      }
+    }),
 });
 
 export const verificationCodeSchema = z
@@ -35,7 +59,7 @@ export const verificationCodeSchema = z
 
 export const passwordSchema = z
   .string()
-  .regex(strongPasswordPattern, "密码至少 8 位且需同时包含字母和数字");
+  .regex(passwordPattern, "密码至少 8 位");
 
 export const registerDetailsSchema = z
   .object({
@@ -68,7 +92,7 @@ export const loginAccountFormSchema = z.object({
   account: z
     .object({
       localPart: z.string().trim(),
-      domain: z.enum(["@njupt.edu.cn", "@sast.fun"]),
+      domain: z.enum(["@njupt.edu.cn", "@sast.fun", "其他邮箱"]),
     })
     .superRefine(({ localPart, domain }, ctx) => {
       if (localPart.length === 0) {
@@ -82,14 +106,17 @@ export const loginAccountFormSchema = z.object({
         });
         return;
       }
-      if (domain === "@njupt.edu.cn" && localPart.includes("@")) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "邮箱前缀不能包含 @",
-          path: ["localPart"],
-        });
+      if (domain === "其他邮箱") {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(localPart)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "请输入有效的邮箱地址",
+            path: ["localPart"],
+          });
+        }
+        return;
       }
-      if (domain === "@sast.fun" && localPart.includes("@")) {
+      if (localPart.includes("@")) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "邮箱前缀不能包含 @",

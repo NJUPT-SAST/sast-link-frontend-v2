@@ -20,7 +20,9 @@ describe("profileRules", () => {
       const regex = pattern(rule.pattern).value;
       expect(regex.test("")).toBe(true);
       expect(regex.test("https://example.com")).toBe(true);
+      expect(regex.test("https://example.com/path")).toBe(true);
       expect(regex.test("example.com")).toBe(false);
+      expect(regex.test("https://")).toBe(false);
     }
   });
 });
@@ -34,7 +36,7 @@ describe("profileEditSchema", () => {
     qqNumber: "123456789",
     college: "计算机学院、软件学院、网络空间安全学院",
     major: "软件工程",
-    department: "软件研发部",
+    department: "software",
     blogUrl: "https://blog.example.com",
     githubUrl: "https://github.com/alice",
   };
@@ -94,6 +96,16 @@ describe("profileEditSchema", () => {
 
   it("rejects invalid department", () => {
     const r = profileEditSchema.safeParse({ ...valid, department: "engineering" });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects legacy chinese department names", () => {
+    const r = profileEditSchema.safeParse({ ...valid, department: "软件研发部" });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects malformed absolute urls", () => {
+    const r = profileEditSchema.safeParse({ ...valid, blogUrl: "https://" });
     expect(r.success).toBe(false);
   });
 

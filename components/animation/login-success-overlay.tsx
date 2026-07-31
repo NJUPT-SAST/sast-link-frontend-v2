@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { useHideCursor } from "@/hooks/use-hide-cursor";
+
 interface LoginSuccessOverlayProps {
   onDone: () => void;
 }
@@ -12,6 +14,8 @@ interface LoginSuccessOverlayProps {
  * during auth step changes.
  */
 export function LoginSuccessOverlay({ onDone }: LoginSuccessOverlayProps) {
+  useHideCursor();
+
   useEffect(() => {
     const id = setTimeout(onDone, 700);
     return () => clearTimeout(id);
@@ -20,7 +24,7 @@ export function LoginSuccessOverlay({ onDone }: LoginSuccessOverlayProps) {
   return (
     <div
       aria-hidden="true"
-      className="fixed inset-0 z-[9998] flex items-center justify-center"
+      className="pointer-events-none fixed inset-0 z-[9998] flex items-center justify-center"
     >
       {/* scrim — fades in then out */}
       <div className="absolute inset-0 animate-[ls-scrim_0.7s_ease-out_forwards] bg-foreground" />

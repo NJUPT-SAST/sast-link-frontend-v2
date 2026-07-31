@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
@@ -8,6 +8,7 @@ import { toApiError } from "@/lib/api/errors";
 import { exchangeLoginCode } from "@/lib/api/oauth";
 import { createSession, setSession } from "@/lib/token";
 import { useUserListStore } from "@/store/use-user-list-store";
+import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -44,7 +45,9 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const addAccount = useUserListStore((state) => state.addAccount);
+  const resetProfile = useUserProfileStore((state) => state.resetProfile);
   const [exchangeError, setExchangeError] = useState<string | null>(null);
+  const exchangedRef = useRef(false);
   const code = searchParams.get("code");
   const inputError =
     searchParams.get("error_description") ||
@@ -61,8 +64,10 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
     }
 
     if (!code) return;
+    if (exchangedRef.current) return;
+    exchangedRef.current = true;
 
-    exchangeLoginCode(code, searchParams.get("state") ?? undefined)
+    exchangeLoginCode(code)
       .then((response) => {
         const data = response.data.data;
         const session = createSession(
@@ -71,6 +76,7 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
           data.expires_in,
         );
         setSession(session);
+        resetProfile();
         addAccount({
           userId: data.user.id,
           loginEmail: data.user.login_email,

@@ -22,16 +22,10 @@ export const COLLEGES = [
 ] as const;
 
 export type College = (typeof COLLEGES)[number];
-export type Department =
-  | "软件研发部"
-  | "多媒体部"
-  | "电子部"
-  | "办公室部"
-  | "科宣部"
-  | "外联部";
+export type Department = "software" | "media";
 type LoginMethod = "github" | "lark" | "other_mail";
-type UserRole = "freshman" | "member" | "lecturer" | "admin";
-type UserState = "njupter" | "on_sast" | "retired_sast" | "is_deleted";
+export type UserRole = "freshman" | "member" | "lecturer" | "admin";
+export type UserState = "njupter" | "on_sast" | "retired_sast" | "is_deleted";
 type EmailType = "njupt_email" | "sast_email";
 
 export interface ApiEnvelope<T> {
@@ -124,7 +118,7 @@ export interface UpdateProfileRequest {
   major?: string;
   student_id?: string;
   nickname?: string;
-  department?: Department;
+  department?: Department | "";
   intro?: string;
   email?: string;
   blog_url?: string;
@@ -185,4 +179,100 @@ export interface HealthData {
   status: "ok" | "error";
   db: "ok" | "error" | "degraded";
   redis: "ok" | "degraded";
+}
+
+// --- Admin ---
+
+export type ClientType = "first_party" | "third_party";
+export type GrantType = "authorization_code" | "refresh_token";
+export type Scope = "openid" | "profile" | "email";
+
+export interface AdminUserListParams {
+  page?: number;
+  page_size?: number;
+  role?: UserRole;
+  state?: UserState;
+  department?: Department;
+  student_id?: string;
+  keyword?: string;
+}
+
+export interface AdminUserListData {
+  users: UserProfileData[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface AdminUpdateUserRequest {
+  name?: string;
+  phone_number?: string;
+  qq_number?: string;
+  college?: College;
+  major?: string;
+  student_id?: string;
+  login_email?: string;
+  role?: UserRole;
+  state?: UserState;
+  email_type?: EmailType;
+}
+
+export interface AdminOAuthClient {
+  id: number;
+  client_id: string;
+  client_name: string;
+  client_type: ClientType;
+  redirect_uris: string[];
+  grant_types: GrantType[];
+  scopes: Scope[];
+  is_active: boolean;
+  client_secret?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminCreateOAuthClientRequest {
+  client_name: string;
+  client_type: ClientType;
+  redirect_uris: string[];
+  grant_types: GrantType[];
+  scopes: Scope[];
+}
+
+export interface AdminUpdateOAuthClientRequest {
+  client_name?: string;
+  redirect_uris?: string[];
+  is_active?: boolean;
+}
+
+export interface AdminAuditLogListParams {
+  page?: number;
+  page_size?: number;
+  user_id?: number;
+  action?: string;
+  resource?: string;
+  success?: boolean;
+  start_time?: string;
+  end_time?: string;
+}
+
+export interface AdminAuditLog {
+  id: number;
+  user_id: number | null;
+  action: string;
+  resource: string;
+  resource_id: string | null;
+  detail: Record<string, unknown> | null;
+  client_ip: string | null;
+  user_agent: string | null;
+  success: boolean;
+  err_code: number | null;
+  created_at: string;
+}
+
+export interface AdminAuditLogListData {
+  logs: AdminAuditLog[];
+  total: number;
+  page: number;
+  page_size: number;
 }

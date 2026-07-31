@@ -55,6 +55,19 @@ export const userHandlers = [
     bindTickets.set(ticket, email);
     return ok({ bind_ticket: ticket });
   }),
+  http.post(`${API_BASE_URL}/user/identities/:provider`, async ({ request, params }) => {
+    const user = authenticated(request);
+    if (!user) return fail(401, 40100, "未登录");
+    const provider = String(params.provider);
+    if (provider !== "lark" && provider !== "github") return fail(404, 40400, "未知 provider");
+    const url = new URL(request.url);
+    const code = url.searchParams.get("code");
+    if (!code) return fail(400, 40000, "code 不能为空");
+    const next = identity(Date.now(), provider, `mock-${provider}-${code}`);
+    user.profile.identities = user.profile.identities.filter((item) => item.provider !== provider);
+    user.profile.identities.push(next);
+    return ok({ identity: next });
+  }),
   http.post(`${API_BASE_URL}/user/identities/email/verify`, async ({ request }) => {
     const user = authenticated(request);
     if (!user) return fail(401, 40100, "未登录");

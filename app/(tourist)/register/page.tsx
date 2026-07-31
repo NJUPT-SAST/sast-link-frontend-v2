@@ -18,15 +18,17 @@ const STEP_META = {
 function RegisterFlow() {
   const searchParams = useSearchParams();
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [loginEmail, setLoginEmail] = useState("");
   const [registerTicket, setRegisterTicket] = useState("");
   const meta = STEP_META[step];
+  const position = direction === "forward" ? "rightToLeft" : "leftToRight";
 
   return (
     <AuthShell tech={meta.tech}>
-      {step === 1 && <PageTransition><RegisterStep1 onNext={(email) => { setLoginEmail(email); setStep(2); }} /></PageTransition>}
-      {step === 2 && <PageTransition><RegisterStep2 loginEmail={loginEmail} onNext={(ticket) => { setRegisterTicket(ticket); setStep(3); }} onBack={() => setStep(1)} /></PageTransition>}
-      {step === 3 && <PageTransition><RegisterStep3 loginEmail={loginEmail} ticket={registerTicket} registrationState={searchParams.get("registration_state") ?? undefined} oauthState={searchParams.get("state") ?? undefined} defaultName={searchParams.get("name") ?? ""} onBack={() => setStep(2)} /></PageTransition>}
+      {step === 1 && <PageTransition position={position}><RegisterStep1 onNext={(email) => { setLoginEmail(email); setDirection("forward"); setStep(2); }} /></PageTransition>}
+      {step === 2 && <PageTransition position={position}><RegisterStep2 loginEmail={loginEmail} onNext={(ticket) => { setRegisterTicket(ticket); setDirection("forward"); setStep(3); }} onBack={() => { setDirection("back"); setStep(1); }} /></PageTransition>}
+      {step === 3 && <PageTransition position={position}><RegisterStep3 loginEmail={loginEmail} ticket={registerTicket} registrationState={searchParams.get("registration_state") ?? undefined} oauthState={searchParams.get("oauth_state") ?? undefined} defaultName={searchParams.get("name") ?? ""} onBack={() => { setDirection("back"); setStep(2); }} /></PageTransition>}
     </AuthShell>
   );
 }

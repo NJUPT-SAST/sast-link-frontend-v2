@@ -10,6 +10,7 @@ import { passwordLogin } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
 import { createSession, setSession } from "@/lib/token";
 import { useUserListStore } from "@/store/use-user-list-store";
+import { useUserProfileStore } from "@/store/use-user-profile-store";
 import {
   type LoginPasswordFormValues,
   loginPasswordFormSchema,
@@ -29,6 +30,7 @@ interface LoginStep2Props {
 export default function LoginStep2({ loginEmail, onBack }: LoginStep2Props) {
   const router = useRouter();
   const addAccount = useUserListStore((state) => state.addAccount);
+  const resetProfile = useUserProfileStore((state) => state.resetProfile);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const form = useForm<LoginPasswordFormValues>({
@@ -47,6 +49,8 @@ export default function LoginStep2({ loginEmail, onBack }: LoginStep2Props) {
         data.expires_in,
       );
       setSession(session);
+      // Clear any previous account's profile so the new session starts clean.
+      resetProfile();
       addAccount({
         userId: data.user.id,
         loginEmail: data.user.login_email,

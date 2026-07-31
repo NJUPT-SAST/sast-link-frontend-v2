@@ -29,8 +29,8 @@ export function ProfileCard() {
     const section = sectionRef.current;
     if (!section) return;
     const observer = new IntersectionObserver(
-      ([entry]) => setVisible(entry.isIntersecting && entry.intersectionRatio >= 0.92),
-      { threshold: [0, 0.92, 1] },
+      ([entry]) => setVisible(entry.isIntersecting),
+      { threshold: 0.25, rootMargin: "-64px 0px 0px 0px" },
     );
     observer.observe(section);
     return () => observer.disconnect();
@@ -40,23 +40,30 @@ export function ProfileCard() {
     if (editing) inputRef.current?.focus();
   }, [editing]);
 
+  const savingRef = useRef(false);
   const finishEditing = async (save: boolean) => {
+    // Enter and blur both fire this; guard so a second call during the first
+    // in-flight save doesn't trigger a duplicate updateUserProfile request.
+    if (savingRef.current) return;
     setEditing(false);
     if (!save || signature === (profile.intro ?? "")) {
       if (!save) setSignature(profile.intro ?? "");
       return;
     }
+    savingRef.current = true;
     try {
       const response = await updateUserProfile({ intro: signature });
       useUserProfileStore.getState().setProfile(mapProfile(response.data.data.user));
     } catch (error) {
       setSignature(profile.intro ?? "");
       message.error(toApiError(error).message);
+    } finally {
+      savingRef.current = false;
     }
   };
 
   return (
-    <section ref={sectionRef} id="profile-card" className="grid min-h-screen snap-start place-items-center px-5 py-24 sm:px-8">
+    <section ref={sectionRef} id="profile-card" className="grid min-h-screen snap-start scroll-mt-16 place-items-center px-5 py-24 sm:px-8">
       <article
         aria-label="个人名片"
         className={`grid w-full max-w-[760px] border border-hairline bg-background/78 backdrop-blur-md transition-[opacity,transform] duration-500 ease-out md:grid-cols-[230px_minmax(0,1fr)] ${visible ? "translate-y-0 opacity-100" : "translate-y-[18px] opacity-0"}`}

@@ -46,4 +46,24 @@ describe("LoginAccountField", () => {
     );
     expect(screen.getByText("请输入 9 位学号")).toBeInTheDocument();
   });
+
+  it("shows the resolved full email preview when typing a prefix", () => {
+    render(
+      <LoginAccountField
+        value={{ localPart: "alice", domain: "@njupt.edu.cn" }}
+        onChange={jest.fn()}
+      />,
+    );
+    expect(screen.getByText("将使用 alice@njupt.edu.cn 继续")).toBeInTheDocument();
+  });
+
+  it("shows the resolved domain when typing @suffix", () => {
+    render(
+      <LoginAccountField
+        value={{ localPart: "bob@sast.fun", domain: "@njupt.edu.cn" }}
+        onChange={jest.fn()}
+      />,
+    );
+    expect(screen.getByText("将使用 bob@sast.fun 继续")).toBeInTheDocument();
+  });
 });

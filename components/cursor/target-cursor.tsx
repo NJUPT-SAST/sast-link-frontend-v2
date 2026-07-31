@@ -11,6 +11,7 @@ const FOLLOW = 0.5;
 const CORNER_FOLLOW = 0.2;
 const PARALLAX_STRENGTH = 0.025;
 const SPEED_SPREAD = 0.35; // idle brackets breathe outward while moving fast
+const LEAN_MAX = 8; // idle dot leans toward the movement direction while moving
 const PRESS_PULL = 0.35; // corners close toward center while pressed
 const PRESS_IN = 0.45; // press attack speed
 const PRESS_OUT = 0.12; // release rebound speed
@@ -60,6 +61,10 @@ export function TargetCursor() {
 
     document.documentElement.classList.add("tc-active");
 
+    // While a fullscreen overlay (survey intro, login flare) is up, the
+    // reticle is noise — hide it and let the system cursor through.
+    const isHiddenByOverlay = () => document.documentElement.hasAttribute("data-cursor-hidden");
+
     const setTarget = (next: Element | null) => {
       if (next === target) return;
       target = next;
@@ -92,6 +97,20 @@ export function TargetCursor() {
       shown.y = lerp(shown.y, pointer.y, FOLLOW);
       root.style.transform = `translate(${shown.x}px, ${shown.y}px)`;
 
+      const hiddenByOverlay = isHiddenByOverlay();
+      if (hiddenByOverlay) {
+        // Overlay playing: drop the locked target and hide the reticle
+        // entirely (system cursor stays hidden too — nothing on screen).
+        // The visual re-appears and re-locks once the overlay is gone.
+        setTarget(null);
+        root.style.visibility = "hidden";
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+
+      const wasHidden = root.style.visibility === "hidden";
+      if (wasHidden) root.style.visibility = "";
+
       let desired: BracketCorners;
       let centerInRoot: Point = { x: 0, y: 0 };
       if (target && document.body.contains(target)) {
@@ -118,7 +137,9 @@ export function TargetCursor() {
         desired = bracketCorners({ x: 0, y: 0, width: 0, height: 0 }, gap);
       }
 
-      const pull = press * PRESS_PULL;
+      // Expanded (locked) targets keep their bracket size on press — shrinking
+      // a locked frame on click reads as a glitch, so only idle reticles contract.
+      const pull = target ? 0 : press * PRESS_PULL;
       (Object.keys(corners) as Array<keyof BracketCorners>).forEach((key, index) => {
         corners[key].x = lerp(corners[key].x, desired[key].x, CORNER_FOLLOW);
         corners[key].y = lerp(corners[key].y, desired[key].y, CORNER_FOLLOW);
@@ -126,8 +147,14 @@ export function TargetCursor() {
         const py = lerp(corners[key].y, centerInRoot.y, pull);
         arms[index].style.transform = `translate(${px + ARM_OFFSETS[index].x}px, ${py + ARM_OFFSETS[index].y}px)`;
       });
+      // Lean the idle dot toward the movement direction for a physical drag feel;
+      // the dot is hidden while locked, so this only shows when moving free.
+      const lean = speed * LEAN_MAX;
+      const dlen = Math.hypot(dx, dy);
+      const lx = dlen > 0.001 ? (dx / dlen) * lean : 0;
+      const ly = dlen > 0.001 ? (dy / dlen) * lean : 0;
       dot.style.opacity = target ? "0" : "1";
-      dot.style.transform = `translate(-50%, -50%) scale(${1 + press * 0.6})`;
+      dot.style.transform = `translate(calc(-50% + ${lx}px), calc(-50% + ${ly}px)) scale(${1 + press * 0.6})`;
       raf = requestAnimationFrame(frame);
     };
 
@@ -136,6 +163,7 @@ export function TargetCursor() {
     document.addEventListener("mouseout", onOut, { passive: true });
     window.addEventListener("mousedown", onDown);
     window.addEventListener("mouseup", onUp);
+    window.addEventListener("blur", onUp);
     raf = requestAnimationFrame(frame);
 
     return () => {
@@ -146,6 +174,7 @@ export function TargetCursor() {
       document.removeEventListener("mouseout", onOut);
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("blur", onUp);
     };
   }, [enabled]);
 
@@ -154,7 +183,7 @@ export function TargetCursor() {
   const armClass = "pointer-events-none absolute left-0 top-0 size-3";
   return (
     <div ref={rootRef} aria-hidden="true" data-testid="target-cursor" data-state="idle" className="pointer-events-none fixed left-0 top-0 z-[9999] size-0 mix-blend-difference text-white">
-      <div ref={dotRef} className="pointer-events-none absolute left-0 top-0 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-current" />
+      <div ref={dotRef} className="pointer-events-none absolute left-0 top-0 size-1 rounded-full bg-current" />
       <div ref={tlRef} className={`${armClass} border-l-[3px] border-t-[3px] border-current`} />
       <div ref={trRef} className={`${armClass} border-r-[3px] border-t-[3px] border-current`} />
       <div ref={blRef} className={`${armClass} border-b-[3px] border-l-[3px] border-current`} />

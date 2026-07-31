@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -8,7 +8,8 @@ import { useSWRConfig } from "swr";
 
 import { updateUserProfile } from "@/lib/api/user";
 import { toApiError } from "@/lib/api/errors";
-import { COLLEGES, type Department, type UpdateProfileRequest } from "@/lib/api/types";
+import { mapProfile } from "@/lib/api/mappers";
+import { COLLEGES, type UpdateProfileRequest } from "@/lib/api/types";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { avatarFallbackChar } from "@/lib/constants/profile";
 import { message } from "@/lib/message";
@@ -16,12 +17,14 @@ import {
   profileEditSchema,
   type ProfileEditFormValues,
 } from "@/lib/validations/profile";
+import { scrollToFirstError } from "@/lib/form";
 import { AuthFormField } from "@/components/auth/auth-form-field";
-import { AvatarCropperDialog } from "@/components/user/avatar-cropper-dialog";
 import { BackButton } from "@/components/navigation/back-button";
 import { FormError } from "@/components/ui/form-error";
 import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DEFAULT_AVATAR } from "@/lib/constants/profile";
 import {
   Form,
   FormField,
@@ -31,38 +34,46 @@ import {
 
 const DEPARTMENT_OPTIONS = [
   { value: "", label: "未选择" },
-  { value: "软件研发部", label: "软件研发部" },
-  { value: "多媒体部", label: "多媒体部" },
-  { value: "电子部", label: "电子部" },
-  { value: "办公室部", label: "办公室部" },
-  { value: "科宣部", label: "科宣部" },
-  { value: "外联部", label: "外联部" },
+  { value: "software", label: "软件研发部" },
+  { value: "media", label: "多媒体部" },
 ] as const;
 
 const selectClass =
   "h-12 w-full rounded-lg border border-input bg-card px-3.5 text-[15px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
 
+const FIELD_ORDER = [
+  "nickname",
+  "name",
+  "intro",
+  "major",
+  "college",
+  "department",
+  "phoneNumber",
+  "qqNumber",
+  "blogUrl",
+  "githubUrl",
+];
+
 function toUpdateRequest(values: ProfileEditFormValues): UpdateProfileRequest {
-  const department = (values.department || undefined) as Department | undefined;
   return {
     nickname: values.nickname,
     name: values.name,
-    intro: values.intro || undefined,
-    phone_number: values.phoneNumber || undefined,
-    qq_number: values.qqNumber || undefined,
+    intro: values.intro,
+    phone_number: values.phoneNumber,
+    qq_number: values.qqNumber,
     college: values.college,
     major: values.major,
     // student_id is set during registration — not editable
-    department,
+    department: values.department,
     // other emails managed via identities — not editable here
-    blog_url: values.blogUrl || undefined,
-    github_url: values.githubUrl || undefined,
+    blog_url: values.blogUrl,
+    github_url: values.githubUrl,
   };
 }
 
 export default function EditPage() {
   const profile = useUserProfileStore((s) => s.profile);
-  const updateProfile = useUserProfileStore((s) => s.updateProfile);
+  const setProfile = useUserProfileStore((s) => s.setProfile);
   const { mutate } = useSWRConfig();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -83,34 +94,49 @@ export default function EditPage() {
     },
   });
 
-  const submit = form.handleSubmit(async (values) => {
+  // profile loads async after mount - reseed the form once it arrives so a
+  // direct visit/refresh to /settings/edit isn't stuck on empty defaults.
+  // keepDirtyValues prevents a background SWR revalidation from overwriting
+  // edits the user is currently making.
+  useEffect(() => {
+    if (profile.id === 0) return;
+    form.reset(
+      {
+        nickname: profile.nickname,
+        name: profile.name,
+        intro: profile.intro ?? "",
+        phoneNumber: profile.phoneNumber ?? "",
+        qqNumber: profile.qqNumber ?? "",
+        college: profile.college ?? "其他",
+        major: profile.major ?? "",
+        department: profile.department ?? "",
+        blogUrl: profile.blogUrl ?? "",
+        githubUrl: profile.githubUrl ?? "",
+      },
+      { keepDirtyValues: true },
+    );
+  }, [profile, form]);
+
+  const onValid = async (values: ProfileEditFormValues) => {
     setLoading(true);
     try {
-      await updateUserProfile(toUpdateRequest(values));
-      const dept = (values.department || null) as Department | null;
-      updateProfile({
-        nickname: values.nickname,
-        name: values.name,
-        intro: values.intro || null,
-        phoneNumber: values.phoneNumber || null,
-        qqNumber: values.qqNumber || null,
-        college: values.college,
-        major: values.major,
-        // studentId is set during registration — not editable
-        department: dept,
-        // other emails managed via identities — not editable here
-        blogUrl: values.blogUrl || null,
-        githubUrl: values.githubUrl || null,
-      });
+      const response = await updateUserProfile(toUpdateRequest(values));
+      setProfile(mapProfile(response.data.data.user));
       mutate("user-profile");
       message.success("修改成功");
-      router.back();
+      router.push("/settings");
     } catch (error) {
       form.setError("root", { message: toApiError(error).message });
     } finally {
       setLoading(false);
     }
-  });
+  };
+
+  const onInvalid = () => {
+    scrollToFirstError(form.formState.errors, FIELD_ORDER);
+  };
+
+  const submit = form.handleSubmit(onValid, onInvalid);
 
   const textFields = [
     { name: "nickname" as const, label: "昵称" },
@@ -133,17 +159,16 @@ export default function EditPage() {
   ];
 
   return (
-    <main className="mx-auto flex w-full max-w-[760px] flex-col gap-14 px-5 pb-20 pt-14 sm:px-8">
+    <main className="pt-transition mx-auto flex w-full max-w-[760px] flex-col gap-14 px-5 pb-20 pt-14 sm:px-8">
       <BackButton />
 
-      {/* Avatar */}
+      {/* Avatar - hidden until backend storage ships */}
       <section aria-label="头像">
         <h2 className="type-tech mb-3 text-tertiary">头像</h2>
-        <AvatarCropperDialog
-          avatarUrl={profile.avatar}
-          fallbackChar={avatarFallbackChar(profile)}
-          onUploaded={(url) => updateProfile({ avatar: url })}
-        />
+        <Avatar className="size-20 border border-foreground">
+          <AvatarImage src={profile.avatar ?? DEFAULT_AVATAR} alt={profile.nickname} />
+          <AvatarFallback className="text-2xl">{avatarFallbackChar(profile)}</AvatarFallback>
+        </Avatar>
       </section>
 
       <Form {...form}>
@@ -157,16 +182,15 @@ export default function EditPage() {
                   key={name}
                   control={form.control}
                   name={name}
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <AuthFormField
                         {...field}
                         ref={field.ref}
                         label={label}
+                        invalid={fieldState.invalid}
+                        error={fieldState.error?.message}
                       />
-                      <div className="min-h-4 text-xs [&_p]:text-destructive">
-                        <FormMessage />
-                      </div>
                     </FormItem>
                   )}
                 />
@@ -183,16 +207,15 @@ export default function EditPage() {
                   key={name}
                   control={form.control}
                   name={name}
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <AuthFormField
                         {...field}
                         ref={field.ref}
                         label={label}
+                        invalid={fieldState.invalid}
+                        error={fieldState.error?.message}
                       />
-                      <div className="min-h-4 text-xs [&_p]:text-destructive">
-                        <FormMessage />
-                      </div>
                     </FormItem>
                   )}
                 />
@@ -267,17 +290,16 @@ export default function EditPage() {
                   key={name}
                   control={form.control}
                   name={name}
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <AuthFormField
                         {...field}
                         ref={field.ref}
                         label={label}
                         type={type}
+                        invalid={fieldState.invalid}
+                        error={fieldState.error?.message}
                       />
-                      <div className="min-h-4 text-xs [&_p]:text-destructive">
-                        <FormMessage />
-                      </div>
                     </FormItem>
                   )}
                 />
@@ -294,17 +316,16 @@ export default function EditPage() {
                   key={name}
                   control={form.control}
                   name={name}
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <AuthFormField
                         {...field}
                         ref={field.ref}
                         label={label}
                         type={type}
+                        invalid={fieldState.invalid}
+                        error={fieldState.error?.message}
                       />
-                      <div className="min-h-4 text-xs [&_p]:text-destructive">
-                        <FormMessage />
-                      </div>
                     </FormItem>
                   )}
                 />

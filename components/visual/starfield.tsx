@@ -28,18 +28,27 @@ export function Starfield() {
 
     const dpr = () => Math.min(window.devicePixelRatio || 1, MAX_DPR);
 
+    // One seed per mount: resize reuses it so the sky doesn't reshuffle on
+    // every window drag - only canvas size and star density update.
+    const seed = (Math.random() * 2 ** 31) | 0;
     const resize = () => {
       canvas.width = Math.floor(window.innerWidth * dpr());
       canvas.height = Math.floor(window.innerHeight * dpr());
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
-      // fresh seed per mount: every visit gets a different sky
-      stars = generateStars((Math.random() * 2 ** 31) | 0, window.innerWidth, window.innerHeight);
+      stars = generateStars(seed, window.innerWidth, window.innerHeight);
+    };
+
+    const isDark = () => document.documentElement.classList.contains("dark");
+    const starColor = () => {
+      const raw = getComputedStyle(document.documentElement).getPropertyValue("--starfield");
+      return raw.trim() || (isDark() ? "#ffffff" : "#404040");
     };
 
     const frame = () => {
       current.x += (target.x - current.x) * 0.06;
       current.y += (target.y - current.y) * 0.06;
+      const dark = isDark();
       drawStars(ctx, stars, {
         width: window.innerWidth,
         height: window.innerHeight,
@@ -47,7 +56,8 @@ export function Starfield() {
         timeSec: (performance.now() - start) / 1000,
         offsetX: current.x,
         offsetY: current.y,
-        color: document.documentElement.classList.contains("dark") ? "#ffffff" : "#0a0a0a",
+        color: starColor(),
+        minOpacity: dark ? 0.15 : 0.35,
       });
       if (!reduced && running) raf = requestAnimationFrame(frame);
     };

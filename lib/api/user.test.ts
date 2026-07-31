@@ -29,8 +29,8 @@ describe("lib/api/user v2", () => {
     getUserIdentities();
     bindEmail("alice@example.com");
     verifyBindEmail("bind-ticket", "123456");
-    bindGithub("github-code");
-    bindLark("lark-code");
+    bindGithub("github-code", "http://localhost:3000/oauth/bind/github");
+    bindLark("lark-code", "http://localhost:3000/oauth/bind/lark");
     unbindIdentity(3, "Password123");
 
     expect(apiClient.get).toHaveBeenNthCalledWith(1, "/user/profile");
@@ -47,10 +47,16 @@ describe("lib/api/user v2", () => {
       code: "123456",
     });
     expect(apiClient.post).toHaveBeenNthCalledWith(3, "/user/identities/github", null, {
-      params: { code: "github-code" },
+      params: {
+        code: "github-code",
+        redirect_uri: "http://localhost:3000/oauth/bind/github",
+      },
     });
     expect(apiClient.post).toHaveBeenNthCalledWith(4, "/user/identities/lark", null, {
-      params: { code: "lark-code" },
+      params: {
+        code: "lark-code",
+        redirect_uri: "http://localhost:3000/oauth/bind/lark",
+      },
     });
     expect(apiClient.delete).toHaveBeenCalledWith("/user/identities/3", {
       data: { password: "Password123" },

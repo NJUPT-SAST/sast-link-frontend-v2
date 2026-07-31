@@ -25,4 +25,22 @@ describe("PageTransition", () => {
     expect(div.style.getPropertyValue("--pt-x")).toBe("0");
     expect(div.style.getPropertyValue("--pt-y")).toBe("-10px");
   });
+
+  it.each([
+    ["slide", "pt-transition"],
+    ["rise", "pt-rise"],
+    ["blur", "pt-blur"],
+    ["fade", "pt-fade"],
+    ["zoom", "pt-zoom"],
+  ] as const)("uses %s variant -> %s class", (variant, cls) => {
+    const { container } = render(<PageTransition variant={variant}>x</PageTransition>);
+    expect(container.querySelector("div")).toHaveClass(cls);
+  });
+
+  it("does not emit slide offset vars for non-slide variants", () => {
+    const { container } = render(<PageTransition variant="blur">x</PageTransition>);
+    const div = container.querySelector("div")!;
+    expect(div.style.getPropertyValue("--pt-x")).toBe("");
+    expect(div.style.getPropertyValue("--pt-y")).toBe("");
+  });
 });

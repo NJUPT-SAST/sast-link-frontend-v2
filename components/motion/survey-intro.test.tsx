@@ -42,4 +42,15 @@ describe("SurveyIntro", () => {
     expect(screen.queryByTestId("survey-intro")).not.toBeInTheDocument();
     expect(sessionStorage.getItem(SEEN_KEY)).toBe("1");
   });
+
+  it("hides the custom cursor while playing", () => {
+    render(<SurveyIntro />);
+    expect(document.documentElement).toHaveAttribute("data-cursor-hidden");
+  });
+
+  it("does not hide the cursor once seen in this session", () => {
+    sessionStorage.setItem(SEEN_KEY, "1");
+    render(<SurveyIntro />);
+    expect(document.documentElement).not.toHaveAttribute("data-cursor-hidden");
+  });
 });

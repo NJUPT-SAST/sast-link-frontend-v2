@@ -8,10 +8,11 @@ describe("auth validation schemas", () => {
     expect(loginEmailSchema.safeParse("user@example.com").success).toBe(false);
   });
 
-  it("requires six-digit codes and strong passwords", () => {
+  it("requires six-digit codes and passwords of at least 8 characters", () => {
     expect(verificationCodeSchema.safeParse("123456").success).toBe(true);
     expect(verificationCodeSchema.safeParse("12345").success).toBe(false);
     expect(passwordSchema.safeParse("Password123").success).toBe(true);
-    expect(passwordSchema.safeParse("password").success).toBe(false);
+    expect(passwordSchema.safeParse("password").success).toBe(true);
+    expect(passwordSchema.safeParse("passwor").success).toBe(false);
   });
 });

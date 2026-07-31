@@ -7,7 +7,7 @@ import { Camera, ZoomIn, ZoomOut } from "lucide-react";
 
 import { uploadAvatar } from "@/lib/api/user";
 import { message } from "@/lib/message";
-import { DEFAULT_AVATAR } from "@/lib/constants/profile";
+import { DEFAULT_AVATAR, MAX_AVATAR_BYTES } from "@/lib/constants/profile";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,7 +50,17 @@ export function AvatarCropperDialog({
   const { openFilePicker } = useFilePicker({
     accept: "image/*",
     onFilesSuccessfullySelected: ({ plainFiles }: { plainFiles: File[] }) => {
-      setFile(plainFiles[0]);
+      const f = plainFiles[0];
+      if (!f) return;
+      if (!f.type.startsWith("image/")) {
+        message.warning("请选择图片文件");
+        return;
+      }
+      if (f.size > MAX_AVATAR_BYTES) {
+        message.warning("图片不能超过 5MB");
+        return;
+      }
+      setFile(f);
       setScale(SCALE_MIN);
     },
   });
@@ -92,7 +102,12 @@ export function AvatarCropperDialog({
           <AvatarImage src={avatarUrl ?? DEFAULT_AVATAR} alt="avatar" />
           <AvatarFallback className="text-2xl">{fallbackChar}</AvatarFallback>
         </Avatar>
-        <Button variant="outline" size="sm" onClick={() => openFilePicker()}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => openFilePicker()}
+          className="transition-transform hover:-translate-y-px active:scale-[.98]"
+        >
           <Camera size={16} />
           更换头像
         </Button>

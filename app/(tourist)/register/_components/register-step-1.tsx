@@ -8,8 +8,8 @@ import Link from "next/link";
 import { registerSendCode } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
 import {
-  type LoginAccountFormValues,
-  loginAccountFormSchema,
+  type RegisterAccountFormValues,
+  registerAccountFormSchema,
 } from "@/lib/validations/auth";
 import { LoginAccountField } from "@/app/(tourist)/login/_components/login-account-field";
 import { DotLoading } from "@/components/ui/dot-loading";
@@ -23,8 +23,8 @@ interface RegisterStep1Props {
 
 export default function RegisterStep1({ defaultEmail = "", onNext }: RegisterStep1Props) {
   const [loading, setLoading] = useState(false);
-  const form = useForm<LoginAccountFormValues>({
-    resolver: zodResolver(loginAccountFormSchema),
+  const form = useForm<RegisterAccountFormValues>({
+    resolver: zodResolver(registerAccountFormSchema),
     defaultValues: {
       account: { localPart: defaultEmail.split("@")[0] ?? "", domain: "@njupt.edu.cn" },
     },
@@ -67,6 +67,7 @@ export default function RegisterStep1({ defaultEmail = "", onNext }: RegisterSte
                     label="邮箱"
                     error={errorMessage}
                     disableAtDetection
+                    allowedDomains={["@njupt.edu.cn", "@sast.fun"]}
                   />
                 </FormItem>
               );

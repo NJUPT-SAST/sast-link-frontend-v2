@@ -3,7 +3,7 @@ import type { RegisterOptions } from "react-hook-form";
 
 import { COLLEGES } from "@/lib/api/types";
 
-const urlPattern = /^$|^https?:\/\/.+/;
+const urlPattern = /^$|^https?:\/\/[^\/\s]+/;
 
 export interface ProfileFormValues {
   nickname: string;
@@ -59,7 +59,7 @@ export const profileEditSchema = z.object({
   college: z.enum(COLLEGES),
   major: z.string().trim().min(1, "专业不能为空").max(50),
   // studentId is set during registration and cannot be edited
-  department: z.enum(["", "软件研发部", "多媒体部", "电子部", "办公室部", "科宣部", "外联部"]),
+  department: z.enum(["", "software", "media"]),
   blogUrl: z
     .string()
     .trim()
