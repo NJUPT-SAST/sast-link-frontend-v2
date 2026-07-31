@@ -87,7 +87,7 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
         router.replace("/home");
       })
       .catch((reason) => setExchangeError(toApiError(reason).message));
-  }, [addAccount, code, router, searchParams]);
+  }, [addAccount, code, resetProfile, router, searchParams]);
 
   const error = inputError || exchangeError;
 

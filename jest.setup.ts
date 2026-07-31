@@ -81,11 +81,13 @@ jest.mock('next/navigation', () => ({
 // MSW server for API mocking in tests
 import { server } from "@/mocks/server";
 import { resetTickets } from "@/mocks/data/tickets";
+import { resetUsers } from "@/mocks/data/users";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   server.resetHandlers();
   resetTickets();
+  resetUsers();
 });
 afterAll(() => server.close());
 

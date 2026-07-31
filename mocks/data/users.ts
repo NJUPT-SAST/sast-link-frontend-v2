@@ -169,3 +169,18 @@ export function createMockUser(input: { loginEmail: string; password: string; na
   mockUsers.push(user);
   return user;
 }
+
+// The shared mockUser array is mutated by handlers (token rotation, password
+// changes, new registrations). Tests run in parallel workers, so a mutation in
+// one suite leaks into the next unless the array is restored per test. The
+// snapshot is deep-cloned on first use so later resets never alias it.
+let usersSnapshot: MockUser[] | null = null;
+
+export function resetUsers() {
+  if (!usersSnapshot) {
+    usersSnapshot = structuredClone(mockUsers);
+  }
+  mockUsers.length = 0;
+  mockUsers.push(...structuredClone(usersSnapshot));
+}
+
