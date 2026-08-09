@@ -22,12 +22,12 @@ import { Button } from "@/components/ui/button";
 import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { PageTransition } from "@/components/animation/page-transition";
 
-interface LoginStep2Props {
+interface LoginPasswordFormProps {
   loginEmail: string;
   onBack: () => void;
 }
 
-export default function LoginStep2({ loginEmail, onBack }: LoginStep2Props) {
+export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordFormProps) {
   const router = useRouter();
   const addAccount = useUserListStore((state) => state.addAccount);
   const resetProfile = useUserProfileStore((state) => state.resetProfile);

@@ -17,13 +17,13 @@ import { OtherLoginList } from "@/components/auth/other-login-list";
 import { GithubIcon, LarkIcon } from "@/components/icons/brand-icons";
 import { PageTransition } from "@/components/animation/page-transition";
 
-interface LoginStep1Props {
+interface LoginAccountFormProps {
   onNext: (loginEmail: string) => void;
   /** transient notice shown above the form, e.g. "密码已重置" */
   resetNotice?: string | null;
 }
 
-export default function LoginStep1({ onNext, resetNotice }: LoginStep1Props) {
+export default function LoginAccountForm({ onNext, resetNotice }: LoginAccountFormProps) {
   const [loading, setLoading] = useState(false);
   const form = useForm<LoginAccountFormValues>({
     resolver: zodResolver(loginAccountFormSchema),

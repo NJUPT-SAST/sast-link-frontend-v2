@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import LoginStep1 from "./login-step-1";
+import LoginAccountForm from "./login-account-form";
 
 jest.mock(
   "next/link",
@@ -11,10 +11,10 @@ jest.mock(
     },
 );
 
-describe("LoginStep1", () => {
+describe("LoginAccountForm", () => {
   it("submits a lowercased student id with the default njupt domain", async () => {
     const onNext = jest.fn();
-    render(<LoginStep1 onNext={onNext} />);
+    render(<LoginAccountForm onNext={onNext} />);
     await userEvent.type(screen.getByLabelText("账户"), "B24040001");
     await userEvent.click(screen.getByRole("button", { name: "继续" }));
     expect(onNext).toHaveBeenCalledWith("b24040001@njupt.edu.cn");
@@ -22,7 +22,7 @@ describe("LoginStep1", () => {
 
   it("lowercases an uppercase email prefix before submitting", async () => {
     const onNext = jest.fn();
-    render(<LoginStep1 onNext={onNext} />);
+    render(<LoginAccountForm onNext={onNext} />);
     await userEvent.type(screen.getByLabelText("账户"), "Alice");
     await userEvent.click(screen.getByRole("button", { name: "继续" }));
     expect(onNext).toHaveBeenCalledWith("alice@njupt.edu.cn");
@@ -30,7 +30,7 @@ describe("LoginStep1", () => {
 
   it("submits an arbitrary prefix when sast.fun is selected", async () => {
     const onNext = jest.fn();
-    render(<LoginStep1 onNext={onNext} />);
+    render(<LoginAccountForm onNext={onNext} />);
     await userEvent.click(screen.getByRole("button", { name: "选择邮箱域名" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "@sast.fun" }));
     await userEvent.type(screen.getByLabelText("账户"), "foo");
@@ -40,7 +40,7 @@ describe("LoginStep1", () => {
 
   it("submits an arbitrary prefix with the default njupt domain", async () => {
     const onNext = jest.fn();
-    render(<LoginStep1 onNext={onNext} />);
+    render(<LoginAccountForm onNext={onNext} />);
     await userEvent.type(screen.getByLabelText("账户"), "alice");
     await userEvent.click(screen.getByRole("button", { name: "继续" }));
     expect(onNext).toHaveBeenCalledWith("alice@njupt.edu.cn");
@@ -48,7 +48,7 @@ describe("LoginStep1", () => {
 
   it("submits a full email as-is when the other-email domain is selected", async () => {
     const onNext = jest.fn();
-    render(<LoginStep1 onNext={onNext} />);
+    render(<LoginAccountForm onNext={onNext} />);
     await userEvent.click(screen.getByRole("button", { name: "选择邮箱域名" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "其他邮箱" }));
     await userEvent.type(screen.getByLabelText("账户"), "alice@example.com");
