@@ -42,34 +42,25 @@ export function LoginAccountField({
     () => DOMAINS.filter((d) => allowedDomains.includes(d)),
     [allowedDomains],
   );
+  // Once an `@` appears the user is typing a full address — hide the domain
+  // pill and treat the whole input as the address.
   const atResolved = useMemo(() => {
-    if (disableAtDetection || value.domain === OTHER_EMAIL) return null;
-    const atIndex = value.localPart.indexOf("@");
-    if (atIndex < 0) return null;
-    const suffix = value.localPart.slice(atIndex + 1);
-    return DOMAINS.find((d) => d !== OTHER_EMAIL && d.slice(1) === suffix) ?? null;
-  }, [value.localPart, value.domain, disableAtDetection]);
+    if (disableAtDetection) return null;
+    return value.localPart.includes("@") ? value.localPart : null;
+  }, [value.localPart, disableAtDetection]);
 
   const handleChange = (raw: string) => {
-    if (disableAtDetection || value.domain === OTHER_EMAIL) {
+    if (disableAtDetection) {
       onChange({ ...value, localPart: raw });
       return;
     }
-    const atIndex = raw.indexOf("@");
-    if (atIndex < 0) {
-      onChange({ ...value, localPart: raw });
+    // An `@` means the input is already a full address: switch to the
+    // other-email mode so the domain pill disappears and the raw value submits.
+    if (value.domain !== OTHER_EMAIL && raw.includes("@")) {
+      onChange({ localPart: raw, domain: OTHER_EMAIL });
       return;
     }
-    const prefix = raw.slice(0, atIndex);
-    const suffix = raw.slice(atIndex + 1);
-    const matched = DOMAINS.find(
-      (d) => d !== OTHER_EMAIL && d.slice(1) === suffix,
-    );
-    if (matched) {
-      onChange({ localPart: prefix, domain: matched });
-    } else {
-      onChange({ ...value, localPart: raw });
-    }
+    onChange({ ...value, localPart: raw });
   };
 
   // Hint follows the selected domain: @njupt.edu.cn accounts are student ids,

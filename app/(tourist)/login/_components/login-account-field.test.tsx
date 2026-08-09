@@ -68,4 +68,29 @@ describe("LoginAccountField", () => {
     );
     expect(screen.getByText("将使用 bob@sast.fun 继续")).toBeInTheDocument();
   });
+
+  it("hides the domain pill once the input contains an @", () => {
+    render(
+      <LoginAccountField
+        value={{ localPart: "alice@gmail.com", domain: "@njupt.edu.cn" }}
+        onChange={jest.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "选择邮箱域名" })).not.toBeInTheDocument();
+  });
+
+  it("switches to full-address mode when an @ is typed", () => {
+    const onChange = jest.fn();
+    render(
+      <LoginAccountField
+        value={{ localPart: "bob", domain: "@njupt.edu.cn" }}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("账户"), { target: { value: "bob@sast.fun" } });
+    expect(onChange).toHaveBeenCalledWith({
+      localPart: "bob@sast.fun",
+      domain: "其他邮箱",
+    });
+  });
 });
