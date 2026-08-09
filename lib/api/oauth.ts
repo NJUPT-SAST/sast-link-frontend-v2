@@ -23,6 +23,22 @@ export function consentAuthorize(requestId: string, approve: boolean) {
   );
 }
 
+/** Verified client metadata for one pending authorization request. */
+export interface OAuthConsentInfo {
+  client_name: string;
+  scopes: string[];
+  expires_in: number;
+}
+
+/** Fetches a pending request's verified client metadata from the backend. The
+ *  consent page renders these instead of any URL-supplied value, so a crafted
+ *  link cannot spoof which application is asking. */
+export function getConsentInfo(requestId: string) {
+  return apiClient.get<ApiEnvelope<OAuthConsentInfo>>("/oauth/authorize/consent", {
+    params: { request_id: requestId },
+  });
+}
+
 /** One application the current user has authorized via the consent screen. */
 export interface OAuthGrant {
   client_id: number;

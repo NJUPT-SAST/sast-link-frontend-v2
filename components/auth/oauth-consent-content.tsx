@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Check } from "lucide-react";
 
-import { consentAuthorize } from "@/lib/api/oauth";
+import {
+  consentAuthorize,
+  getConsentInfo,
+  type OAuthConsentInfo,
+} from "@/lib/api/oauth";
 import { toApiError } from "@/lib/api/errors";
 import { redirectTo } from "@/lib/api/redirect";
 import { describeOAuthScopes } from "@/lib/constants/oauth";
@@ -38,14 +42,38 @@ function EmptyState({
 export function OAuthConsentContent() {
   const searchParams = useSearchParams();
   const requestId = searchParams.get("request_id");
-  const clientName = searchParams.get("client_name") ?? "未知应用";
-  const scopes = describeOAuthScopes(searchParams.get("scope") ?? "");
-  const expiresIn = Number(searchParams.get("expires_in") ?? "0");
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
 
-  const [loading, setLoading] = useState(false);
+  const [info, setInfo] = useState<OAuthConsentInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Fetch the pending request's verified client metadata from the backend. The
+  // request_id in the URL is only the opaque handle; client_name/scopes are
+  // never read from the query string — a crafted consent link could otherwise
+  // spoof which application is asking.
+  useEffect(() => {
+    if (!requestId) return;
+    let cancelled = false;
+    getConsentInfo(requestId)
+      .then((response) => {
+        if (cancelled) return;
+        setInfo(response.data.data);
+        setLoadFailed(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [requestId]);
 
   // The backend could not verify the authorization request — it redirects here
   // instead of to the client so this page is never an open redirector.
@@ -68,8 +96,29 @@ export function OAuthConsentContent() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="grid size-14 place-items-center">
+        <DotLoading />
+      </div>
+    );
+  }
+
+  if (loadFailed || !info) {
+    return (
+      <EmptyState
+        title="授权请求无效"
+        hint="授权请求无效或已过期，请返回原应用重新发起登录。"
+      />
+    );
+  }
+
+  const clientName = info.client_name;
+  const scopes = describeOAuthScopes(info.scopes.join(" "));
+  const expiresIn = info.expires_in;
+
   const submit = async (approve: boolean) => {
-    setLoading(true);
+    setSubmitting(true);
     setSubmitError(null);
     try {
       const response = await consentAuthorize(requestId, approve);
@@ -77,7 +126,7 @@ export function OAuthConsentContent() {
       redirectTo(response.data.data.redirect_uri);
     } catch (reason) {
       setSubmitError(toApiError(reason).message);
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -113,13 +162,13 @@ export function OAuthConsentContent() {
       {submitError && <p className="w-full text-sm text-destructive">{submitError}</p>}
 
       <div className="flex w-full flex-col gap-3">
-        <Button onClick={() => submit(true)} disabled={loading} className="w-full">
-          {loading ? <DotLoading /> : "授权登录"}
+        <Button onClick={() => submit(true)} disabled={submitting} className="w-full">
+          {submitting ? <DotLoading /> : "授权登录"}
         </Button>
         <Button
           variant="outline"
           onClick={() => submit(false)}
-          disabled={loading}
+          disabled={submitting}
           className="w-full"
         >
           拒绝
