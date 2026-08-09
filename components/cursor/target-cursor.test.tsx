@@ -13,6 +13,7 @@ function mockPointer(fine: boolean, reduced = false) {
 
 describe("TargetCursor", () => {
   afterEach(() => {
+    jest.restoreAllMocks();
     document.documentElement.classList.remove("tc-active");
   });
 
@@ -106,5 +107,39 @@ describe("TargetCursor", () => {
 
     document.documentElement.removeAttribute("data-cursor-hidden");
     await waitFor(() => expect(root.style.visibility).toBe(""));
+  });
+
+  it("pauses the rAF loop when idle and wakes on the next pointer move", async () => {
+    mockPointer(true);
+    // Control the loop manually: capture each rAF callback instead of letting
+    // jsdom's timer-driven rAF run, so the pause/wake decision is deterministic.
+    const rafSpy = jest.spyOn(window, "requestAnimationFrame");
+    jest.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+    let captured: FrameRequestCallback | null = null;
+    rafSpy.mockImplementation((cb) => {
+      captured = cb;
+      return 1;
+    });
+
+    let clock = 0;
+    jest.spyOn(performance, "now").mockImplementation(() => clock);
+
+    render(<TargetCursor />);
+    await screen.findByTestId("target-cursor");
+
+    // A move wakes the loop and arms a frame.
+    fireEvent.pointerMove(window, { clientX: 40, clientY: 40 });
+    expect(captured).not.toBeNull();
+    const cb = captured!;
+    const callsBeforeIdle = rafSpy.mock.calls.length;
+
+    // Pointer still past the threshold: the next frame must pause (no reschedule).
+    clock = 10_000;
+    cb(10_000);
+    expect(rafSpy.mock.calls.length).toBe(callsBeforeIdle);
+
+    // A fresh move resumes the loop.
+    fireEvent.pointerMove(window, { clientX: 60, clientY: 60 });
+    expect(rafSpy.mock.calls.length).toBeGreaterThan(callsBeforeIdle);
   });
 });

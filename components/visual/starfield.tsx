@@ -5,6 +5,18 @@ import { useEffect, useRef } from "react";
 import { generateStars, drawStars, type Star } from "@/lib/visual/starfield";
 
 const MAX_DPR = 2;
+const FRAME_INTERVAL = 1000 / 30; // redraw at most ~30fps — smooth enough for sparse dots
+const WEAK_STAR_SCALE = 0.6;
+
+/** Capable desktop detects → `(pointer: fine)`. Coarse/low-core/low-memory
+ *  devices get a cheaper sky (DPR capped at 1, ~60% of the stars). The
+ *  navigator hints are optional, so each check is guarded. */
+export function isLowEndDevice(): boolean {
+  if (typeof navigator.hardwareConcurrency === "number" && navigator.hardwareConcurrency <= 4) return true;
+  if (typeof (navigator as { deviceMemory?: number }).deviceMemory === "number" && (navigator as { deviceMemory?: number }).deviceMemory! < 4) return true;
+  if (typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches) return true;
+  return false;
+}
 
 /** Full-viewport generative starfield: square pixel stars, three parallax
  *  layers, white on dark / black on light. reduced-motion renders a single
@@ -22,11 +34,13 @@ export function Starfield() {
     let stars: Star[] = [];
     let raf = 0;
     let running = true;
+    let lastDraw = 0;
     const target = { x: 0, y: 0 };
     const current = { x: 0, y: 0 };
     const start = performance.now();
+    const lowEnd = isLowEndDevice();
 
-    const dpr = () => Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    const dpr = () => Math.min(window.devicePixelRatio || 1, lowEnd ? 1 : MAX_DPR);
 
     // One seed per mount: resize reuses it so the sky doesn't reshuffle on
     // every window drag - only canvas size and star density update.
@@ -36,7 +50,9 @@ export function Starfield() {
       canvas.height = Math.floor(window.innerHeight * dpr());
       canvas.style.width = `${window.innerWidth}px`;
       canvas.style.height = `${window.innerHeight}px`;
-      stars = generateStars(seed, window.innerWidth, window.innerHeight);
+      const generated = generateStars(seed, window.innerWidth, window.innerHeight);
+      // Weak devices draw a sparser sky — same seed, just fewer dots.
+      stars = lowEnd ? generated.slice(0, Math.floor(generated.length * WEAK_STAR_SCALE)) : generated;
     };
 
     const isDark = () => document.documentElement.classList.contains("dark");
@@ -45,7 +61,13 @@ export function Starfield() {
       return raw.trim() || (isDark() ? "#ffffff" : "#404040");
     };
 
-    const frame = () => {
+    const frame = (t: number) => {
+      // Keep rAF scheduled at display rate so pointer parallax stays
+      // responsive, but only repaint once every FRAME_INTERVAL — halving the
+      // canvas paint cost is invisible for a sparse sky.
+      if (!reduced && running) raf = requestAnimationFrame(frame);
+      if (lastDraw !== 0 && t - lastDraw < FRAME_INTERVAL) return;
+      lastDraw = t;
       current.x += (target.x - current.x) * 0.06;
       current.y += (target.y - current.y) * 0.06;
       const dark = isDark();
@@ -59,7 +81,6 @@ export function Starfield() {
         color: starColor(),
         minOpacity: dark ? 0.15 : 0.35,
       });
-      if (!reduced && running) raf = requestAnimationFrame(frame);
     };
 
     const onPointer = (e: PointerEvent) => {
@@ -71,13 +92,14 @@ export function Starfield() {
       running = document.visibilityState === "visible";
       if (running && !reduced) {
         cancelAnimationFrame(raf);
+        lastDraw = 0; // redraw immediately on return so the sky isn't stale
         raf = requestAnimationFrame(frame);
       }
     };
 
     resize();
     if (reduced) {
-      frame(); // one static frame, no loop, no listeners
+      frame(performance.now()); // one static frame, no loop, no listeners
     } else {
       window.addEventListener("resize", resize);
       window.addEventListener("pointermove", onPointer, { passive: true });

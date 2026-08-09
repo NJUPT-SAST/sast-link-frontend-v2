@@ -15,6 +15,7 @@ const LEAN_MAX = 8; // idle dot leans toward the movement direction while moving
 const PRESS_PULL = 0.35; // corners close toward center while pressed
 const PRESS_IN = 0.45; // press attack speed
 const PRESS_OUT = 0.12; // release rebound speed
+const IDLE_MS = 120; // pause the rAF loop once the pointer has been still this long
 
 const ARM_OFFSETS: readonly Point[] = [
   { x: 0, y: 0 },
@@ -58,6 +59,8 @@ export function TargetCursor() {
     let press = 0; // 0..1 press amount, lerped both ways
     let pressed = false;
     let raf = 0;
+    let lastMove = performance.now();
+    let rectCache: DOMRect | null = null;
 
     document.documentElement.classList.add("tc-active");
 
@@ -71,23 +74,46 @@ export function TargetCursor() {
       root.dataset.state = target ? "locked" : "idle";
     };
 
+    // Resume a paused loop. Called from every relevant input event so an idle
+    // page starts drawing again the instant the user interacts.
+    const wake = () => {
+      if (raf === 0) raf = requestAnimationFrame(frame);
+    };
+
+    // Cache the locked target's box so the loop never forces layout per frame;
+    // refreshed on target change, window resize and scroll.
+    const refreshRect = () => {
+      rectCache =
+        target && document.body.contains(target) ? target.getBoundingClientRect() : null;
+    };
+
     const onMove = (event: PointerEvent) => {
       pointer.x = event.clientX;
       pointer.y = event.clientY;
+      lastMove = performance.now();
+      wake();
     };
 
-    const onOver = (event: MouseEvent) => setTarget(resolveLockTarget(event.target));
+    const onOver = (event: MouseEvent) => {
+      setTarget(resolveLockTarget(event.target));
+      refreshRect();
+      wake();
+    };
     const onOut = (event: MouseEvent) => {
       if (!target) return;
       const related = event.relatedTarget;
       if (related instanceof Node && target.contains(related)) return;
       setTarget(resolveLockTarget(related));
+      refreshRect();
+      wake();
     };
 
-    const onDown = () => { pressed = true; };
-    const onUp = () => { pressed = false; };
+    const onDown = () => { pressed = true; wake(); };
+    const onUp = () => { pressed = false; wake(); };
 
-    const frame = () => {
+    // Function declaration (hoisted) so the wake/refreshRect helpers defined
+    // above can reference the loop without a use-before-define violation.
+    function frame() {
       const dx = pointer.x - shown.x;
       const dy = pointer.y - shown.y;
       const instant = Math.min(Math.hypot(dx, dy) / 60, 1);
@@ -101,10 +127,11 @@ export function TargetCursor() {
       if (hiddenByOverlay) {
         // Overlay playing: drop the locked target and hide the reticle
         // entirely (system cursor stays hidden too — nothing on screen).
-        // The visual re-appears and re-locks once the overlay is gone.
+        // Pause the loop; the MutationObserver on data-cursor-hidden wakes it
+        // once the overlay is gone.
         setTarget(null);
         root.style.visibility = "hidden";
-        raf = requestAnimationFrame(frame);
+        raf = 0;
         return;
       }
 
@@ -114,7 +141,10 @@ export function TargetCursor() {
       let desired: BracketCorners;
       let centerInRoot: Point = { x: 0, y: 0 };
       if (target && document.body.contains(target)) {
-        const rect = target.getBoundingClientRect();
+        // rectCache is refreshed on target change, resize and scroll — never
+        // read here per frame, which would force a synchronous layout.
+        const rect = rectCache ?? target.getBoundingClientRect();
+        rectCache = rect;
         const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
         centerInRoot = { x: center.x - shown.x, y: center.y - shown.y };
         const drift = {
@@ -155,8 +185,16 @@ export function TargetCursor() {
       const ly = dlen > 0.001 ? (dy / dlen) * lean : 0;
       dot.style.opacity = target ? "0" : "1";
       dot.style.transform = `translate(calc(-50% + ${lx}px), calc(-50% + ${ly}px)) scale(${1 + press * 0.6})`;
+
+      // With no locked target and a still pointer the reticle is frozen — drop
+      // the loop until some input wakes it. This is the main CPU win on idle
+      // pages: zero frames instead of 60/s.
+      if (!target && performance.now() - lastMove > IDLE_MS) {
+        raf = 0;
+        return;
+      }
       raf = requestAnimationFrame(frame);
-    };
+    }
 
     window.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("mouseover", onOver, { passive: true });
@@ -164,10 +202,22 @@ export function TargetCursor() {
     window.addEventListener("mousedown", onDown);
     window.addEventListener("mouseup", onUp);
     window.addEventListener("blur", onUp);
+    // The locked bracket must track scroll/resize without re-reading layout
+    // every frame — just refresh the cached box.
+    window.addEventListener("resize", refreshRect);
+    window.addEventListener("scroll", refreshRect, { capture: true, passive: true });
+    // An overlay can appear/disappear while the pointer is still; wake the
+    // loop so the reticle hides and re-appears with it.
+    const observer = new MutationObserver(() => wake());
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-cursor-hidden"],
+    });
     raf = requestAnimationFrame(frame);
 
     return () => {
       cancelAnimationFrame(raf);
+      observer.disconnect();
       document.documentElement.classList.remove("tc-active");
       window.removeEventListener("pointermove", onMove);
       document.removeEventListener("mouseover", onOver);
@@ -175,6 +225,8 @@ export function TargetCursor() {
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("blur", onUp);
+      window.removeEventListener("resize", refreshRect);
+      window.removeEventListener("scroll", refreshRect, { capture: true });
     };
   }, [enabled]);
 
