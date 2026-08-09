@@ -7,6 +7,7 @@ import { SWRConfig } from "swr";
 import { SurveyIntro } from "@/components/motion/survey-intro";
 import { Starfield } from "@/components/visual/starfield";
 import { TargetCursor } from "@/components/cursor/target-cursor";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const GlobalMessagePanel = dynamic(
   () =>
@@ -32,11 +33,13 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <SWRConfig value={{ revalidateOnFocus: false }}>
-      <Starfield />
-      {children}
-      <GlobalMessagePanel />
-      <SurveyIntro />
-      <TargetCursor />
+      <TooltipProvider delayDuration={500}>
+        <Starfield />
+        {children}
+        <GlobalMessagePanel />
+        <SurveyIntro />
+        <TargetCursor />
+      </TooltipProvider>
     </SWRConfig>
   );
 }
