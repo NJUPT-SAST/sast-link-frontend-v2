@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { toApiError } from "@/lib/api/errors";
 import { exchangeLoginCode } from "@/lib/api/oauth";
 import { createSession, setSession } from "@/lib/token";
+import { consumeAuthNext } from "@/lib/auth-next";
 import { useUserListStore } from "@/store/use-user-list-store";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { cn } from "@/lib/utils";
@@ -17,7 +18,7 @@ interface OAuthCallbackContentProps {
 }
 
 function Steps({ failed }: { failed: boolean }) {
-  const steps = ["授权", failed ? "兑换失败" : "兑换", "建立会话"];
+  const steps = ["授权", failed ? "登录失败" : "登录", "完成"];
   return (
     <div className="flex items-center">
       {steps.map((label, index) => (
@@ -52,7 +53,7 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
   const inputError =
     searchParams.get("error_description") ||
     (!code && !searchParams.get("registration_state")
-      ? "OAuth 回调缺少登录码"
+      ? "缺少授权信息，请重新登录"
       : null);
 
   useEffect(() => {
@@ -84,7 +85,7 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
           avatar: null,
           session,
         });
-        router.replace("/home");
+        router.replace(consumeAuthNext("/home"));
       })
       .catch((reason) => setExchangeError(toApiError(reason).message));
   }, [addAccount, code, resetProfile, router, searchParams]);
@@ -103,16 +104,15 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
           <p className="max-w-[360px] text-[15px] leading-[22px] text-muted-foreground">
             {error}。返回登录页重新发起 {provider.name} 登录即可。
           </p>
-          <div className="mt-2 flex gap-3">
-            <Button onClick={() => router.replace("/login")}>重新尝试</Button>
-            <Button variant="outline" onClick={() => router.replace("/login")}>返回登录</Button>
+          <div className="mt-2">
+            <Button onClick={() => router.replace("/login")}>返回登录</Button>
           </div>
         </>
       ) : (
         <>
           <h1 className="type-title3">正在通过{provider.name}登录</h1>
           <Steps failed={false} />
-          <p className="type-tech text-tertiary">Exchanging code</p>
+          <p className="type-tech text-tertiary">正在建立会话…</p>
           <Loader2 size={28} className="animate-spin text-link" />
         </>
       )}

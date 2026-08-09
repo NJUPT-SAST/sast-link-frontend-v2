@@ -14,6 +14,39 @@ export function exchangeLoginCode(code: string) {
   });
 }
 
+/** Records the user's decision on a pending authorization request and returns
+ *  the target redirect_uri (with the one-time authorization code) to follow. */
+export function consentAuthorize(requestId: string, approve: boolean) {
+  return apiClient.post<ApiEnvelope<{ redirect_uri: string }>>(
+    "/oauth/authorize/consent",
+    { request_id: requestId, approve },
+  );
+}
+
+/** One application the current user has authorized via the consent screen. */
+export interface OAuthGrant {
+  client_id: number;
+  client_key: string;
+  client_name: string;
+  client_type: string;
+  redirect_uris: string[];
+  is_active: boolean | null;
+  scopes: string[];
+  last_authorized_at: string;
+}
+
+/** Lists the applications the current user has authorized. */
+export function getGrants() {
+  return apiClient.get<ApiEnvelope<{ grants: OAuthGrant[] }>>("/oauth/grants");
+}
+
+/** Revokes one application's access for the current user. */
+export function revokeGrant(clientId: number) {
+  return apiClient.delete<ApiEnvelope<{ message: string }>>(
+    `/oauth/grants/${clientId}`,
+  );
+}
+
 /**
  * Bind-leg OAuth settings. The bind callback is a frontend route (not a backend
  * callback), so the authorize URL is assembled here from public values: the

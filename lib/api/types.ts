@@ -22,7 +22,13 @@ export const COLLEGES = [
 ] as const;
 
 export type College = (typeof COLLEGES)[number];
-export type Department = "software" | "media";
+export type Department =
+  | "software"
+  | "media"
+  | "electronics"
+  | "office"
+  | "publicity"
+  | "outreach";
 type LoginMethod = "github" | "lark" | "other_mail";
 export type UserRole = "freshman" | "member" | "lecturer" | "admin";
 export type UserState = "njupter" | "on_sast" | "retired_sast" | "is_deleted";
@@ -215,6 +221,7 @@ export interface AdminUpdateUserRequest {
   role?: UserRole;
   state?: UserState;
   email_type?: EmailType;
+  department?: Department;
 }
 
 export interface AdminOAuthClient {
@@ -243,6 +250,9 @@ export interface AdminUpdateOAuthClientRequest {
   client_name?: string;
   redirect_uris?: string[];
   is_active?: boolean;
+  client_type?: ClientType;
+  grant_types?: GrantType[];
+  scopes?: Scope[];
 }
 
 export interface AdminAuditLogListParams {
@@ -259,6 +269,7 @@ export interface AdminAuditLogListParams {
 export interface AdminAuditLog {
   id: number;
   user_id: number | null;
+  user_name?: string | null;
   action: string;
   resource: string;
   resource_id: string | null;

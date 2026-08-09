@@ -8,6 +8,7 @@ import { toApiError } from "@/lib/api/errors";
 import { consumeBindState } from "@/lib/api/oauth";
 import type { OAuthProvider } from "@/lib/api/oauth";
 import { bindGithub, bindLark } from "@/lib/api/user";
+import type { Identity } from "@/lib/api/types";
 import {
   FEISHU_BIND_REDIRECT_URI,
   GITHUB_BIND_REDIRECT_URI,
@@ -59,9 +60,21 @@ export function OAuthBindContent({
     const bind = provider === "lark" ? bindLark : bindGithub;
 
     bind(code, redirectUri || undefined)
-      .then(() => {
+      .then((response) => {
         message.success("绑定成功");
-        mutate();
+        const identity = response.data.data.identity;
+        if (identity) {
+          // Optimistically merge so /settings reflects the binding right away,
+          // even if the background revalidation hasn't finished before the
+          // navigation renders.
+          mutate((current: Identity[] = []) =>
+            current.some((item) => item.id === identity.id)
+              ? current
+              : [...current, identity],
+          );
+        } else {
+          void mutate();
+        }
         router.replace("/settings");
       })
       .catch((reason) => setError(toApiError(reason).message));
@@ -88,7 +101,7 @@ export function OAuthBindContent({
         {icon}
       </div>
       <h1 className="type-title3">正在绑定{providerName}</h1>
-      <p className="type-tech text-tertiary">Exchanging code</p>
+      <p className="type-tech text-tertiary">正在完成绑定…</p>
       <Loader2 size={28} className="animate-spin text-link" />
     </div>
   );
