@@ -1,21 +1,40 @@
 services:
   sast-link-next:
-    image: sast/sast-link-next:current
+    image: ccr.ccs.tencentyun.com/sast/sast-link-next:current
     build:
       context: .
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+        NEXT_PUBLIC_FEISHU_CLIENT_ID: ${NEXT_PUBLIC_FEISHU_CLIENT_ID:-}
+        NEXT_PUBLIC_FEISHU_BIND_REDIRECT_URI: ${NEXT_PUBLIC_FEISHU_BIND_REDIRECT_URI:-}
+        NEXT_PUBLIC_GITHUB_CLIENT_ID: ${NEXT_PUBLIC_GITHUB_CLIENT_ID:-}
+        NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI: ${NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI:-}
     container_name: sast-link-next
     ports:
-      - "3002:80"
+      # Caddy runs on the host and reaches this container through this published
+      # port, so the mapping is required. Bound to loopback rather than
+      # 0.0.0.0 so the only public path in is Caddy (and therefore HTTPS).
+      - "127.0.0.1:3002:80"
     restart: unless-stopped
+    networks:
+      - sast-link-v2
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/"]
-      interval: 30s
+      # Tightened from 30s so a deploy reaches `healthy` in seconds instead of
+      # waiting out a full interval before the first probe even runs.
+      interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 5s
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+
+networks:
+  sast-link-v2:
+    # Shared bridge created out-of-band alongside the backend, so it must
+    # outlive this stack. Caddy runs on the host and comes in through the
+    # published port above, not over this network.
+    external: true

@@ -3,7 +3,7 @@ FROM node:20-alpine AS builder
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@11.15.1 --activate
+RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 
 WORKDIR /app
 
@@ -12,7 +12,21 @@ WORKDIR /app
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
-COPY package.json pnpm-lock.yaml ./
+# OAuth bind runs entirely in the browser: the authorize URL is assembled from
+# these values, so they must be baked in at build time. Without a client id
+# buildBindOAuthUrl() returns null and the bind buttons go dead.
+ARG NEXT_PUBLIC_FEISHU_CLIENT_ID
+ENV NEXT_PUBLIC_FEISHU_CLIENT_ID=${NEXT_PUBLIC_FEISHU_CLIENT_ID}
+ARG NEXT_PUBLIC_FEISHU_BIND_REDIRECT_URI
+ENV NEXT_PUBLIC_FEISHU_BIND_REDIRECT_URI=${NEXT_PUBLIC_FEISHU_BIND_REDIRECT_URI}
+ARG NEXT_PUBLIC_GITHUB_CLIENT_ID
+ENV NEXT_PUBLIC_GITHUB_CLIENT_ID=${NEXT_PUBLIC_GITHUB_CLIENT_ID}
+ARG NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI
+ENV NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI=${NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI}
+
+# pnpm-workspace.yaml carries the `overrides` block that is baked into the
+# lockfile — omitting it makes --frozen-lockfile fail with a config mismatch.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .

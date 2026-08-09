@@ -1,142 +1,282 @@
 name: Docker Deploy
 
 # ============================================================================
-# Docker-based Server Deployment
+# Registry-based deployment
 # ============================================================================
-# Builds the Docker image, transfers the tar to the server via SCP,
-# and executes the deployment script via SSH.
+# Builds the image, pushes it to the Tencent registry, then has the server pull
+# and swap tags. Replaces the older SCP-a-tarball approach: the registry keeps
+# every version addressable, so a rollback is one `docker tag` away and no
+# multi-hundred-MB file crosses the wire on each deploy.
 #
-# Required secrets (set in GitHub repo Settings > Secrets and variables > Actions):
-#   - SERVER_HOST:      Target server IP/hostname
-#   - SERVER_USER:      SSH username
-#   - SSH_PRIVATE_KEY:  SSH private key for authentication
+# Required secrets:
+#   TCR_USERNAME / TCR_PASSWORD  registry credentials (ccr.ccs.tencentyun.com)
+#   SERVER_HOST / SERVER_USER    SSH target
+#   SSH_PRIVATE_KEY              SSH key whose public half is in authorized_keys
+#
+# Required repo variables (Settings > Variables). Public by design — these end
+# up in the browser bundle — so they are variables, not secrets:
+#   API_BASE_URL                 e.g. https://link.sast.fun/v2
+#   FEISHU_CLIENT_ID             Feishu app id
+#   GH_CLIENT_ID                 GitHub OAuth client id
+#   FEISHU_BIND_REDIRECT_URI     e.g. https://link.sast.fun/oauth/bind/lark
+#   GH_BIND_REDIRECT_URI         e.g. https://link.sast.fun/oauth/bind/github
+# GitHub rejects variable names starting with GITHUB_, hence the GH_ prefix.
+#
+# Server prerequisites (one-off):
+#   docker network create sast-link-v2
+#   mkdir -p /data/sast-link-next
 # ============================================================================
 
 on:
   workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false # a half-finished deploy is worse than a queued one
 
 env:
   SERVICE_NAME: sast-link-next
-  REGISTRY_PREFIX: sast
-  TAR_FILE_NAME: sast-link-next-image.tar
+  REGISTRY: ccr.ccs.tencentyun.com
+  IMAGE: ccr.ccs.tencentyun.com/sast/sast-link-next
+  SERVICE_DIR: /data/sast-link-next
+  SHARED_NETWORK: sast-link-v2
+  HOST_PORT: 3002
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Build, push and deploy
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Get short Git commit hash
+      - name: Resolve version tag
         id: vars
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      # next.config.ts uses output: "export", so every NEXT_PUBLIC_* value is
+      # inlined into the static bundle at build time. A missing one cannot be
+      # patched with a .env on the server — it means rebuilding. Fail loudly
+      # here instead of shipping an image with dead OAuth buttons.
+      - name: Check build-time configuration
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          FEISHU_CLIENT_ID: ${{ vars.FEISHU_CLIENT_ID }}
+          GH_CLIENT_ID: ${{ vars.GH_CLIENT_ID }}
+          FEISHU_BIND_REDIRECT_URI: ${{ vars.FEISHU_BIND_REDIRECT_URI }}
+          GH_BIND_REDIRECT_URI: ${{ vars.GH_BIND_REDIRECT_URI }}
+        run: |
+          missing=""
+          for v in API_BASE_URL FEISHU_CLIENT_ID GH_CLIENT_ID \
+                   FEISHU_BIND_REDIRECT_URI GH_BIND_REDIRECT_URI; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository variables:$missing"
+            echo "Set them under Settings > Secrets and variables > Actions > Variables."
+            exit 1
+          fi
+          echo "all five build-time values present"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
-      - name: Build and export to tar
-        uses: docker/build-push-action@v7
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
         with:
           context: .
-          push: false
+          push: true
           tags: |
-            ${{ env.REGISTRY_PREFIX }}/${{ env.SERVICE_NAME }}:latest
-            ${{ env.REGISTRY_PREFIX }}/${{ env.SERVICE_NAME }}:${{ steps.vars.outputs.sha_short }}
-          outputs: type=docker,dest=./${{ env.TAR_FILE_NAME }}
+            ${{ env.IMAGE }}:${{ steps.vars.outputs.sha }}
+            ${{ env.IMAGE }}:latest
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ vars.API_BASE_URL }}
+            NEXT_PUBLIC_FEISHU_CLIENT_ID=${{ vars.FEISHU_CLIENT_ID }}
+            NEXT_PUBLIC_FEISHU_BIND_REDIRECT_URI=${{ vars.FEISHU_BIND_REDIRECT_URI }}
+            NEXT_PUBLIC_GITHUB_CLIENT_ID=${{ vars.GH_CLIENT_ID }}
+            NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI=${{ vars.GH_BIND_REDIRECT_URI }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Transfer image to server
-        uses: appleboy/scp-action@master
-        timeout-minutes: 30
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: ${{ env.TAR_FILE_NAME }}
-          target: "/data/${{ env.SERVICE_NAME }}/"
+      # Two ways this image has silently shipped broken before: a build arg that
+      # never reached the bundle, and a try_files rule that served index.html for
+      # every subroute (HTTP 200 either way — only the body differs). Both are
+      # checked before the server is touched.
+      - name: Verify image
+        env:
+          IMAGE_REF: ${{ env.IMAGE }}:${{ steps.vars.outputs.sha }}
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          FEISHU_CLIENT_ID: ${{ vars.FEISHU_CLIENT_ID }}
+          GH_CLIENT_ID: ${{ vars.GH_CLIENT_ID }}
+          FEISHU_BIND_REDIRECT_URI: ${{ vars.FEISHU_BIND_REDIRECT_URI }}
+          GH_BIND_REDIRECT_URI: ${{ vars.GH_BIND_REDIRECT_URI }}
+        run: |
+          set -u
+          docker pull -q "$IMAGE_REF"
+          fail=0
 
-      - name: Transfer compose file to server
-        uses: appleboy/scp-action@master
+          echo "--- build args baked into the bundle ---"
+          for value in "$API_BASE_URL" "$FEISHU_CLIENT_ID" "$GH_CLIENT_ID" \
+                       "$FEISHU_BIND_REDIRECT_URI" "$GH_BIND_REDIRECT_URI"; do
+            if docker run --rm "$IMAGE_REF" \
+                 sh -c "grep -rq '$value' /var/www/_next/static/chunks/ 2>/dev/null"; then
+              echo "  ok       $value"
+            else
+              echo "::error::not baked into bundle: $value"; fail=1
+            fi
+          done
+
+          echo "--- routes serve their own page ---"
+          docker rm -f verify >/dev/null 2>&1 || true
+          docker run -d --name verify "$IMAGE_REF" >/dev/null
+          sleep 3
+
+          index_size=$(docker exec verify \
+            sh -c 'wget -qO- http://127.0.0.1:80/ 2>/dev/null | wc -c')
+          echo "  /                      $index_size bytes (index)"
+
+          # Derived from app/**/page.tsx — update when routes are added.
+          for route in /login /register /reset /home /profile /profile/edit \
+                       /settings /settings/password /settings/apps \
+                       /admin /admin/users /admin/audit-logs /admin/oauth-clients \
+                       /oauth/callback /oauth/consent \
+                       /oauth/bind/lark /oauth/bind/github; do
+            size=$(docker exec verify \
+              sh -c "wget -qO- http://127.0.0.1:80${route} 2>/dev/null | wc -c")
+            if [ "$size" = "0" ]; then
+              echo "::error::$route returned an empty body"; fail=1
+            elif [ "$size" = "$index_size" ]; then
+              echo "::error::$route served index.html — try_files is missing the {path}.html probe"
+              fail=1
+            else
+              printf "  ok       %-22s %s bytes\n" "$route" "$size"
+            fi
+          done
+
+          docker rm -f verify >/dev/null 2>&1 || true
+          [ "$fail" = 0 ] || exit 1
+          echo "image verified"
+
+      - name: Copy compose file to server
+        uses: appleboy/scp-action@v0.1.7
         timeout-minutes: 3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: docker-compose.yml
-          target: "/data/${{ env.SERVICE_NAME }}/"
+          target: ${{ env.SERVICE_DIR }}/
 
-      - name: Execute deployment script on server
-        uses: appleboy/ssh-action@master
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v1.2.2
         timeout-minutes: 15
+        env:
+          IMAGE: ${{ env.IMAGE }}
+          SHA: ${{ steps.vars.outputs.sha }}
+          SERVICE_NAME: ${{ env.SERVICE_NAME }}
+          SERVICE_DIR: ${{ env.SERVICE_DIR }}
+          SHARED_NETWORK: ${{ env.SHARED_NETWORK }}
+          HOST_PORT: ${{ env.HOST_PORT }}
+          REGISTRY: ${{ env.REGISTRY }}
+          TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
+          TCR_PASSWORD: ${{ secrets.TCR_PASSWORD }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: IMAGE,SHA,SERVICE_NAME,SERVICE_DIR,SHARED_NETWORK,HOST_PORT,REGISTRY,TCR_USERNAME,TCR_PASSWORD
           script: |
             set -e
 
-            SERVICE_DIR="/data/${{ env.SERVICE_NAME }}"
-            IMAGE_NAME="${{ env.REGISTRY_PREFIX }}/${{ env.SERVICE_NAME }}"
-            TAR_FILE="${{ env.TAR_FILE_NAME }}"
-            NEW_VERSION_TAG="${{ steps.vars.outputs.sha_short }}"
-            CONTAINER_NAME="${{ env.SERVICE_NAME }}"
-            HEALTH_CHECK_RETRIES=20
-            HEALTH_CHECK_INTERVAL=3
+            # compose declares this network as external, so `up` dies outright
+            # if it is absent. Cheaper to create it than to debug that.
+            docker network inspect "$SHARED_NETWORK" >/dev/null 2>&1 \
+              || docker network create "$SHARED_NETWORK"
 
-            cd ${SERVICE_DIR}
+            cd "$SERVICE_DIR"
 
-            echo "deploy start, version: ${NEW_VERSION_TAG}"
+            echo "$TCR_PASSWORD" | docker login "$REGISTRY" -u "$TCR_USERNAME" --password-stdin
+            docker pull "${IMAGE}:${SHA}"
 
-            echo "loading new image from ${TAR_FILE}..."
-            docker load -i ${TAR_FILE}
-
-            echo "handling image backup & rotation..."
-            if docker image inspect "${IMAGE_NAME}:current" >/dev/null 2>&1; then
-              if docker image inspect "${IMAGE_NAME}:backup" >/dev/null 2>&1; then
-                echo "  - removing old backup image..."
-                docker rmi "${IMAGE_NAME}:backup"
-              fi
-              echo "  - tagging current as backup..."
-              docker tag "${IMAGE_NAME}:current" "${IMAGE_NAME}:backup"
+            # current -> backup, new -> current. Rollback is then a single
+            # retag, with no rebuild or transfer.
+            if docker image inspect "${IMAGE}:current" >/dev/null 2>&1; then
+              docker rmi "${IMAGE}:backup" 2>/dev/null || true
+              docker tag "${IMAGE}:current" "${IMAGE}:backup"
+              echo "current -> backup"
             else
-              echo "  - no current image found, skipping backup (first deploy)"
+              echo "no current image (first deploy), skipping backup"
             fi
+            docker tag "${IMAGE}:${SHA}" "${IMAGE}:current"
 
-            echo "tagging new image (${NEW_VERSION_TAG}) as current..."
-            docker tag "${IMAGE_NAME}:${NEW_VERSION_TAG}" "${IMAGE_NAME}:current"
-
-            echo "starting services with docker compose..."
             docker compose up -d --remove-orphans
 
-            echo "waiting for container to become healthy..."
-            HEALTHY=0
-            for i in $(seq 1 ${HEALTH_CHECK_RETRIES}); do
-              STATUS=$(docker inspect --format='{{.State.Health.Status}}' ${CONTAINER_NAME} 2>/dev/null || echo "starting")
-              if [ "$STATUS" = "healthy" ]; then
-                HEALTHY=1
-                echo "  container is healthy"
-                break
+            healthy=0
+            for i in $(seq 1 24); do
+              status=$(docker inspect --format='{{.State.Health.Status}}' \
+                "$SERVICE_NAME" 2>/dev/null || echo starting)
+              if [ "$status" = healthy ]; then
+                healthy=1; echo "healthy after $((i * 5))s"; break
               fi
-              echo "  attempt $i/${HEALTH_CHECK_RETRIES}: status=$STATUS, waiting ${HEALTH_CHECK_INTERVAL}s..."
-              sleep ${HEALTH_CHECK_INTERVAL}
+              echo "  [$i/24] $status"
+              sleep 5
             done
 
-            if [ "$HEALTHY" -eq 0 ]; then
-              echo "ERROR: container failed to become healthy, rolling back..."
-              if docker image inspect "${IMAGE_NAME}:backup" >/dev/null 2>&1; then
-                echo "  - tagging backup as current..."
-                docker tag "${IMAGE_NAME}:backup" "${IMAGE_NAME}:current"
-                docker compose up -d --remove-orphans
-                echo "  - rollback complete"
+            # The container being healthy only proves Caddy answers on :80. This
+            # confirms a real page comes back through the published port.
+            if [ "$healthy" = 1 ]; then
+              login_size=$(curl -sf "http://127.0.0.1:${HOST_PORT}/login" | wc -c || echo 0)
+              index_size=$(curl -sf "http://127.0.0.1:${HOST_PORT}/" | wc -c || echo 0)
+              if [ "$login_size" = 0 ] || [ "$login_size" = "$index_size" ]; then
+                echo "ERROR: /login returned ${login_size} bytes, index is ${index_size} — routing is broken"
+                healthy=0
               else
-                echo "  - no backup image available, manual intervention required"
+                echo "routing ok (/login ${login_size} bytes, / ${index_size} bytes)"
               fi
-              rm -f ${TAR_FILE}
+            fi
+
+            if [ "$healthy" = 0 ]; then
+              echo "=== deploy failed, rolling back ==="
+              docker logs --tail 40 "$SERVICE_NAME" 2>&1 || true
+              if docker image inspect "${IMAGE}:backup" >/dev/null 2>&1; then
+                docker tag "${IMAGE}:backup" "${IMAGE}:current"
+                docker compose up -d --remove-orphans
+                echo "rolled back to backup"
+              else
+                echo "no backup image — manual intervention needed"
+              fi
               exit 1
             fi
 
-            echo "cleaning up temporary files and images..."
-            rm ${TAR_FILE}
-            docker rmi "${IMAGE_NAME}:latest" 2>/dev/null || true
-            docker images --filter "dangling=true" --format "{{.ID}}" | xargs -r docker rmi 2>/dev/null || true
+            # Keep current/backup/latest plus the three most recent version tags.
+            docker image ls --format '{{.Tag}}' "$IMAGE" \
+              | grep -v -E '^(current|backup|latest|<none>)$' \
+              | tail -n +4 \
+              | xargs -r -I {} docker rmi "${IMAGE}:{}" 2>/dev/null || true
+            docker image prune -f >/dev/null
 
-            echo "deploy success! running version: ${NEW_VERSION_TAG}"
+            echo "deployed ${SHA}"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Deploy"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Image | \`${{ env.IMAGE }}:${{ steps.vars.outputs.sha }}\` |"
+            echo "| Commit | ${{ github.sha }} |"
+            echo "| Result | ${{ job.status }} |"
+            echo ""
+            echo "Rollback: \`docker tag ${{ env.IMAGE }}:backup ${{ env.IMAGE }}:current && docker compose up -d\`"
+          } >> $GITHUB_STEP_SUMMARY
