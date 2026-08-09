@@ -59,7 +59,11 @@ export default function AdminOAuthClientsPage() {
 
   const handleOpenChange = (open: boolean) => {
     setFormOpen(open);
-    if (!open) setEditingClient(undefined);
+    if (!open) {
+      // Let the dialog finish its close animation before the form's `client`
+      // prop drops to undefined, or the reset re-render makes the window flash.
+      window.setTimeout(() => setEditingClient(undefined), 250);
+    }
   };
 
   return (
@@ -101,6 +105,7 @@ export default function AdminOAuthClientsPage() {
             </DialogTitle>
           </DialogHeader>
           <OAuthClientForm
+            key={editingClient?.id ?? "create"}
             mode={editingClient ? "edit" : "create"}
             client={editingClient}
             onSubmit={handleSubmit}

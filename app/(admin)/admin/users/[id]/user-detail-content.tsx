@@ -50,7 +50,7 @@ export function AdminUserDetailContent() {
 
   return (
     <div className="flex flex-col gap-8">
-      <BackButton />
+      <BackButton fallback="/admin/users" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="type-title2">{user.name}</h1>

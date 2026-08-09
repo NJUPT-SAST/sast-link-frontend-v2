@@ -38,7 +38,7 @@ export function OAuthClientList({
         <div>回调地址</div>
         <div>授权类型</div>
         <div>Scope</div>
-        <div className="text-right">操作</div>
+        <div className="text-right" aria-hidden />
       </div>
       {clients.map((client) => {
         const isInternal = client.client_id === "sast-link-web";
@@ -62,18 +62,25 @@ export function OAuthClientList({
                 {client.is_active ? "启用" : "停用"}
               </span>
             </div>
-            <div className="flex flex-col gap-1 text-tertiary">
-              {client.redirect_uris.map((uri) => (
-                <span key={uri} className="truncate">{uri}</span>
-              ))}
+            <div
+              className="truncate text-tertiary"
+              title={client.redirect_uris.join("、")}
+            >
+              {client.redirect_uris.join("、")}
             </div>
-            <div className="text-tertiary">
+            <div
+              className="truncate text-tertiary"
+              title={client.grant_types.map((g) => GRANT_TYPE_LABELS[g]).join("、")}
+            >
               {client.grant_types.map((g) => GRANT_TYPE_LABELS[g]).join("、")}
             </div>
-            <div className="text-tertiary">
+            <div
+              className="truncate text-tertiary"
+              title={client.scopes.map((s) => SCOPE_LABELS[s]).join("、")}
+            >
               {client.scopes.map((s) => SCOPE_LABELS[s]).join("、")}
             </div>
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-2 whitespace-nowrap">
               <Button
                 variant="ghost"
                 size="sm"

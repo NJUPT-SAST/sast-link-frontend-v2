@@ -38,7 +38,7 @@ export function AdminUserEditContent() {
 
   return (
     <div className="flex flex-col gap-8">
-      <BackButton />
+      <BackButton fallback="/admin/users" />
       <div>
         <h1 className="type-title2">编辑用户</h1>
         <p className="mt-1 text-sm text-tertiary">{user.name} · {user.login_email}</p>

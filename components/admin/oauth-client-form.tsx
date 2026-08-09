@@ -15,6 +15,7 @@ import {
   type AdminOAuthClientFormValues,
 } from "@/lib/validations/admin";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { FormError } from "@/components/ui/form-error";
 import {
@@ -66,6 +67,9 @@ function toUpdateRequest(values: AdminOAuthClientFormValues): AdminUpdateOAuthCl
   if (values.client_name !== undefined) request.client_name = values.client_name;
   if (values.redirect_uris !== undefined) request.redirect_uris = values.redirect_uris;
   if (values.is_active !== undefined) request.is_active = values.is_active;
+  if (values.client_type !== undefined) request.client_type = values.client_type;
+  if (values.grant_types !== undefined) request.grant_types = values.grant_types;
+  if (values.scopes !== undefined) request.scopes = values.scopes;
   return request;
 }
 
@@ -146,29 +150,27 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAu
           )}
         />
 
-        {isCreate && (
-          <FormField
-            control={form.control}
-            name="client_type"
-            render={({ field }) => (
-              <FormItem>
-                <label htmlFor="client_type" className="mb-2 block text-[13px] text-muted-foreground">
-                  客户端类型
-                </label>
-                <select id="client_type" {...field} className={selectClass}>
-                  {CLIENT_TYPE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="min-h-4 text-xs">
-                  <FormMessage />
-                </div>
-              </FormItem>
-            )}
-          />
-        )}
+        <FormField
+          control={form.control}
+          name="client_type"
+          render={({ field }) => (
+            <FormItem>
+              <label htmlFor="client_type" className="mb-2 block text-[13px] text-muted-foreground">
+                客户端类型
+              </label>
+              <Select id="client_type" {...field} className={selectClass}>
+                {CLIENT_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </Select>
+              <div className="min-h-4 text-xs">
+                <FormMessage />
+              </div>
+            </FormItem>
+          )}
+        />
 
         <div>
           <label className="mb-2 block text-[13px] text-muted-foreground">回调地址</label>
@@ -221,49 +223,45 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAu
           </div>
         </div>
 
-        {isCreate && (
-          <>
-            <div>
-              <label className="mb-2 block text-[13px] text-muted-foreground">授权类型</label>
-              <div className="flex flex-wrap gap-4">
-                {GRANT_TYPE_OPTIONS.map((opt) => (
-                  <label key={opt.value} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      value={opt.value}
-                      {...form.register("grant_types")}
-                      className="size-4 rounded border-input"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-              <div className="min-h-4 text-xs">
-                <FormMessage />
-              </div>
-            </div>
+        <div>
+          <label className="mb-2 block text-[13px] text-muted-foreground">授权类型</label>
+          <div className="flex flex-wrap gap-4">
+            {GRANT_TYPE_OPTIONS.map((opt) => (
+              <label key={opt.value} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  value={opt.value}
+                  {...form.register("grant_types")}
+                  className="size-4 rounded border-input"
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+          <div className="min-h-4 text-xs">
+            <FormMessage />
+          </div>
+        </div>
 
-            <div>
-              <label className="mb-2 block text-[13px] text-muted-foreground">权限范围</label>
-              <div className="flex flex-wrap gap-4">
-                {SCOPE_OPTIONS.map((opt) => (
-                  <label key={opt.value} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      value={opt.value}
-                      {...form.register("scopes")}
-                      className="size-4 rounded border-input"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-              <div className="min-h-4 text-xs">
-                <FormMessage />
-              </div>
-            </div>
-          </>
-        )}
+        <div>
+          <label className="mb-2 block text-[13px] text-muted-foreground">权限范围</label>
+          <div className="flex flex-wrap gap-4">
+            {SCOPE_OPTIONS.map((opt) => (
+              <label key={opt.value} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  value={opt.value}
+                  {...form.register("scopes")}
+                  className="size-4 rounded border-input"
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+          <div className="min-h-4 text-xs">
+            <FormMessage />
+          </div>
+        </div>
 
         {!isCreate && (
           <FormField

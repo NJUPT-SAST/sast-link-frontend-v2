@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import type { AdminUserListParams } from "@/lib/api/types";
 import { adminUserFiltersSchema, type AdminUserFiltersFormValues } from "@/lib/validations/admin";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 
 interface UserFiltersProps {
@@ -89,31 +90,31 @@ export function UserFilters({ value, onChange }: UserFiltersProps) {
         <label htmlFor="role" className="mb-1.5 block text-xs text-muted-foreground">
           角色
         </label>
-        <select id="role" {...form.register("role")} className={selectClass}>
+        <Select id="role" {...form.register("role")} className={selectClass}>
           {ROLE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="w-[140px]">
         <label htmlFor="state" className="mb-1.5 block text-xs text-muted-foreground">
           状态
         </label>
-        <select id="state" {...form.register("state")} className={selectClass}>
+        <Select id="state" {...form.register("state")} className={selectClass}>
           {STATE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="w-[140px]">
         <label htmlFor="department" className="mb-1.5 block text-xs text-muted-foreground">
           部门
         </label>
-        <select id="department" {...form.register("department")} className={selectClass}>
+        <Select id="department" {...form.register("department")} className={selectClass}>
           {DEPARTMENT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="w-[180px]">
         <AuthFormField

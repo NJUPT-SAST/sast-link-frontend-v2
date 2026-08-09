@@ -7,6 +7,7 @@ export interface AdminNavItem {
 }
 
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
+  { label: "概览", href: "/admin", roles: ["admin"] },
   { label: "用户管理", href: "/admin/users", roles: ["admin", "lecturer"] },
   { label: "OAuth 客户端", href: "/admin/oauth-clients", roles: ["admin"] },
   { label: "审计日志", href: "/admin/audit-logs", roles: ["admin"] },
@@ -31,6 +32,10 @@ export const SCOPE_LABELS: Record<Scope, string> = {
 export const DEPARTMENT_LABELS: Record<Department, string> = {
   software: "软件研发部",
   media: "多媒体部",
+  electronics: "电子部",
+  office: "办公室",
+  publicity: "科宣部",
+  outreach: "外联部",
 };
 
 export const AUDIT_ACTION_LABELS: Record<string, string> = {

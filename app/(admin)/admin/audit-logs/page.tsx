@@ -17,6 +17,10 @@ export default function AdminAuditLogsPage() {
     setFilters((prev) => ({ ...prev, page }));
   }, []);
 
+  const handlePageSizeChange = useCallback((pageSize: number) => {
+    setFilters((prev) => ({ ...prev, page: 1, page_size: pageSize }));
+  }, []);
+
   const handleFiltersChange = useCallback((next: AdminAuditLogListParams) => {
     setFilters(next);
   }, []);
@@ -50,6 +54,7 @@ export default function AdminAuditLogsPage() {
             pageSize={data.page_size}
             total={data.total}
             onChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
           />
         </>
       )}

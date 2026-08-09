@@ -17,7 +17,12 @@ export function AdminNav() {
     <nav className="border-b border-hairline">
       <ul className="mx-auto flex max-w-[1200px] gap-1 px-5 sm:px-8">
         {items.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          // The overview lives exactly at /admin — a prefix match would keep it
+          // lit for every /admin/* route.
+          const active =
+            item.href === "/admin"
+              ? pathname === "/admin"
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <li key={item.href}>
               <Link

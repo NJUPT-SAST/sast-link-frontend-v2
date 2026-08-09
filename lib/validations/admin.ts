@@ -28,7 +28,14 @@ const redirectUriSchema = z
 
 const userRoleSchema = z.enum(["freshman", "member", "lecturer", "admin"]);
 const userStateSchema = z.enum(["njupter", "on_sast", "retired_sast", "is_deleted"]);
-const departmentSchema = z.enum(["software", "media"]);
+const departmentSchema = z.enum([
+  "software",
+  "media",
+  "electronics",
+  "office",
+  "publicity",
+  "outreach",
+]);
 const emailTypeSchema = z.enum(["njupt_email", "sast_email"]);
 const grantTypeSchema = z.enum(["authorization_code", "refresh_token"]);
 const scopeSchema = z.enum(["openid", "profile", "email"]);

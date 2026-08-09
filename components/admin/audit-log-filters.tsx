@@ -10,6 +10,7 @@ import {
   type AdminAuditLogFiltersFormValues,
 } from "@/lib/validations/admin";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 
 interface AuditLogFiltersProps {
@@ -98,11 +99,11 @@ export function AuditLogFilters({ value, onChange }: AuditLogFiltersProps) {
         <label htmlFor="success" className="mb-1.5 block text-xs text-muted-foreground">
           结果
         </label>
-        <select id="success" {...form.register("success")} className={selectClass}>
+        <Select id="success" {...form.register("success")} className={selectClass}>
           {SUCCESS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="w-[180px]">
         <AuthFormField

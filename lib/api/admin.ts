@@ -1,4 +1,5 @@
 import type {
+  AdminAuditLog,
   AdminAuditLogListData,
   AdminAuditLogListParams,
   AdminCreateOAuthClientRequest,
@@ -11,6 +12,22 @@ import type {
   UserProfileData,
 } from "./types";
 import { apiClient } from "./client";
+
+export interface AdminStatsData {
+  users: {
+    total: number;
+    by_role: Record<string, number>;
+    by_state: Record<string, number>;
+    by_department: Record<string, number>;
+    no_department: number;
+  };
+  clients: { total: number; active: number };
+  audit: { recent: AdminAuditLog[] };
+}
+
+export function getAdminStats() {
+  return apiClient.get<ApiEnvelope<AdminStatsData>>("/admin/stats");
+}
 
 export function getAdminUsers(params?: AdminUserListParams) {
   return apiClient.get<ApiEnvelope<AdminUserListData>>("/admin/users", { params });

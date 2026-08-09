@@ -14,6 +14,7 @@ import {
 import { scrollToFirstError } from "@/lib/form";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { FormError } from "@/components/ui/form-error";
 import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
@@ -146,11 +147,11 @@ export function UserEditForm({ user, onSubmit, loading = false }: UserEditFormPr
                   <label htmlFor="college" className="mb-2 block text-[13px] text-muted-foreground">
                     学院
                   </label>
-                  <select id="college" {...field} className={selectClass}>
+                  <Select id="college" {...field} className={selectClass}>
                     {COLLEGES.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
-                  </select>
+                  </Select>
                   <div className="min-h-4 text-xs">
                     <FormMessage />
                   </div>
@@ -186,11 +187,11 @@ export function UserEditForm({ user, onSubmit, loading = false }: UserEditFormPr
                   <label htmlFor="role" className="mb-2 block text-[13px] text-muted-foreground">
                     角色
                   </label>
-                  <select id="role" {...field} className={selectClass}>
+                  <Select id="role" {...field} className={selectClass}>
                     {ROLE_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
-                  </select>
+                  </Select>
                   <div className="min-h-4 text-xs">
                     <FormMessage />
                   </div>
@@ -205,11 +206,11 @@ export function UserEditForm({ user, onSubmit, loading = false }: UserEditFormPr
                   <label htmlFor="state" className="mb-2 block text-[13px] text-muted-foreground">
                     状态
                   </label>
-                  <select id="state" {...field} className={selectClass}>
+                  <Select id="state" {...field} className={selectClass}>
                     {STATE_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
-                  </select>
+                  </Select>
                   <div className="min-h-4 text-xs">
                     <FormMessage />
                   </div>
