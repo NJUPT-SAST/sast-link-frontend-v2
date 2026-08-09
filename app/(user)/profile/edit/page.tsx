@@ -10,8 +10,8 @@ import { updateUserProfile } from "@/lib/api/user";
 import { toApiError } from "@/lib/api/errors";
 import { mapProfile } from "@/lib/api/mappers";
 import { COLLEGES, type UpdateProfileRequest } from "@/lib/api/types";
+import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
-import { avatarFallbackChar } from "@/lib/constants/profile";
 import { message } from "@/lib/message";
 import {
   profileEditSchema,
@@ -22,21 +22,14 @@ import { AuthFormField } from "@/components/auth/auth-form-field";
 import { BackButton } from "@/components/navigation/back-button";
 import { FormError } from "@/components/ui/form-error";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { DotLoading } from "@/components/ui/dot-loading";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { DEFAULT_AVATAR } from "@/lib/constants/profile";
 import {
   Form,
   FormField,
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-
-const DEPARTMENT_OPTIONS = [
-  { value: "", label: "未选择" },
-  { value: "software", label: "软件研发部" },
-  { value: "media", label: "多媒体部" },
-] as const;
 
 const selectClass =
   "h-12 w-full rounded-lg border border-input bg-card px-3.5 text-[15px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
@@ -45,9 +38,8 @@ const FIELD_ORDER = [
   "nickname",
   "name",
   "intro",
-  "major",
   "college",
-  "department",
+  "major",
   "phoneNumber",
   "qqNumber",
   "blogUrl",
@@ -61,11 +53,11 @@ function toUpdateRequest(values: ProfileEditFormValues): UpdateProfileRequest {
     intro: values.intro,
     phone_number: values.phoneNumber,
     qq_number: values.qqNumber,
-    college: values.college,
+    // leave college untouched when the user hasn't chosen one
+    ...(values.college ? { college: values.college } : {}),
     major: values.major,
-    // student_id is set during registration — not editable
-    department: values.department,
-    // other emails managed via identities — not editable here
+    // student_id is set during registration — not editable;
+    // department is managed by admin / recruitment — not editable
     blog_url: values.blogUrl,
     github_url: values.githubUrl,
   };
@@ -86,7 +78,7 @@ export default function EditPage() {
       intro: profile.intro ?? "",
       phoneNumber: profile.phoneNumber ?? "",
       qqNumber: profile.qqNumber ?? "",
-      college: profile.college ?? "其他",
+      college: profile.college ?? "",
       major: profile.major ?? "",
       department: profile.department ?? "",
       blogUrl: profile.blogUrl ?? "",
@@ -95,7 +87,7 @@ export default function EditPage() {
   });
 
   // profile loads async after mount - reseed the form once it arrives so a
-  // direct visit/refresh to /settings/edit isn't stuck on empty defaults.
+  // direct visit/refresh to /profile/edit isn't stuck on empty defaults.
   // keepDirtyValues prevents a background SWR revalidation from overwriting
   // edits the user is currently making.
   useEffect(() => {
@@ -107,7 +99,7 @@ export default function EditPage() {
         intro: profile.intro ?? "",
         phoneNumber: profile.phoneNumber ?? "",
         qqNumber: profile.qqNumber ?? "",
-        college: profile.college ?? "其他",
+        college: profile.college ?? "",
         major: profile.major ?? "",
         department: profile.department ?? "",
         blogUrl: profile.blogUrl ?? "",
@@ -124,7 +116,7 @@ export default function EditPage() {
       setProfile(mapProfile(response.data.data.user));
       mutate("user-profile");
       message.success("修改成功");
-      router.push("/settings");
+      router.push("/profile");
     } catch (error) {
       form.setError("root", { message: toApiError(error).message });
     } finally {
@@ -139,9 +131,8 @@ export default function EditPage() {
   const submit = form.handleSubmit(onValid, onInvalid);
 
   const textFields = [
-    { name: "nickname" as const, label: "昵称" },
+    { name: "nickname" as const, label: "别名" },
     { name: "name" as const, label: "真实姓名" },
-    { name: "intro" as const, label: "签名" },
   ];
 
   const academicFields = [
@@ -162,17 +153,8 @@ export default function EditPage() {
     <main className="pt-transition mx-auto flex w-full max-w-[760px] flex-col gap-14 px-5 pb-20 pt-14 sm:px-8">
       <BackButton />
 
-      {/* Avatar - hidden until backend storage ships */}
-      <section aria-label="头像">
-        <h2 className="type-tech mb-3 text-tertiary">头像</h2>
-        <Avatar className="size-20 border border-foreground">
-          <AvatarImage src={profile.avatar ?? DEFAULT_AVATAR} alt={profile.nickname} />
-          <AvatarFallback className="text-2xl">{avatarFallbackChar(profile)}</AvatarFallback>
-        </Avatar>
-      </section>
-
       <Form {...form}>
-        <form onSubmit={submit} className="flex flex-col gap-14">
+        <form onSubmit={submit} noValidate className="flex flex-col gap-14">
           {/* Basic info */}
           <section aria-label="基本资料">
             <h2 className="type-tech mb-3 text-tertiary">基本资料</h2>
@@ -195,6 +177,32 @@ export default function EditPage() {
                   )}
                 />
               ))}
+
+              {/* Signature — multi-line */}
+              <FormField
+                control={form.control}
+                name="intro"
+                render={({ field }) => (
+                  <FormItem>
+                    <label
+                      htmlFor="intro"
+                      className="mb-2 block text-[13px] text-muted-foreground"
+                    >
+                      签名
+                    </label>
+                    <textarea
+                      id="intro"
+                      {...field}
+                      rows={4}
+                      placeholder="泥真的没有想说的咩.."
+                      className="min-h-[120px] w-full resize-none rounded-lg border bg-card px-3.5 py-3 text-[15px] transition-colors placeholder:text-tertiary focus-visible:outline-none invalid:border-destructive valid:border-input focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+                    />
+                    <div className="min-h-4 text-xs [&_p]:text-destructive">
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
             </div>
           </section>
 
@@ -202,6 +210,33 @@ export default function EditPage() {
           <section aria-label="学籍信息">
             <h2 className="type-tech mb-3 text-tertiary">学籍信息</h2>
             <div className="flex flex-col gap-4">
+              {/* College first, then major */}
+              <FormField
+                control={form.control}
+                name="college"
+                render={({ field }) => (
+                  <FormItem>
+                    <label
+                      htmlFor="college"
+                      className="mb-2 block text-[13px] text-muted-foreground"
+                    >
+                      学院
+                    </label>
+                    <Select id="college" {...field} className={selectClass}>
+                      <option value="">未选择</option>
+                      {COLLEGES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </Select>
+                    <div className="min-h-4 text-xs [&_p]:text-destructive">
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+
               {academicFields.map(({ name, label }) => (
                 <FormField
                   key={name}
@@ -221,63 +256,15 @@ export default function EditPage() {
                 />
               ))}
 
-              {/* College select */}
-              <FormField
-                control={form.control}
-                name="college"
-                render={({ field }) => (
-                  <FormItem>
-                    <label
-                      htmlFor="college"
-                      className="mb-2 block text-[13px] text-muted-foreground"
-                    >
-                      学院
-                    </label>
-                    <select id="college" {...field} className={selectClass}>
-                      {COLLEGES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="min-h-4 text-xs [&_p]:text-destructive">
-                      <FormMessage />
-                    </div>
-                  </FormItem>
-                )}
-              />
-
-              {/* Department select — SAST members only */}
-              {profile.state !== "njupter" && (
-                <FormField
-                  control={form.control}
-                  name="department"
-                  render={({ field }) => (
-                    <FormItem>
-                      <label
-                        htmlFor="department"
-                        className="mb-2 block text-[13px] text-muted-foreground"
-                      >
-                        部门
-                      </label>
-                      <select
-                        id="department"
-                        {...field}
-                        className={selectClass}
-                      >
-                        {DEPARTMENT_OPTIONS.map((d) => (
-                          <option key={d.value} value={d.value}>
-                            {d.label}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="min-h-4 text-xs [&_p]:text-destructive">
-                        <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              )}
+              {/* Department is read-only — managed by admin / recruitment */}
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="text-[13px] text-muted-foreground">部门</span>
+                <span className="text-foreground">
+                  {profile.department
+                    ? DEPARTMENT_LABELS[profile.department] ?? profile.department
+                    : "未分配"}
+                </span>
+              </div>
             </div>
           </section>
 

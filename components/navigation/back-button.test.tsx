@@ -30,13 +30,13 @@ describe("BackButton", () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it("falls back to /settings when there is no history", async () => {
+  it("falls back to /profile when there is no history", async () => {
     setHistoryLength(1);
     const user = userEvent.setup();
     render(<BackButton />);
 
     await user.click(screen.getByRole("button", { name: "返回" }));
-    expect(replace).toHaveBeenCalledWith("/settings");
+    expect(replace).toHaveBeenCalledWith("/profile");
     expect(back).not.toHaveBeenCalled();
   });
 });

@@ -49,7 +49,9 @@ export function IdentityList({ actionable }: IdentityListProps) {
       message.warning("未配置第三方绑定，请联系管理员");
       return;
     }
-    window.open(url, "_blank", "noopener,noreferrer");
+    // Navigate in the same tab — the provider bounces back to /oauth/bind/{provider},
+    // so a new window is just an extra tab with no benefit (and can be popup-blocked).
+    window.location.assign(url);
   };
 
   const handleUnbind = async () => {

@@ -83,7 +83,6 @@ describe("EditPage", () => {
   it("renders all editable sections", () => {
     render(<EditPage />);
 
-    expect(screen.getByText("头像")).toBeInTheDocument();
     expect(screen.getByText("基本资料")).toBeInTheDocument();
     expect(screen.getByText("学籍信息")).toBeInTheDocument();
     expect(screen.getByText("联系方式")).toBeInTheDocument();
@@ -94,7 +93,7 @@ describe("EditPage", () => {
   it("pre-fills nickname from profile", () => {
     render(<EditPage />);
 
-    const input = screen.getByLabelText("昵称") as HTMLInputElement;
+    const input = screen.getByLabelText("别名") as HTMLInputElement;
     expect(input.value).toBe("Alice");
   });
 
@@ -123,18 +122,18 @@ describe("EditPage", () => {
     expect(payload.name).toBe("张三");
     expect(payload.college).toBe("计算机学院、软件学院、网络空间安全学院");
     expect(payload.major).toBe("软件工程");
-    expect(payload.department).toBe("software");
+    expect(payload.department).toBeUndefined();
   });
 
   it("shows validation error when nickname is cleared", async () => {
     render(<EditPage />);
 
-    const input = screen.getByLabelText("昵称");
+    const input = screen.getByLabelText("别名");
     fireEvent.change(input, { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
 
     await waitFor(() => {
-      expect(screen.getByText("昵称不能为空")).toBeInTheDocument();
+      expect(screen.getByText("别名不能为空")).toBeInTheDocument();
     });
 
     expect(mockUpdateUserProfile).not.toHaveBeenCalled();
@@ -217,7 +216,7 @@ describe("EditPage", () => {
     await waitFor(() => {
       expect(mockSetProfile).toHaveBeenCalled();
       expect(mockMutate).toHaveBeenCalledWith("user-profile");
-      expect(mockRouterPush).toHaveBeenCalledWith("/settings");
+      expect(mockRouterPush).toHaveBeenCalledWith("/profile");
     });
 
     const updatedProfile = mockSetProfile.mock.calls[0][0];
@@ -227,12 +226,12 @@ describe("EditPage", () => {
   it("calls scrollToFirstError when validation fails", async () => {
     render(<EditPage />);
 
-    const input = screen.getByLabelText("昵称");
+    const input = screen.getByLabelText("别名");
     fireEvent.change(input, { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
 
     await waitFor(() => {
-      expect(screen.getByText("昵称不能为空")).toBeInTheDocument();
+      expect(screen.getByText("别名不能为空")).toBeInTheDocument();
     });
 
     expect(mockScrollToFirstError).toHaveBeenCalled();
@@ -241,9 +240,8 @@ describe("EditPage", () => {
       "nickname",
       "name",
       "intro",
-      "major",
       "college",
-      "department",
+      "major",
       "phoneNumber",
       "qqNumber",
       "blogUrl",

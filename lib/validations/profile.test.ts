@@ -94,16 +94,6 @@ describe("profileEditSchema", () => {
     expect(r.success).toBe(false);
   });
 
-  it("rejects invalid department", () => {
-    const r = profileEditSchema.safeParse({ ...valid, department: "engineering" });
-    expect(r.success).toBe(false);
-  });
-
-  it("rejects legacy chinese department names", () => {
-    const r = profileEditSchema.safeParse({ ...valid, department: "软件研发部" });
-    expect(r.success).toBe(false);
-  });
-
   it("rejects malformed absolute urls", () => {
     const r = profileEditSchema.safeParse({ ...valid, blogUrl: "https://" });
     expect(r.success).toBe(false);

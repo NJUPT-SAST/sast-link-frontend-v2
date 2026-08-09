@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { getGreeting } from "@/lib/greeting";
@@ -27,7 +28,7 @@ export function HomeHero() {
         </h1>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
           <Button variant="ghost" asChild>
-            <Link href="/settings">账户设置</Link>
+            <Link href="/profile">账户设置</Link>
           </Button>
         </div>
       </div>
@@ -35,8 +36,10 @@ export function HomeHero() {
       <a
         href="#profile-card"
         aria-label="查看个人名片"
-        className="absolute bottom-8 left-1/2 z-[1] -translate-x-1/2 border-x-[10px] border-t-[14px] border-x-transparent border-t-foreground opacity-60 transition-[opacity,transform] hover:translate-y-1 hover:opacity-100"
-      />
+        className="guide-bob absolute bottom-8 left-1/2 z-[1] -translate-x-1/2 text-foreground hover:[animation:none] hover:opacity-100"
+      >
+        <ChevronDown size={24} strokeWidth={1.75} />
+      </a>
     </section>
   );
 }

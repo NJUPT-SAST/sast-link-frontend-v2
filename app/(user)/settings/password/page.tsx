@@ -61,9 +61,12 @@ export default function SettingsPasswordPage() {
 
   return (
     <main className="pt-transition mx-auto flex w-full max-w-[760px] flex-col gap-10 px-5 pb-20 pt-14 sm:px-8">
-      <BackButton />
+      <BackButton fallback="/settings" />
       <section aria-label="修改密码">
         <h2 className="type-tech mb-3 text-tertiary">修改密码</h2>
+        <p className="mb-4 text-[13px] leading-5 text-tertiary">
+          修改成功后需要重新登录。
+        </p>
         <form onSubmit={submit} className="flex max-w-[420px] flex-col gap-4">
           <AuthFormField
             id="oldPassword"

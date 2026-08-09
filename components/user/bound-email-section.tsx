@@ -173,7 +173,21 @@ export function BoundEmailSection() {
       ) : mode.kind === "verify-code" ? (
         <div className="flex flex-col gap-3 border-b border-hairline py-4 sm:flex-row sm:items-start">
           <div className="flex-1">
-            <p className="mb-2 text-[13px] text-muted-foreground">验证码已发送至 {mode.email}</p>
+            <p className="mb-2 text-[13px] text-muted-foreground">
+              验证码已发送至 {mode.email}
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  void bindEmail(mode.email)
+                    .then(() => message.info("验证码已重新发送"))
+                    .catch((error) => setError(toApiError(error).message));
+                }}
+                className="ml-2 text-xs text-link hover:underline disabled:text-muted-foreground"
+              >
+                重新发送
+              </button>
+            </p>
             <AuthFormField
               label="验证码"
               placeholder="6 位验证码"
@@ -191,21 +205,23 @@ export function BoundEmailSection() {
             </Button>
           </div>
         </div>
+      ) : others.length >= MAX_OTHER_EMAILS ? (
+        <p className="py-3 text-xs text-muted-foreground">
+          最多绑定 {MAX_OTHER_EMAILS} 个邮箱
+        </p>
       ) : (
         <div className="py-3">
-          {others.length < MAX_OTHER_EMAILS && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setEmail("");
-                setError("");
-                setMode({ kind: "add-email" });
-              }}
-            >
-              添加邮箱
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setEmail("");
+              setError("");
+              setMode({ kind: "add-email" });
+            }}
+          >
+            添加邮箱
+          </Button>
         </div>
       )}
     </div>

@@ -68,7 +68,7 @@ export function ProfileCard() {
         aria-label="个人名片"
         className={`grid w-full max-w-[760px] border border-hairline bg-background/78 backdrop-blur-md transition-[opacity,transform] duration-500 ease-out md:grid-cols-[230px_minmax(0,1fr)] ${visible ? "translate-y-0 opacity-100" : "translate-y-[18px] opacity-0"}`}
       >
-        <div className="flex min-h-[380px] flex-col justify-between border-b border-hairline p-7 md:border-b-0 md:border-r md:p-9">
+        <div className="flex min-h-[340px] min-w-0 flex-col justify-between border-b border-hairline p-7 md:border-b-0 md:border-r md:p-9">
           <div data-cursor-target>
             <Avatar className="size-28 border border-foreground sm:size-[132px]">
               <AvatarImage src={profile.avatar ?? DEFAULT_AVATAR} alt={profile.nickname} />
@@ -94,7 +94,7 @@ export function ProfileCard() {
                 className="w-full border-0 border-b border-foreground bg-transparent pb-1 text-[13px] leading-7 outline-none"
               />
             ) : (
-              <p className="text-[13px] leading-7 text-muted-foreground">
+              <p className="break-words text-[13px] leading-7 text-muted-foreground">
                 {signature.trim() || EMPTY_SIGNATURE}
               </p>
             )}
@@ -103,7 +103,7 @@ export function ProfileCard() {
 
         <dl className="flex flex-col justify-center px-7 py-4 md:px-10 md:py-9">
           {[
-            ["姓名", profile.name],
+            ["真实姓名", profile.name],
             ["学院", profile.college],
             ["专业", profile.major],
           ].map(([label, value], index) => (

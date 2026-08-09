@@ -44,8 +44,8 @@ export const profileEditSchema = z.object({
   nickname: z
     .string()
     .trim()
-    .min(1, "昵称不能为空")
-    .max(255, "昵称最多 255 个字符"),
+    .min(1, "别名不能为空")
+    .max(255, "别名最多 255 个字符"),
   name: z.string().trim().min(1, "姓名不能为空").max(255),
   intro: z.string().trim().max(255, "签名最多 255 个字符"),
   phoneNumber: z
@@ -56,10 +56,20 @@ export const profileEditSchema = z.object({
     .string()
     .trim()
     .refine((v) => v === "" || /^\d{5,20}$/.test(v), "请输入正确的 QQ 号"),
-  college: z.enum(COLLEGES),
+  // college may be empty until the user picks one — "其他" as a default would
+  // silently overwrite a blank value on save.
+  college: z.enum(COLLEGES).or(z.literal("")),
   major: z.string().trim().min(1, "专业不能为空").max(50),
-  // studentId is set during registration and cannot be edited
-  department: z.enum(["", "software", "media"]),
+  // department is shown read-only — managed by admin / recruitment, not edited here
+  department: z.enum([
+    "",
+    "software",
+    "media",
+    "electronics",
+    "office",
+    "publicity",
+    "outreach",
+  ]),
   blogUrl: z
     .string()
     .trim()
