@@ -4,41 +4,51 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
-import { Logo } from "@/components/icons/logo";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface AuthShellProps {
-  /** mono step marker, e.g. "Sign in / 01" */
-  tech: string;
   children: ReactNode;
   className?: string;
+  /** widen the form panel beyond the default 400px for long forms */
+  wide?: boolean;
 }
 
-/** Split-screen auth layout. Left: logo + step marker over the starfield.
- *  Right: the form panel. minmax(0,…) keeps the ticker content from
- *  blowing the grid tracks out of the viewport. */
-export function AuthShell({ tech, children, className }: AuthShellProps) {
+/** Centered single-column auth layout over the starfield. Logo sits in the
+ *  top-left corner; the panel is centered with `m-auto` so a tall form still
+ *  scrolls instead of pinning to the top edge. */
+export function AuthShell({ children, className, wide = false }: AuthShellProps) {
+  // Self-contained provider so the brand tooltip works without depending on
+  // the app-level provider (e.g. when AuthShell is rendered in isolation).
   return (
-    <section className="grid min-h-screen w-full text-foreground md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      <div className="relative hidden overflow-hidden md:flex md:flex-col">
-        <div className="px-16 pt-14">
-          <Link href="/" aria-label="返回首页" className="inline-flex text-foreground transition-opacity hover:opacity-80">
-            <Logo />
-          </Link>
-        </div>
-        <p className="type-tech mt-auto px-16 pb-16 text-tertiary">{tech}</p>
-      </div>
-
-      <div className="flex items-center justify-center overflow-y-auto border-l border-hairline bg-background/70 backdrop-blur-md max-md:border-l-0">
-        <div className={cn("flex w-[400px] max-w-[calc(100%-64px)] flex-col py-12", className)}>
-          <div className="mb-8 md:hidden">
-            <Link href="/" aria-label="返回首页" className="inline-flex text-foreground transition-opacity hover:opacity-80">
-              <Logo />
+    <TooltipProvider delayDuration={500}>
+    <section className="flex min-h-screen w-full flex-col overflow-y-auto text-foreground">
+      <div className="absolute left-5 top-5 sm:left-8 sm:top-7">
+        {/* Plain text — an SVG logo's fixed width leaves a gap under the
+            cursor's four-corner bracket, which reads as empty space. */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link
+              href="/"
+              aria-label="返回首页"
+              className="text-lg font-bold tracking-tight text-foreground transition-opacity hover:opacity-80"
+            >
+              SAST Link
             </Link>
-          </div>
+          </TooltipTrigger>
+          <TooltipContent>返回首页</TooltipContent>
+        </Tooltip>
+      </div>
+      <div className="m-auto flex w-full max-w-[calc(100%-40px)] flex-col items-center py-16 sm:max-w-[calc(100%-64px)]">
+        <div className={cn("flex w-full flex-col", wide ? "max-w-[520px]" : "max-w-[400px]", className)}>
           {children}
         </div>
       </div>
     </section>
+    </TooltipProvider>
   );
 }
-

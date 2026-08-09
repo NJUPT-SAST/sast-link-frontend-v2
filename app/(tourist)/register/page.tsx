@@ -1,38 +1,70 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { PageTransition } from "@/components/animation/page-transition";
-import RegisterStep1 from "./_components/register-step-1";
-import RegisterStep2 from "./_components/register-step-2";
-import RegisterStep3 from "./_components/register-step-3";
+import RegisterEmailForm from "./_components/register-email-form";
+import RegisterDetailsForm from "./_components/register-details-form";
 
-const STEP_META = {
-  1: { tech: "Register / 01 of 03" },
-  2: { tech: "Register / 02 of 03" },
-  3: { tech: "Register / 03 of 03" },
-} as const;
+type RegisterPhase = "email" | "details";
+
+const TICKET_KEY = "sast:register-ticket";
 
 function RegisterFlow() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [direction, setDirection] = useState<"forward" | "back">("forward");
-  const [loginEmail, setLoginEmail] = useState("");
-  const [registerTicket, setRegisterTicket] = useState("");
-  const meta = STEP_META[step];
-  const position = direction === "forward" ? "rightToLeft" : "leftToRight";
+  const phase: RegisterPhase =
+    searchParams.get("phase") === "details" ? "details" : "email";
+  const loginEmail = searchParams.get("email") ?? "";
+  const registerTicket =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem(TICKET_KEY) ?? ""
+      : "";
+  const position = phase === "details" ? "rightToLeft" : "leftToRight";
 
   return (
-    <AuthShell tech={meta.tech}>
-      {step === 1 && <PageTransition position={position}><RegisterStep1 onNext={(email) => { setLoginEmail(email); setDirection("forward"); setStep(2); }} /></PageTransition>}
-      {step === 2 && <PageTransition position={position}><RegisterStep2 loginEmail={loginEmail} onNext={(ticket) => { setRegisterTicket(ticket); setDirection("forward"); setStep(3); }} onBack={() => { setDirection("back"); setStep(1); }} /></PageTransition>}
-      {step === 3 && <PageTransition position={position}><RegisterStep3 loginEmail={loginEmail} ticket={registerTicket} registrationState={searchParams.get("registration_state") ?? undefined} oauthState={searchParams.get("oauth_state") ?? undefined} defaultName={searchParams.get("name") ?? ""} onBack={() => { setDirection("back"); setStep(2); }} /></PageTransition>}
+    <AuthShell wide={phase === "details"}>
+      {phase === "email" && (
+        <PageTransition position={position}>
+          <RegisterEmailForm
+            defaultEmail={searchParams.get("email") ?? ""}
+            onVerified={(email, ticket) => {
+              sessionStorage.setItem(TICKET_KEY, ticket);
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("phase", "details");
+              params.set("email", email);
+              router.replace(`/register?${params.toString()}`);
+            }}
+          />
+        </PageTransition>
+      )}
+      {phase === "details" && (
+        <PageTransition position={position}>
+          <RegisterDetailsForm
+            loginEmail={loginEmail}
+            registerTicket={registerTicket}
+            registrationState={searchParams.get("registration_state") ?? undefined}
+            oauthState={searchParams.get("oauth_state") ?? undefined}
+            onBack={() => {
+              sessionStorage.removeItem(TICKET_KEY);
+              const params = new URLSearchParams(searchParams.toString());
+              params.delete("phase");
+              params.delete("email");
+              router.replace(`/register?${params.toString()}`);
+            }}
+          />
+        </PageTransition>
+      )}
     </AuthShell>
   );
 }
 
 export default function RegisterPage() {
-  return <Suspense><RegisterFlow /></Suspense>;
+  return (
+    <Suspense>
+      <RegisterFlow />
+    </Suspense>
+  );
 }

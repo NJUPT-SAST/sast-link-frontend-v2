@@ -9,9 +9,6 @@ describe("LoginPage", () => {
     expect(
       screen.getByRole("heading", { name: "登录" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("使用学号或登录邮箱继续。"),
-    ).toBeInTheDocument();
     expect(screen.getByLabelText("账户")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "继续" }),

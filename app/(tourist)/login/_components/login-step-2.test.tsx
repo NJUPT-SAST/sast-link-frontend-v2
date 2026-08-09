@@ -17,14 +17,4 @@ describe("LoginStep2", () => {
     await userEvent.click(screen.getByRole("button", { name: "登录 SAST Link" }));
     await waitFor(() => expect(passwordLogin).toHaveBeenCalledWith("alice@njupt.edu.cn", "Password123"));
   });
-
-  it("hides the custom cursor during the success overlay", async () => {
-    (passwordLogin as jest.Mock).mockResolvedValue(authData);
-    render(<LoginStep2 loginEmail="alice@njupt.edu.cn" onBack={jest.fn()} />);
-    await userEvent.type(screen.getByLabelText("密码"), "Password123");
-    await userEvent.click(screen.getByRole("button", { name: "登录 SAST Link" }));
-    await waitFor(() =>
-      expect(document.documentElement).toHaveAttribute("data-cursor-hidden"),
-    );
-  });
 });

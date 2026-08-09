@@ -63,6 +63,7 @@ export const passwordSchema = z
 
 export const registerDetailsSchema = z
   .object({
+    nickname: z.string().trim().min(1, "别名不可为空").max(255, "别名最多 255 个字符"),
     password: passwordSchema,
     confirmPassword: z.string().min(1, "请确认密码"),
     name: z.string().trim().min(1, "姓名不可为空").max(255),
@@ -134,6 +135,12 @@ export type RegisterAccountFormValues = z.infer<typeof registerAccountFormSchema
 export type VerificationCodeFormValues = z.infer<typeof verificationCodeFormSchema>;
 export type RegisterDetailsFormValues = z.infer<typeof registerDetailsSchema>;
 export type ResetPasswordFormValues = z.infer<typeof resetPasswordFormSchema>;
+
+export const registerVerifyFormSchema = z.object({
+  account: registerAccountFormSchema.shape.account,
+  code: verificationCodeSchema,
+});
+export type RegisterVerifyFormValues = z.infer<typeof registerVerifyFormSchema>;
 
 export function studentIdToEmail(studentId: string) {
   return `${studentId.trim()}@njupt.edu.cn`;

@@ -13,6 +13,8 @@ interface AuthFormFieldProps extends Omit<ComponentPropsWithoutRef<"input">, "si
   invalid?: boolean;
   error?: string;
   containerClassName?: string;
+  /** render a required marker next to the label */
+  required?: boolean;
 }
 
 export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
@@ -27,6 +29,7 @@ export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
       containerClassName,
       id,
       type,
+      required = false,
       ...props
     },
     ref,
@@ -42,6 +45,7 @@ export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
           className="mb-2 block text-[13px] text-muted-foreground"
         >
           {label}
+          {required && <span className="ml-0.5 text-destructive">*</span>}
         </label>
         <div className="relative w-full">
           <input

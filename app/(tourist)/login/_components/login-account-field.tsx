@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -71,6 +72,15 @@ export function LoginAccountField({
     }
   };
 
+  // Hint follows the selected domain: @njupt.edu.cn accounts are student ids,
+  // @sast.fun accounts are a custom email prefix.
+  const placeholder =
+    value.domain === OTHER_EMAIL
+      ? "完整邮箱地址"
+      : value.domain === "@sast.fun"
+        ? "邮箱前缀"
+        : "学号";
+
   return (
     <div className="w-full">
       <label className="mb-2 block text-[13px] text-muted-foreground">
@@ -88,7 +98,7 @@ export function LoginAccountField({
           autoComplete={autoComplete}
           aria-label={label}
           aria-invalid={!!error}
-          placeholder="学号或邮箱前缀"
+          placeholder={placeholder}
           value={value.localPart}
           onChange={(event) => handleChange(event.target.value)}
           onFocus={() => setFocused(true)}
@@ -102,7 +112,7 @@ export function LoginAccountField({
                 type="button"
                 aria-label="选择邮箱域名"
                 className={cn(
-                  "shrink-0 px-2.5 py-1 text-sm font-medium transition-colors",
+                  "shrink-0 rounded-md px-2.5 py-1 text-sm font-medium transition-colors",
                   "bg-secondary/80 text-muted-foreground hover:bg-secondary",
                   "dark:bg-muted/60 dark:hover:bg-muted",
                 )}
@@ -110,17 +120,18 @@ export function LoginAccountField({
                 {value.domain}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[9rem]">
+            <DropdownMenuContent align="end" className="min-w-[10rem] p-1.5">
               {domainOptions.map((domain) => (
                 <DropdownMenuItem
                   key={domain}
+                  data-cursor-target
                   onClick={() => onChange({ ...value, domain })}
-                  className={cn(
-                    "cursor-pointer",
-                    domain === value.domain && "bg-accent text-accent-foreground",
-                  )}
+                  className="cursor-pointer rounded-md px-3 py-2.5 text-sm hover:bg-accent hover:text-accent-foreground"
                 >
                   {domain}
+                  {domain === value.domain && (
+                    <Check className="ml-auto size-3.5 text-foreground" />
+                  )}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>

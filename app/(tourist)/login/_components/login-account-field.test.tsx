@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { LoginAccountField } from "./login-account-field";
 
 describe("LoginAccountField", () => {
-  it("renders the default domain and accepts prefix input", async () => {
+  it("renders the default domain and accepts prefix input", () => {
     const onChange = jest.fn();
     render(
       <LoginAccountField
@@ -12,7 +12,9 @@ describe("LoginAccountField", () => {
         onChange={onChange}
       />,
     );
-    expect(screen.getByRole("button", { name: "选择邮箱域名" })).toHaveTextContent("@njupt.edu.cn");
+    expect(screen.getByRole("button", { name: "选择邮箱域名" })).toHaveTextContent(
+      "@njupt.edu.cn",
+    );
     fireEvent.change(screen.getByLabelText("账户"), { target: { value: "B24040001" } });
     expect(onChange).toHaveBeenCalledWith({
       localPart: "B24040001",

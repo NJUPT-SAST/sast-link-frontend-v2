@@ -19,9 +19,11 @@ import { PageTransition } from "@/components/animation/page-transition";
 
 interface LoginStep1Props {
   onNext: (loginEmail: string) => void;
+  /** transient notice shown above the form, e.g. "密码已重置" */
+  resetNotice?: string | null;
 }
 
-export default function LoginStep1({ onNext }: LoginStep1Props) {
+export default function LoginStep1({ onNext, resetNotice }: LoginStep1Props) {
   const [loading, setLoading] = useState(false);
   const form = useForm<LoginAccountFormValues>({
     resolver: zodResolver(loginAccountFormSchema),
@@ -48,9 +50,10 @@ export default function LoginStep1({ onNext }: LoginStep1Props) {
   const handleSubmit = form.handleSubmit(({ account }) => {
     setLoading(true);
     try {
+      const localPart = account.localPart.trim().toLowerCase();
       const loginEmail = account.domain.startsWith("@")
-        ? `${account.localPart.trim()}${account.domain}`
-        : account.localPart.trim();
+        ? `${localPart}${account.domain}`
+        : localPart;
       onNext(loginEmail);
     } finally {
       setLoading(false);
@@ -60,9 +63,13 @@ export default function LoginStep1({ onNext }: LoginStep1Props) {
   return (
     <PageTransition className="flex w-full flex-col">
       <div className="mb-8 flex flex-col gap-2.5">
-        <h2 className="type-title1">登录</h2>
-        <p className="text-[15px] text-muted-foreground">使用学号或登录邮箱继续。</p>
+        <h2 className="type-title1 text-center">登录</h2>
       </div>
+      {resetNotice && (
+        <div className="mb-4 rounded-lg border border-success/30 bg-success/10 px-3.5 py-2.5 text-sm text-success">
+          {resetNotice}
+        </div>
+      )}
       <Form {...form}>
         <form onSubmit={handleSubmit} className="flex flex-col">
           <Controller
@@ -79,9 +86,19 @@ export default function LoginStep1({ onNext }: LoginStep1Props) {
                     value={field.value}
                     onChange={field.onChange}
                     error={errorMessage}
+                    allowedDomains={["@njupt.edu.cn", "@sast.fun", "其他邮箱"]}
                   />
                   <div className="mt-1.5 flex justify-end">
-                    <Link href="/reset" className="text-xs text-link hover:underline">
+                    <Link
+                      href={(() => {
+                        const localPart = field.value.localPart.trim().toLowerCase();
+                        const email = field.value.domain.startsWith("@")
+                          ? `${localPart}${field.value.domain}`
+                          : localPart;
+                        return email ? `/reset?email=${encodeURIComponent(email)}` : "/reset";
+                      })()}
+                      className="text-sm text-link hover:underline"
+                    >
                       忘记密码
                     </Link>
                   </div>
@@ -100,7 +117,7 @@ export default function LoginStep1({ onNext }: LoginStep1Props) {
       <OtherLoginList list={oauthList} />
       <p className="mt-7 text-center text-sm text-muted-foreground">
         没有账号？
-        <Link href="/register" className="text-link hover:underline">注册</Link>
+        <Link href="/register" className="text-link text-lg hover:underline">注册</Link>
       </p>
     </PageTransition>
   );

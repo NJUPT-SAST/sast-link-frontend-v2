@@ -9,6 +9,7 @@ import Link from "next/link";
 import { passwordLogin } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
 import { createSession, setSession } from "@/lib/token";
+import { consumeAuthNext } from "@/lib/auth-next";
 import { useUserListStore } from "@/store/use-user-list-store";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import {
@@ -16,7 +17,6 @@ import {
   loginPasswordFormSchema,
 } from "@/lib/validations/auth";
 import { AuthFormField } from "@/components/auth/auth-form-field";
-import { LoginSuccessOverlay } from "@/components/animation/login-success-overlay";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { Button } from "@/components/ui/button";
 import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
@@ -32,7 +32,6 @@ export default function LoginStep2({ loginEmail, onBack }: LoginStep2Props) {
   const addAccount = useUserListStore((state) => state.addAccount);
   const resetProfile = useUserProfileStore((state) => state.resetProfile);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const form = useForm<LoginPasswordFormValues>({
     resolver: zodResolver(loginPasswordFormSchema),
     defaultValues: { password: "" },
@@ -58,17 +57,15 @@ export default function LoginStep2({ loginEmail, onBack }: LoginStep2Props) {
         avatar: null,
         session,
       });
-      setSuccess(true);
+      // Mid-flow redirect (e.g. back to an OAuth consent request) lands the
+      // user where they were heading; a normal sign-in goes to the homepage.
+      router.replace(consumeAuthNext("/home"));
     } catch (error) {
       form.setError("password", { message: toApiError(error).message });
     } finally {
       setLoading(false);
     }
   });
-
-  if (success) {
-    return <LoginSuccessOverlay onDone={() => router.replace("/home")} />;
-  }
 
   return (
     <PageTransition className="flex w-full flex-col">
@@ -93,7 +90,10 @@ export default function LoginStep2({ loginEmail, onBack }: LoginStep2Props) {
                   invalid={!!fieldState.error}
                 />
                 <div className="mt-1.5 flex justify-end">
-                  <Link href="/reset" className="text-xs text-link hover:underline">
+                  <Link
+                    href={`/reset?email=${encodeURIComponent(loginEmail)}`}
+                    className="text-sm text-link hover:underline"
+                  >
                     忘记密码
                   </Link>
                 </div>

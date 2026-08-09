@@ -3,26 +3,27 @@ import { render, screen } from "@testing-library/react";
 import { AuthShell } from "./auth-shell";
 
 describe("AuthShell", () => {
-  it("renders step marker and step content region", () => {
+  it("renders children and the brand logo", () => {
     render(
-      <AuthShell tech="Sign in / 01">
+      <AuthShell>
         <div>step content</div>
       </AuthShell>,
     );
 
-    expect(screen.getByText("Sign in / 01")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回首页" })).toBeInTheDocument();
     expect(screen.getByText("step content")).toBeInTheDocument();
   });
 
-  it("clips the brand column so wide content cannot blow the grid", () => {
+  it("centers the panel with a scrollable single column", () => {
     const { container } = render(
-      <AuthShell tech="Sign in / 01">
+      <AuthShell>
         <div>step content</div>
       </AuthShell>,
     );
 
     const section = container.querySelector("section");
-    expect(section).toHaveClass("md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]");
-    expect(section?.firstElementChild).toHaveClass("overflow-hidden");
+    expect(section).toHaveClass("flex", "min-h-screen", "overflow-y-auto");
+    // First child is the absolute top-left logo; second is the centered panel.
+    expect(section?.children[1]).toHaveClass("m-auto", "items-center");
   });
 });
