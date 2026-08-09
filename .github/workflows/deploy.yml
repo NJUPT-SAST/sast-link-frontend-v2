@@ -24,7 +24,7 @@ name: Docker Deploy
 #
 # Server prerequisites (one-off):
 #   docker network create sast-link-v2
-#   mkdir -p /data/sast-link-next
+#   mkdir -p /data/sast-link-frontend-v2
 # ============================================================================
 
 on:
@@ -39,7 +39,7 @@ env:
   SERVICE_NAME: sast-link-next
   REGISTRY: ccr.ccs.tencentyun.com
   IMAGE: ccr.ccs.tencentyun.com/sast/sast-link-next
-  SERVICE_DIR: /data/sast-link-next
+  SERVICE_DIR: /data/sast-link-frontend-v2
   SHARED_NETWORK: sast-link-v2
   HOST_PORT: 3002
 

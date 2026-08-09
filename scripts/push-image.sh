@@ -176,7 +176,7 @@ cat <<EOF
 
 Pushed. On the server:
 
-    cd /data/sast-link-next
+    cd /data/sast-link-frontend-v2
     docker pull ${IMAGE}:${SHA}
     docker image inspect ${IMAGE}:current >/dev/null 2>&1 \\
       && docker tag ${IMAGE}:current ${IMAGE}:backup
