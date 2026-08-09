@@ -1,3 +1,6 @@
+allowBuilds:
+  msw: true
+
 onlyBuiltDependencies:
   - esbuild
   - msw
@@ -7,6 +10,7 @@ onlyBuiltDependencies:
 overrides:
   '@babel/core@<=7.29.0': 7.29.6
   'esbuild@>=0.27.3 <0.28.1': 0.28.1
+  'fast-uri@<3.1.5': 3.1.5
   'form-data@>=4.0.0 <4.0.6': 4.0.6
   handlebars: '>=4.7.9'
   'hono@<4.12.25': 4.12.25
