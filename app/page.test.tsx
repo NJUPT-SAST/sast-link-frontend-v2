@@ -1,29 +1,36 @@
 import { render, screen } from "@testing-library/react";
 import Home from "./page";
 
-// Mock useRouter
 const mockReplace = jest.fn();
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({
-    replace: mockReplace,
-    push: jest.fn(),
-    back: jest.fn(),
-  }),
+  useRouter: () => ({ replace: mockReplace, push: jest.fn(), back: jest.fn() }),
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => "/",
 }));
 
-// Mock Zustand store
-jest.mock("@/store/use-user-list-store", () => ({
-  useUserListStore: () => ({
-    accounts: [],
-    removeAccount: jest.fn(),
-  }),
+const mockGetSession = jest.fn();
+jest.mock("@/lib/token", () => ({
+  getSession: () => mockGetSession(),
 }));
 
 describe("Home Page", () => {
-  it("redirects to login when no accounts exist", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetSession.mockReturnValue(null);
+  });
+
+  it("redirects to /home when already signed in", () => {
+    mockGetSession.mockReturnValue({ accessToken: "a", refreshToken: "r", expiresAt: 1 });
     render(<Home />);
-    expect(mockReplace).toHaveBeenCalledWith("/login");
+    expect(mockReplace).toHaveBeenCalledWith("/home");
+    expect(mockReplace).not.toHaveBeenCalledWith("/login");
+  });
+
+  it("shows the starfield landing with login and register entry when signed out", () => {
+    render(<Home />);
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "SAST Link" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "登录" })).toHaveAttribute("href", "/login");
+    expect(screen.getByRole("link", { name: "注册" })).toHaveAttribute("href", "/register");
   });
 });

@@ -1,75 +1,76 @@
 jest.mock("./client", () => ({
   apiClient: {
+    delete: jest.fn(),
     get: jest.fn(),
     post: jest.fn(),
+    put: jest.fn(),
   },
 }));
 
 import { apiClient } from "./client";
 import {
-  editProfile,
-  getUserBindStatus,
-  getUserInfo,
+  bindEmail,
+  bindGithub,
+  bindLark,
+  getUserIdentities,
   getUserProfile,
+  unbindIdentity,
+  updateUserProfile,
   uploadAvatar,
-  userLogin,
-  userLogout,
+  verifyBindEmail,
 } from "./user";
 
-describe("lib/api/user", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+describe("lib/api/user v2", () => {
+  beforeEach(() => jest.clearAllMocks());
 
-  it("logs in with form data and optional oauth header", () => {
-    userLogin("secret", "ticket-a");
-    userLogin("secret", "ticket-b", "oauth-ticket");
+  it("uses profile and identity routes from OpenAPI", () => {
+    getUserProfile();
+    updateUserProfile({ nickname: "Alice", intro: "Hello" });
+    getUserIdentities();
+    bindEmail("alice@example.com");
+    verifyBindEmail("bind-ticket", "123456");
+    bindGithub("github-code", "http://localhost:3000/oauth/bind/github");
+    bindLark("lark-code", "http://localhost:3000/oauth/bind/lark");
+    unbindIdentity(3, "Password123");
 
-    const firstBody = (apiClient.post as jest.Mock).mock.calls[0][1] as FormData;
-    const secondBody = (apiClient.post as jest.Mock).mock.calls[1][1] as FormData;
-
-    expect(firstBody.get("password")).toBe("secret");
-    expect(secondBody.get("password")).toBe("secret");
-
-    expect(apiClient.post).toHaveBeenNthCalledWith(1, "/user/login", firstBody, {
-      headers: { "LOGIN-TICKET": "ticket-a" },
+    expect(apiClient.get).toHaveBeenNthCalledWith(1, "/user/profile");
+    expect(apiClient.put).toHaveBeenNthCalledWith(1, "/user/profile", {
+      nickname: "Alice",
+      intro: "Hello",
     });
-    expect(apiClient.post).toHaveBeenNthCalledWith(2, "/user/login", secondBody, {
-      headers: {
-        "LOGIN-TICKET": "ticket-b",
-        "OAUTH-TICKET": "oauth-ticket",
+    expect(apiClient.get).toHaveBeenNthCalledWith(2, "/user/identities");
+    expect(apiClient.post).toHaveBeenNthCalledWith(1, "/user/identities/email", {
+      email: "alice@example.com",
+    });
+    expect(apiClient.post).toHaveBeenNthCalledWith(2, "/user/identities/email/verify", {
+      bind_ticket: "bind-ticket",
+      code: "123456",
+    });
+    expect(apiClient.post).toHaveBeenNthCalledWith(3, "/user/identities/github", null, {
+      params: {
+        code: "github-code",
+        redirect_uri: "http://localhost:3000/oauth/bind/github",
       },
     });
-  });
-
-  it("wraps basic profile endpoints with the expected routes", () => {
-    getUserInfo();
-    getUserProfile();
-    getUserBindStatus();
-    userLogout();
-    editProfile({ nickname: "Alice", bio: "Hello" });
-
-    expect(apiClient.get).toHaveBeenNthCalledWith(1, "/user/info");
-    expect(apiClient.get).toHaveBeenNthCalledWith(2, "/profile/getProfile");
-    expect(apiClient.get).toHaveBeenNthCalledWith(3, "/profile/bindStatus");
-    expect(apiClient.post).toHaveBeenNthCalledWith(1, "/user/logout", {});
-    expect(apiClient.post).toHaveBeenNthCalledWith(2, "/profile/changeProfile", {
-      nickname: "Alice",
-      bio: "Hello",
+    expect(apiClient.post).toHaveBeenNthCalledWith(4, "/user/identities/lark", null, {
+      params: {
+        code: "lark-code",
+        redirect_uri: "http://localhost:3000/oauth/bind/lark",
+      },
+    });
+    expect(apiClient.delete).toHaveBeenCalledWith("/user/identities/3", {
+      data: { password: "Password123" },
     });
   });
 
-  it("uploads avatar files as form data", async () => {
+  it("uploads avatar with the OpenAPI multipart field", async () => {
     const file = new Blob(["avatar"], { type: "image/png" });
-
     uploadAvatar(file);
 
-    const body = (apiClient.post as jest.Mock).mock.calls[0][1] as FormData;
-    const uploaded = body.get("avatarFile") as File;
-
-    expect(uploaded?.constructor.name).toBe("File");
+    const body = (apiClient.put as jest.Mock).mock.calls[0][1] as FormData;
+    const uploaded = body.get("file") as File;
     expect(uploaded.type).toBe("image/png");
     await expect(uploaded.text()).resolves.toBe("avatar");
-    expect(apiClient.post).toHaveBeenNthCalledWith(1, "/profile/uploadAvatar", body);
+    expect(apiClient.put).toHaveBeenCalledWith("/user/avatar", body);
   });
 });

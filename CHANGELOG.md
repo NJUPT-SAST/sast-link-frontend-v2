@@ -10,13 +10,13 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 - Next.js App Router implementation for SAST Link tourist and authenticated flows
 - Two-step login flow
-- Four-step registration flow
-- Four-step password reset flow
-- Feishu and GitHub OAuth callback routes
+- Three-step registration flow
+- Single-page password reset flow
+- Feishu and GitHub OAuth login landing page (`/oauth/callback`) and bind callbacks (`/oauth/bind/lark`, `/oauth/bind/github`)
 - Root-page remembered-account switcher
 - Authenticated homepage overview and side-panel composition
 - Profile editing, avatar upload, and avatar wheel zoom support
-- Zustand stores for auth, account list, profile state, and homepage panel state
+- Zustand stores for account list, profile state, and homepage panel state
 - Axios-based API client and auth/user API wrappers
 - Jest 30 + Testing Library + MSW test setup
 - GitHub Actions workflows for quality checks, coverage runs, static export build, and draft releases

@@ -1,63 +1,70 @@
 "use client";
 
-import { Suspense, useCallback, useState } from "react";
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { AuthShell } from "@/components/auth/auth-shell";
 import { PageTransition } from "@/components/animation/page-transition";
-import RegisterStep1 from "./_components/register-step-1";
-import RegisterStep2 from "./_components/register-step-2";
-import RegisterStep3 from "./_components/register-step-3";
-import RegisterStep4 from "./_components/register-step-4";
+import RegisterEmailForm from "./_components/register-email-form";
+import RegisterDetailsForm from "./_components/register-details-form";
 
-export default function RegisterPage() {
-  const [step, setStep] = useState(1);
-  const [registerTicket, setRegisterTicket] = useState("");
-  const [username, setUsername] = useState("");
+type RegisterPhase = "email" | "details";
 
-  const nextStep = useCallback(() => setStep((s) => s + 1), []);
-  const prevStep = useCallback(() => setStep((s) => s - 1), []);
+const TICKET_KEY = "sast:register-ticket";
+
+function RegisterFlow() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const phase: RegisterPhase =
+    searchParams.get("phase") === "details" ? "details" : "email";
+  const loginEmail = searchParams.get("email") ?? "";
+  const registerTicket =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem(TICKET_KEY) ?? ""
+      : "";
+  const position = phase === "details" ? "rightToLeft" : "leftToRight";
 
   return (
-    <AuthShell
-      title="<Register>"
-      description="完成邮箱验证与密码设置后即可开始使用 SAST Link。"
-    >
-      <Suspense>
-        {step === 1 && (
-          <PageTransition>
-            <RegisterStep1
-              onNext={nextStep}
-              onTicket={setRegisterTicket}
-              onUsername={setUsername}
-            />
-          </PageTransition>
-        )}
-        {step === 2 && (
-          <PageTransition>
-            <RegisterStep2
-              username={username}
-              ticket={registerTicket}
-              onTicket={setRegisterTicket}
-              onNext={nextStep}
-              onBack={prevStep}
-            />
-          </PageTransition>
-        )}
-        {step === 3 && (
-          <PageTransition>
-            <RegisterStep3
-              ticket={registerTicket}
-              onNext={nextStep}
-              onBack={prevStep}
-            />
-          </PageTransition>
-        )}
-        {step === 4 && (
-          <PageTransition>
-            <RegisterStep4 />
-          </PageTransition>
-        )}
-      </Suspense>
+    <AuthShell wide={phase === "details"}>
+      {phase === "email" && (
+        <PageTransition position={position}>
+          <RegisterEmailForm
+            defaultEmail={searchParams.get("email") ?? ""}
+            onVerified={(email, ticket) => {
+              sessionStorage.setItem(TICKET_KEY, ticket);
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("phase", "details");
+              params.set("email", email);
+              router.replace(`/register?${params.toString()}`);
+            }}
+          />
+        </PageTransition>
+      )}
+      {phase === "details" && (
+        <PageTransition position={position}>
+          <RegisterDetailsForm
+            loginEmail={loginEmail}
+            registerTicket={registerTicket}
+            registrationState={searchParams.get("registration_state") ?? undefined}
+            oauthState={searchParams.get("oauth_state") ?? undefined}
+            onBack={() => {
+              sessionStorage.removeItem(TICKET_KEY);
+              const params = new URLSearchParams(searchParams.toString());
+              params.delete("phase");
+              params.delete("email");
+              router.replace(`/register?${params.toString()}`);
+            }}
+          />
+        </PageTransition>
+      )}
     </AuthShell>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterFlow />
+    </Suspense>
   );
 }

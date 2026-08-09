@@ -18,6 +18,6 @@ export const message = {
     toast.info(text, { duration: delay ?? 3000 });
   },
   loading: (text: string, delay?: number) => {
-    toast.loading(text, { duration: delay ?? 3000 });
+    toast.loading(text, { duration: delay ?? Infinity });
   },
 };

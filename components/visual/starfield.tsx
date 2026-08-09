@@ -1,0 +1,126 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
+import { generateStars, drawStars, type Star } from "@/lib/visual/starfield";
+
+const MAX_DPR = 2;
+const FRAME_INTERVAL = 1000 / 30; // redraw at most ~30fps — smooth enough for sparse dots
+const WEAK_STAR_SCALE = 0.6;
+
+/** Capable desktop detects → `(pointer: fine)`. Coarse/low-core/low-memory
+ *  devices get a cheaper sky (DPR capped at 1, ~60% of the stars). The
+ *  navigator hints are optional, so each check is guarded. */
+export function isLowEndDevice(): boolean {
+  if (typeof navigator.hardwareConcurrency === "number" && navigator.hardwareConcurrency <= 4) return true;
+  if (typeof (navigator as { deviceMemory?: number }).deviceMemory === "number" && (navigator as { deviceMemory?: number }).deviceMemory! < 4) return true;
+  if (typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches) return true;
+  return false;
+}
+
+/** Full-viewport generative starfield: square pixel stars, three parallax
+ *  layers, white on dark / black on light. reduced-motion renders a single
+ *  static frame with no listeners. */
+export function Starfield() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return; // jsdom and unsupported environments
+
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let stars: Star[] = [];
+    let raf = 0;
+    let running = true;
+    let lastDraw = 0;
+    const target = { x: 0, y: 0 };
+    const current = { x: 0, y: 0 };
+    const start = performance.now();
+    const lowEnd = isLowEndDevice();
+
+    const dpr = () => Math.min(window.devicePixelRatio || 1, lowEnd ? 1 : MAX_DPR);
+
+    // One seed per mount: resize reuses it so the sky doesn't reshuffle on
+    // every window drag - only canvas size and star density update.
+    const seed = (Math.random() * 2 ** 31) | 0;
+    const resize = () => {
+      canvas.width = Math.floor(window.innerWidth * dpr());
+      canvas.height = Math.floor(window.innerHeight * dpr());
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      const generated = generateStars(seed, window.innerWidth, window.innerHeight);
+      // Weak devices draw a sparser sky — same seed, just fewer dots.
+      stars = lowEnd ? generated.slice(0, Math.floor(generated.length * WEAK_STAR_SCALE)) : generated;
+    };
+
+    const isDark = () => document.documentElement.classList.contains("dark");
+    const starColor = () => {
+      const raw = getComputedStyle(document.documentElement).getPropertyValue("--starfield");
+      return raw.trim() || (isDark() ? "#ffffff" : "#404040");
+    };
+
+    const frame = (t: number) => {
+      // Keep rAF scheduled at display rate so pointer parallax stays
+      // responsive, but only repaint once every FRAME_INTERVAL — halving the
+      // canvas paint cost is invisible for a sparse sky.
+      if (!reduced && running) raf = requestAnimationFrame(frame);
+      if (lastDraw !== 0 && t - lastDraw < FRAME_INTERVAL) return;
+      lastDraw = t;
+      current.x += (target.x - current.x) * 0.06;
+      current.y += (target.y - current.y) * 0.06;
+      const dark = isDark();
+      drawStars(ctx, stars, {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        dpr: dpr(),
+        timeSec: (performance.now() - start) / 1000,
+        offsetX: current.x,
+        offsetY: current.y,
+        color: starColor(),
+        minOpacity: dark ? 0.15 : 0.35,
+      });
+    };
+
+    const onPointer = (e: PointerEvent) => {
+      target.x = (e.clientX / window.innerWidth) * 2 - 1;
+      target.y = (e.clientY / window.innerHeight) * 2 - 1;
+    };
+
+    const onVisibility = () => {
+      running = document.visibilityState === "visible";
+      if (running && !reduced) {
+        cancelAnimationFrame(raf);
+        lastDraw = 0; // redraw immediately on return so the sky isn't stale
+        raf = requestAnimationFrame(frame);
+      }
+    };
+
+    resize();
+    if (reduced) {
+      frame(performance.now()); // one static frame, no loop, no listeners
+    } else {
+      window.addEventListener("resize", resize);
+      window.addEventListener("pointermove", onPointer, { passive: true });
+      document.addEventListener("visibilitychange", onVisibility);
+      raf = requestAnimationFrame(frame);
+    }
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("pointermove", onPointer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      data-testid="starfield"
+      className="pointer-events-none fixed inset-0 -z-10"
+    />
+  );
+}

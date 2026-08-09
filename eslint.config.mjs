@@ -13,10 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "coverage/**",
     "next-env.d.ts",
-    // Generated artifacts of the workspace docs app.
-    "docs/.next/**",
-    "docs/.source/**",
-    "docs/out/**",
+    // MSW-generated service worker (rebuilt by `msw init public`).
+    "public/mockServiceWorker.js",
     // Historical migration snapshots are not part of the active app surface.
     "tmp/**",
   ]),

@@ -3,42 +3,27 @@ import { render, screen } from "@testing-library/react";
 import { AuthShell } from "./auth-shell";
 
 describe("AuthShell", () => {
-  it("renders a shared auth heading, description, and step content region", () => {
+  it("renders children and the brand logo", () => {
     render(
-      <AuthShell
-        title="<Login>"
-        description="使用你的 SAST Link 账号继续，支持学号或邮箱登录。"
-      >
+      <AuthShell>
         <div>step content</div>
       </AuthShell>,
     );
 
-    expect(
-      screen.getByRole("heading", { name: "<Login>" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("使用你的 SAST Link 账号继续，支持学号或邮箱登录。"),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回首页" })).toBeInTheDocument();
     expect(screen.getByText("step content")).toBeInTheDocument();
   });
 
-  it("uses theme-aware shell colors instead of fixed light-mode surfaces", () => {
+  it("centers the panel with a scrollable single column", () => {
     const { container } = render(
-      <AuthShell
-        title="<Login>"
-        description="使用你的 SAST Link 账号继续，支持学号或邮箱登录。"
-      >
+      <AuthShell>
         <div>step content</div>
       </AuthShell>,
     );
 
     const section = container.querySelector("section");
-    const panel = container.querySelector(".rounded-\\[24px\\]");
-    const heading = screen.getByRole("heading", { name: "<Login>" });
-
-    expect(section).toHaveClass("bg-background");
-    expect(panel).toHaveClass("border-border");
-    expect(panel).toHaveClass("bg-card");
-    expect(heading).toHaveClass("text-foreground");
+    expect(section).toHaveClass("flex", "min-h-screen", "overflow-y-auto");
+    // First child is the absolute top-left logo; second is the centered panel.
+    expect(section?.children[1]).toHaveClass("m-auto", "items-center");
   });
 });

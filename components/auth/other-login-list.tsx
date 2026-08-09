@@ -12,18 +12,19 @@ interface OtherLoginItem {
 
 export function OtherLoginList({ list }: { list: OtherLoginItem[] }) {
   return (
-    <ul className="inline-flex w-[312px] flex-row items-center justify-center gap-[30px] p-0 m-0 list-none">
+    <ul className="m-0 flex w-full list-none gap-3 p-0">
       {list.map((item) => (
-        <li key={`other_login_${item.describe}`} className="inline-flex">
+        <li key={`other_login_${item.describe}`} className="flex-1">
           <a
             title={item.describe}
             href={item.target || undefined}
             onClick={() => {
               if (!item.target) message.warning("暂未开放");
             }}
-            className="inline-flex h-11 w-11 cursor-pointer select-none items-center justify-center rounded-full border-[3px] border-[#1c1f23]"
+            className="flex h-12 cursor-pointer select-none items-center justify-center gap-2 rounded-lg border border-input text-sm font-medium text-foreground transition-colors hover:bg-recessed [&_img]:size-[18px] [&_svg]:size-[18px]"
           >
             {item.icon}
+            {item.describe}
           </a>
         </li>
       ))}

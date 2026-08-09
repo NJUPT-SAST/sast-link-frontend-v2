@@ -5,15 +5,14 @@
 		level INFO
 	}
 
-	handle /apis/* {
-		reverse_proxy https://link.sast.fun
-	}
-
 	handle {
 		root * /var/www
 		file_server {
 			index index.html
 		}
-		try_files {path} {path}/index.html /index.html
+		# Next.js static export emits leaf routes as `{path}.html` (e.g.
+		# /oauth/bind/github.html). Without {path}.html every deep link falls
+		# through to /index.html — OAuth callbacks then land on the landing page.
+		try_files {path} {path}.html {path}/index.html /index.html
 	}
 }

@@ -1,48 +1,54 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface AuthShellProps {
-  title: string;
-  description: string;
   children: ReactNode;
   className?: string;
+  /** widen the form panel beyond the default 400px for long forms */
+  wide?: boolean;
 }
 
-export function AuthShell({
-  title,
-  description,
-  children,
-  className,
-}: AuthShellProps) {
+/** Centered single-column auth layout over the starfield. Logo sits in the
+ *  top-left corner; the panel is centered with `m-auto` so a tall form still
+ *  scrolls instead of pinning to the top edge. */
+export function AuthShell({ children, className, wide = false }: AuthShellProps) {
+  // Self-contained provider so the brand tooltip works without depending on
+  // the app-level provider (e.g. when AuthShell is rendered in isolation).
   return (
-    <section className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background px-4 py-10 text-foreground">
-      <div className="absolute inset-x-0 top-0 h-48 bg-[radial-gradient(circle_at_top,oklch(from_var(--muted)_l_c_h_/_0.55)_0%,transparent_72%)]" />
-      <div className="relative flex w-full max-w-[397px] flex-col gap-4 sm:gap-5">
-        <div className="space-y-3 text-left">
-          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-muted-foreground">
-            Authentication
-          </p>
-          <h1 className="text-[36px] font-semibold tracking-tight text-foreground sm:text-[43px]">
-            {title}
-          </h1>
-          <p className="max-w-[36ch] text-sm leading-6 text-muted-foreground">
-            {description}
-          </p>
-        </div>
-
-        <div
-          className={cn(
-            "flex min-h-[500px] max-h-[590px] w-full flex-col overflow-hidden rounded-[24px] border-[5px] border-border bg-card text-card-foreground shadow-[0_24px_80px_rgba(28,31,35,0.12)]",
-            "max-[498px]:min-h-[510px] max-[498px]:max-h-[600px] max-[498px]:border-none max-[498px]:shadow-none",
-            className,
-          )}
-        >
+    <TooltipProvider delayDuration={500}>
+    <section className="flex min-h-screen w-full flex-col overflow-y-auto text-foreground">
+      <div className="absolute left-5 top-5 sm:left-8 sm:top-7">
+        {/* Plain text — an SVG logo's fixed width leaves a gap under the
+            cursor's four-corner bracket, which reads as empty space. */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link
+              href="/"
+              aria-label="返回首页"
+              className="text-lg font-bold tracking-tight text-foreground transition-opacity hover:opacity-80"
+            >
+              SAST Link
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent>返回首页</TooltipContent>
+        </Tooltip>
+      </div>
+      <div className="m-auto flex w-full max-w-[calc(100%-40px)] flex-col items-center py-16 sm:max-w-[calc(100%-64px)]">
+        <div className={cn("flex w-full flex-col", wide ? "max-w-[520px]" : "max-w-[400px]", className)}>
           {children}
         </div>
       </div>
     </section>
+    </TooltipProvider>
   );
 }

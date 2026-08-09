@@ -1,35 +1,42 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { AuthShell } from "@/components/auth/auth-shell";
-import LoginStep1 from "./_components/login-step-1";
-import LoginStep2 from "./_components/login-step-2";
+import LoginAccountForm from "./_components/login-account-form";
+import LoginPasswordForm from "./_components/login-password-form";
 
-export default function LoginPage() {
-  const [step, setStep] = useState<1 | 2>(1);
-  const [loginTicket, setLoginTicket] = useState<string | null>(null);
+function LoginFlow() {
+  const searchParams = useSearchParams();
+  // The two phases live in local state — no `?step=` in the URL. Only the
+  // cross-page `?reset=success` notice (redirected back from /reset) survives
+  // in the query string.
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
+  const resetNotice =
+    searchParams.get("reset") === "success" ? "密码已重置，请用新密码登录" : null;
 
   return (
-    <AuthShell
-      title="<Login>"
-      description="使用你的 SAST Link 账号继续，支持学号或邮箱登录。"
-    >
-      <Suspense>
-        {step === 1 ? (
-          <LoginStep1
-            onNext={(ticket) => {
-              setLoginTicket(ticket);
-              setStep(2);
-            }}
-          />
-        ) : (
-          <LoginStep2
-            loginTicket={loginTicket!}
-            onBack={() => setStep(1)}
-          />
-        )}
-      </Suspense>
+    <AuthShell>
+      {accountEmail === null ? (
+        <LoginAccountForm
+          onNext={setAccountEmail}
+          resetNotice={resetNotice}
+        />
+      ) : (
+        <LoginPasswordForm
+          loginEmail={accountEmail}
+          onBack={() => setAccountEmail(null)}
+        />
+      )}
     </AuthShell>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginFlow />
+    </Suspense>
   );
 }

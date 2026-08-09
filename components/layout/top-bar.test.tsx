@@ -1,101 +1,63 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
 import { TopBar } from "./top-bar";
 
-const setHomeInfoPanel = jest.fn();
-const setTheme = jest.fn();
-let currentTheme = "light";
+const mockPathname = jest.fn();
+const mockRole = jest.fn();
 
-jest.mock("next-themes", () => ({
-  useTheme: () => ({
-    theme: currentTheme,
-    setTheme,
-  }),
-}));
-
-jest.mock("@/store/use-panel-store", () => ({
-  usePanelStore: (selector: (state: { setHomeInfoPanel: typeof setHomeInfoPanel }) => unknown) =>
-    selector({ setHomeInfoPanel }),
+jest.mock("@/components/layout/theme-toggle", () => ({
+  ThemeToggle: () => <button aria-label="主题模式" />,
 }));
 
 jest.mock("@/store/use-user-profile-store", () => ({
-  useUserProfileStore: (
-    selector: (state: { profile: { avatar: string | null; nickname?: string } }) => unknown,
-  ) =>
-    selector({
-      profile: {
-        avatar: null,
-        nickname: "Alice",
-      },
-    }),
+  useUserProfileStore: (selector: (state: { profile: { role: string } }) => unknown) =>
+    selector({ profile: { role: mockRole() } }),
+}));
+
+jest.mock("next/navigation", () => ({
+  usePathname: () => mockPathname(),
 }));
 
 describe("TopBar", () => {
   beforeEach(() => {
-    setHomeInfoPanel.mockClear();
-    setTheme.mockClear();
-    currentTheme = "light";
+    mockRole.mockReturnValue("member");
   });
 
-  it("renders the logo, avatar fallback and profile trigger", async () => {
-    const user = userEvent.setup();
-    render(<TopBar />);
+  it("renders borderless tools and links settings", () => {
+    mockPathname.mockReturnValue("/settings");
+    const { container } = render(<TopBar />);
 
     expect(screen.getByText("SAST Link")).toBeInTheDocument();
-    expect(screen.getByText("A")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Open profile" }));
-    expect(setHomeInfoPanel).toHaveBeenCalledWith(true);
+    expect(screen.getByRole("link", { name: "设置" })).toHaveAttribute("href", "/settings");
+    expect(container.querySelector("header")).not.toHaveClass("border-b");
+    expect(container.querySelector("header")).not.toHaveClass("bg-background/70");
+    expect(screen.queryByLabelText("Open profile")).not.toBeInTheDocument();
   });
 
-  it("renders a spacer after the fixed header", () => {
-    const { container } = render(<TopBar />);
-    const spacer = container.querySelector(".h-14.w-px");
-
-    expect(spacer).toBeInTheDocument();
-  });
-
-  it("renders a shared theme toggle and switches to dark mode", async () => {
-    const user = userEvent.setup();
+  it("shows the admin entry only for admins", () => {
+    mockRole.mockReturnValue("admin");
     render(<TopBar />);
-
-    await user.click(screen.getByRole("button", { name: "主题模式" }));
-    await user.click(screen.getByRole("menuitemradio", { name: "深色" }));
-
-    expect(setTheme).toHaveBeenCalledWith("dark");
+    expect(screen.getByRole("link", { name: "管理面板" })).toHaveAttribute(
+      "href",
+      "/admin",
+    );
   });
 
-  it("offers switching back to light mode when dark mode is active", async () => {
-    const user = userEvent.setup();
-    currentTheme = "dark";
-
+  it("hides the admin entry for non-admins", () => {
+    mockRole.mockReturnValue("member");
     render(<TopBar />);
-
-    await user.click(screen.getByRole("button", { name: "主题模式" }));
-    await user.click(screen.getByRole("menuitemradio", { name: "浅色" }));
-
-    expect(setTheme).toHaveBeenCalledWith("light");
+    expect(screen.queryByRole("link", { name: "管理面板" })).not.toBeInTheDocument();
   });
 
-  it("allows following the system theme", async () => {
-    const user = userEvent.setup();
-    currentTheme = "light";
-
+  it("labels the home link as 首页 when already on /home", () => {
+    mockPathname.mockReturnValue("/home");
     render(<TopBar />);
-
-    await user.click(screen.getByRole("button", { name: "主题模式" }));
-    await user.click(screen.getByRole("menuitemradio", { name: "跟随系统" }));
-
-    expect(setTheme).toHaveBeenCalledWith("system");
+    expect(screen.getByRole("link", { name: "首页" })).toHaveAttribute("href", "/home");
   });
 
-  it("uses theme-aware surface classes for the fixed header", () => {
-    const { container } = render(<TopBar />);
-    const header = container.querySelector(".fixed.top-0.left-0");
-
-    expect(header).toHaveClass("bg-background/80");
-    expect(header).toHaveClass("border-border/60");
-    expect(header).not.toHaveClass("bg-white/50");
+  it("labels the home link as 返回首页 when elsewhere", () => {
+    mockPathname.mockReturnValue("/settings");
+    render(<TopBar />);
+    expect(screen.getByRole("link", { name: "返回首页" })).toHaveAttribute("href", "/home");
   });
 });

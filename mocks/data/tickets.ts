@@ -1,32 +1,31 @@
-interface TicketEntry {
-  username: string;
-  verified: boolean;
+export interface CodeEntry {
+  email: string;
+  code: string;
+  registerTicket?: string;
 }
 
-const ticketStore = new Map<string, TicketEntry>();
+export const codes = new Map<string, CodeEntry>();
+export const loginCodes = new Map<string, number>([["mock-login-code", 1]]);
+export const bindTickets = new Map<string, string>();
 
-let counter = 0;
-
-export function issueTicket(username: string, prefix: string): string {
-  const ticket = `${prefix}-${++counter}-${Date.now()}`;
-  ticketStore.set(ticket, { username, verified: false });
-  return ticket;
+export function sendCode(email: string) {
+  codes.set(email, { email, code: "123456" });
 }
 
-export function getTicketEntry(ticket: string): TicketEntry | undefined {
-  return ticketStore.get(ticket);
+export function verifyCode(email: string, code: string) {
+  const entry = codes.get(email);
+  if (!entry || entry.code !== code) return null;
+  entry.registerTicket = `reg-${email}`;
+  return entry.registerTicket;
 }
 
-export function markVerified(ticket: string): void {
-  const entry = ticketStore.get(ticket);
-  if (entry) entry.verified = true;
+export function emailForTicket(ticket: string) {
+  return [...codes.values()].find((entry) => entry.registerTicket === ticket)?.email;
 }
 
-export function deleteTicket(ticket: string): void {
-  ticketStore.delete(ticket);
-}
-
-export function resetTickets(): void {
-  ticketStore.clear();
-  counter = 0;
+export function resetTickets() {
+  codes.clear();
+  bindTickets.clear();
+  loginCodes.clear();
+  loginCodes.set("mock-login-code", 1);
 }

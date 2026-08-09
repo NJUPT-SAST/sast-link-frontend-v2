@@ -19,16 +19,6 @@ export function GithubIcon() {
   );
 }
 
-export function QqIcon() {
-  return <Image src="/svg/qq.svg" alt="QQ" width={32} height={32} className="dark:invert dark:brightness-0" />;
-}
-
-export function MsIcon() {
-  return (
-    <Image src="/svg/ms.svg" alt="Microsoft" width={32} height={32} />
-  );
-}
-
 export function LarkIcon() {
   return <Image src="/svg/feishu.svg" alt="Feishu" width={32} height={32} className="dark:invert dark:brightness-0" />;
 }

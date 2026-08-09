@@ -1,84 +1,65 @@
+import type {
+  ApiEnvelope,
+  AuthResultData,
+  RegisterRequest,
+} from "./types";
 import { apiClient } from "./client";
-import type { ResType } from "./types";
 
-/** Verify account for registration (flag=0) */
-export function verifyRegistAccount(username: string) {
-  return apiClient.get<ResType<{ registerTicket: string }>>(
-    "/verify/account",
-    { params: { username, flag: 0 } },
+export function registerSendCode(loginEmail: string) {
+  return apiClient.post<ApiEnvelope<{ message: string; expires_in: number }>>(
+    "/auth/register/send-code",
+    { login_email: loginEmail },
   );
 }
 
-/** Verify account for login (flag=1) */
-export function verifyLoginAccount(username: string) {
-  return apiClient.get<ResType<{ loginTicket: string }>>(
-    "/verify/account",
-    { params: { username, flag: 1 } },
-  );
+export function registerVerifyCode(loginEmail: string, code: string) {
+  return apiClient.post<
+    ApiEnvelope<{ register_ticket: string; expires_in: number }>
+  >("/auth/register/verify-code", { login_email: loginEmail, code });
 }
 
-/** Verify account for password reset (flag=2) */
-export function verifyResetAccount(username: string) {
-  return apiClient.get<ResType<{ resetPwdTicket: string }>>(
-    "/verify/account",
-    { params: { username, flag: 2 } },
-  );
+export function completeRegister(data: RegisterRequest) {
+  return apiClient.post<ApiEnvelope<AuthResultData>>("/auth/register", data);
 }
 
-/** Send verification email */
-export function sendMail(ticket: string, type?: "reset") {
-  const headerKey = type === "reset" ? "RESETPWD-TICKET" : "REGISTER-TICKET";
-  return apiClient.get<ResType<null>>("/sendEmail", {
-    headers: { [headerKey]: ticket },
+export function passwordLogin(loginEmail: string, password: string) {
+  return apiClient.post<ApiEnvelope<AuthResultData>>("/user/login", {
+    login_email: loginEmail,
+    password,
   });
 }
 
-/** Verify email captcha */
-export function verifyCaptcha(
-  ticket: string,
-  captcha: string,
-  type?: "reset",
+export function logout(refreshTokenValue: string) {
+  return apiClient.post<ApiEnvelope<{ message: string }>>("/auth/logout", {
+    refresh_token: refreshTokenValue,
+  });
+}
+
+export function changePassword(oldPassword: string, newPassword: string) {
+  return apiClient.post<ApiEnvelope<{ message: string }>>(
+    "/auth/change-password",
+    { old_password: oldPassword, new_password: newPassword },
+  );
+}
+
+export function forgotPasswordSendCode(loginEmail: string) {
+  return apiClient.post<ApiEnvelope<{ message: string; expires_in: number }>>(
+    "/auth/forgot-password/send-code",
+    { login_email: loginEmail },
+  );
+}
+
+export function resetPassword(
+  loginEmail: string,
+  code: string,
+  newPassword: string,
 ) {
-  const headerKey = type === "reset" ? "RESETPWD-TICKET" : "REGISTER-TICKET";
-  const params = new URLSearchParams();
-  params.append("captcha", "S-" + captcha);
-
-  return apiClient.post<ResType<null>>("/verify/captcha", params.toString(), {
-    headers: {
-      [headerKey]: ticket,
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+  return apiClient.post<ApiEnvelope<{ message: string }>>(
+    "/auth/reset-password",
+    {
+      login_email: loginEmail,
+      code,
+      new_password: newPassword,
     },
-  });
-}
-
-/** Register a new user */
-export function userRegister(password: string, registerTicket: string) {
-  const params = new URLSearchParams();
-  params.append("password", password);
-
-  return apiClient.post<ResType<null>>("/user/register", params.toString(), {
-    headers: { "REGISTER-TICKET": registerTicket },
-  });
-}
-
-/** Reset password */
-export function resetPassword(password: string, resetTicket: string) {
-  const params = new URLSearchParams();
-  params.append("newPassword", password);
-
-  return apiClient.post<ResType<null>>(
-    "/user/resetPassword",
-    params.toString(),
-    { headers: { "RESETPWD-TICKET": resetTicket } },
   );
-}
-
-/** Feishu/Lark OAuth callback */
-export function getFeishuLoginStatus(code: string, state: string) {
-  return apiClient.get(`/login/lark/callback`, { params: { code, state } });
-}
-
-/** GitHub OAuth callback */
-export function getGithubLoginStatus(code: string, state: string) {
-  return apiClient.get(`/login/github/callback`, { params: { code, state } });
 }

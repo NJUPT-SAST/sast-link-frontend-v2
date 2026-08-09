@@ -1,10 +1,21 @@
 "use client";
 
 import { useState, useEffect, type ReactNode } from "react";
-import { ThemeProvider } from "next-themes";
+import dynamic from "next/dynamic";
 import { SWRConfig } from "swr";
 
-import { GlobalMessagePanel } from "@/components/feedback/global-message-panel";
+import { SurveyIntro } from "@/components/motion/survey-intro";
+import { Starfield } from "@/components/visual/starfield";
+import { TargetCursor } from "@/components/cursor/target-cursor";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+const GlobalMessagePanel = dynamic(
+  () =>
+    import("@/components/feedback/global-message-panel").then(
+      (m) => m.GlobalMessagePanel,
+    ),
+  { ssr: false },
+);
 
 export function Providers({ children }: { children: ReactNode }) {
   const [mockReady, setMockReady] = useState(
@@ -21,15 +32,14 @@ export function Providers({ children }: { children: ReactNode }) {
   if (!mockReady) return null;
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-    >
-      <SWRConfig value={{ revalidateOnFocus: false }}>
+    <SWRConfig value={{ revalidateOnFocus: false }}>
+      <TooltipProvider delayDuration={500}>
+        <Starfield />
         {children}
         <GlobalMessagePanel />
-      </SWRConfig>
-    </ThemeProvider>
+        <SurveyIntro />
+        <TargetCursor />
+      </TooltipProvider>
+    </SWRConfig>
   );
 }

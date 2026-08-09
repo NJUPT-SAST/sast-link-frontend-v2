@@ -1,62 +1,102 @@
-const getToken = jest.fn();
-
-jest.mock("@/lib/token", () => ({
-  getToken: () => getToken(),
+jest.mock("./client", () => ({
+  apiClient: { post: jest.fn() },
 }));
 
-import { oAuth } from "./oauth";
+jest.mock("@/lib/config/public", () => ({
+  __esModule: true,
+  API_BASE_URL: "http://localhost:8080",
+  FEISHU_CLIENT_ID: undefined,
+  FEISHU_BIND_REDIRECT_URI: undefined,
+  GITHUB_CLIENT_ID: undefined,
+  GITHUB_BIND_REDIRECT_URI: undefined,
+}));
 
-describe("lib/api/oauth", () => {
+import { apiClient } from "./client";
+import {
+  buildBindOAuthUrl,
+  buildOAuthLoginUrl,
+  consumeBindState,
+  exchangeLoginCode,
+} from "./oauth";
+import * as publicConfig from "@/lib/config/public";
+
+const BIND_STATE_KEY = "sast:oauth-bind:state";
+
+describe("lib/api/oauth v2", () => {
   beforeEach(() => {
-    getToken.mockReset();
-    jest.restoreAllMocks();
+    jest.clearAllMocks();
+    sessionStorage.clear();
+    (publicConfig as Record<string, unknown>).FEISHU_CLIENT_ID = undefined;
+    (publicConfig as Record<string, unknown>).FEISHU_BIND_REDIRECT_URI = undefined;
+    (publicConfig as Record<string, unknown>).GITHUB_CLIENT_ID = undefined;
+    (publicConfig as Record<string, unknown>).GITHUB_BIND_REDIRECT_URI = undefined;
   });
 
-  it("builds an authorize url with non-empty params only", () => {
-    getToken.mockReturnValue(null);
-    const appendSpy = jest.spyOn(URLSearchParams.prototype, "append");
-    jest.spyOn(console, "error").mockImplementation(() => {});
-
-    oAuth({
-      client_id: "client-id",
-      code_challenge: "challenge",
-      code_challenge_method: "S256",
-      redirect_uri: "http://localhost/callback",
-      response_type: "code",
-      scope: "profile",
-      state: null,
-    });
-
-    expect(appendSpy.mock.calls).toEqual([
-      ["client_id", "client-id"],
-      ["code_challenge", "challenge"],
-      ["code_challenge_method", "S256"],
-      ["redirect_uri", "http://localhost/callback"],
-      ["response_type", "code"],
-      ["scope", "profile"],
-    ]);
+  it("uses same-origin provider login routes", () => {
+    expect(buildOAuthLoginUrl("github")).toBe("http://localhost:8080/oauth/github");
+    expect(buildOAuthLoginUrl("lark")).toBe("http://localhost:8080/oauth/lark");
   });
 
-  it("appends the current token as part when available", () => {
-    getToken.mockReturnValue("token-123");
-    const appendSpy = jest.spyOn(URLSearchParams.prototype, "append");
-    jest.spyOn(console, "error").mockImplementation(() => {});
-
-    oAuth({
-      client_id: "client-id",
-      code_challenge: null,
-      code_challenge_method: null,
-      redirect_uri: null,
-      response_type: "code",
-      scope: null,
-      state: "abc",
+  it("exchanges the one-time login code", () => {
+    exchangeLoginCode("login-code");
+    expect(apiClient.post).toHaveBeenCalledWith("/oauth/exchange-code", {
+      code: "login-code",
     });
+  });
 
-    expect(appendSpy.mock.calls).toEqual([
-      ["client_id", "client-id"],
-      ["response_type", "code"],
-      ["state", "abc"],
-      ["part", "token-123"],
-    ]);
+  it("returns null for the bind URL when env is missing", () => {
+    expect(buildBindOAuthUrl("lark")).toBeNull();
+    expect(buildBindOAuthUrl("github")).toBeNull();
+  });
+
+  it("builds the feishu authorize URL and stores the state", () => {
+    (publicConfig as Record<string, unknown>).FEISHU_CLIENT_ID = "cli_test";
+    (publicConfig as Record<string, unknown>).FEISHU_BIND_REDIRECT_URI =
+      "http://localhost:3000/oauth/bind/lark";
+
+    const url = buildBindOAuthUrl("lark");
+    expect(url).not.toBeNull();
+    const parsed = new URL(url!);
+    expect(parsed.origin + parsed.pathname).toBe(
+      "https://open.feishu.cn/open-apis/authen/v1/authorize",
+    );
+    expect(parsed.searchParams.get("app_id")).toBe("cli_test");
+    expect(parsed.searchParams.get("redirect_uri")).toBe(
+      "http://localhost:3000/oauth/bind/lark",
+    );
+    const state = parsed.searchParams.get("state");
+    expect(state).toBeTruthy();
+    expect(sessionStorage.getItem(`${BIND_STATE_KEY}:lark`)).toBe(state);
+  });
+
+  it("builds the github authorize URL with scope and state", () => {
+    (publicConfig as Record<string, unknown>).GITHUB_CLIENT_ID = "gh_test";
+    (publicConfig as Record<string, unknown>).GITHUB_BIND_REDIRECT_URI =
+      "http://localhost:3000/oauth/bind/github";
+
+    const url = buildBindOAuthUrl("github");
+    expect(url).not.toBeNull();
+    const parsed = new URL(url!);
+    expect(parsed.origin + parsed.pathname).toBe(
+      "https://github.com/login/oauth/authorize",
+    );
+    expect(parsed.searchParams.get("client_id")).toBe("gh_test");
+    expect(parsed.searchParams.get("scope")).toBe("read:user");
+    expect(parsed.searchParams.get("redirect_uri")).toBe(
+      "http://localhost:3000/oauth/bind/github",
+    );
+    const state = parsed.searchParams.get("state");
+    expect(state).toBeTruthy();
+    expect(sessionStorage.getItem(`${BIND_STATE_KEY}:github`)).toBe(state);
+  });
+
+  it("consumes and verifies the bind state", () => {
+    sessionStorage.setItem(`${BIND_STATE_KEY}:lark`, "abc");
+    expect(consumeBindState("lark", "abc")).toBe(true);
+    expect(sessionStorage.getItem(`${BIND_STATE_KEY}:lark`)).toBeNull();
+
+    sessionStorage.setItem(`${BIND_STATE_KEY}:lark`, "abc");
+    expect(consumeBindState("lark", "wrong")).toBe(false);
+    expect(consumeBindState("lark", null)).toBe(false);
   });
 });

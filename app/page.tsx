@@ -1,81 +1,87 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { useUserListStore } from "@/store/use-user-list-store";
-import { getUserInfo } from "@/lib/api/user";
-import { setToken } from "@/lib/token";
-import { message } from "@/lib/message";
-import { BackLayout } from "@/components/layout/back-layout";
-import { AccountPanel } from "@/components/account/account-panel";
-import { Footer } from "@/components/layout/footer";
-import { DotLoading } from "@/components/ui/dot-loading";
+import { getSession } from "@/lib/token";
+import { Button } from "@/components/ui/button";
 
+// Session is a client-only value; the empty subscribe means we read it once on
+// mount so SSR and the first client render agree, then the real value takes over.
+const subscribeSession = () => () => {};
+
+/** `/` — the product's entry: a slow-moving starfield (rendered globally in
+ *  Providers) with the SAST Link title tilting subtly toward the cursor, and a
+ *  login / register pair. Signed-in visitors are bounced straight to /home. */
 export default function Home() {
   const router = useRouter();
-  const { accounts, removeAccount } = useUserListStore();
-  const [selected, setSelected] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const hasSession = useSyncExternalStore(
+    subscribeSession,
+    () => getSession() !== null,
+    () => false,
+  );
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    if (accounts.length === 0) {
-      router.replace("/login");
-    }
-  }, [accounts, router]);
+    if (hasSession) router.replace("/home");
+  }, [hasSession, router]);
 
-  const handleLogin = () => {
-    if (!accounts[selected]) return;
+  // Restrained parallax: the title tilts a few degrees toward the cursor.
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    setLoading(true);
-    setToken(accounts[selected].token);
+    let raf = 0;
+    const target = { x: 0, y: 0 };
+    const current = { x: 0, y: 0 };
 
-    getUserInfo()
-      .then((res) => {
-        if (res.data.Success) {
-          router.replace("/home");
-          return;
-        }
-        message.error("该用户的验证消息已过期，请重新登录!");
-      })
-      .catch(() => {
-        message.error("网络错误");
-      })
-      .finally(() => setLoading(false));
-  };
+    const onPointer = (e: PointerEvent) => {
+      target.x = (e.clientX / window.innerWidth - 0.5) * 2;
+      target.y = (e.clientY / window.innerHeight - 0.5) * 2;
+    };
 
-  if (accounts.length === 0) return null;
+    const frame = () => {
+      current.x += (target.x - current.x) * 0.06;
+      current.y += (target.y - current.y) * 0.06;
+      el.style.transform = `perspective(600px) rotateX(${current.y * -3}deg) rotateY(${current.x * 3}deg)`;
+      raf = requestAnimationFrame(frame);
+    };
+
+    window.addEventListener("pointermove", onPointer, { passive: true });
+    raf = requestAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("pointermove", onPointer);
+    };
+  }, []);
+
+  if (hasSession) return null;
 
   return (
-    <>
-      <BackLayout type="green" />
-      <main className="flex min-h-screen flex-col items-center">
-        <div className="page-title">{"<sast link>"}</div>
-        <div className="global-container">
-          <AccountPanel
-            accounts={accounts}
-            selectedIndex={selected}
-            onSelect={setSelected}
-            onRemove={removeAccount}
-          />
-          <Footer>
-            <button
-              onClick={handleLogin}
-              disabled={loading}
-              className="flex h-[42px] w-[314px] cursor-pointer items-center justify-center rounded-[10px] border-[3px] border-[#1c1f23] bg-[#1c1f23] text-xl font-semibold text-white disabled:opacity-50"
-            >
-              {loading ? <DotLoading /> : "登录"}
-            </button>
-            <Link
-              href="/login"
-              className="text-sm text-[#1c1f23] hover:underline"
-            >
-              使用其他账号
-            </Link>
-          </Footer>
-        </div>
-      </main>
-    </>
+    <main className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center">
+      <h1
+        ref={titleRef}
+        data-cursor-target
+        className="type-title1 text-5xl font-bold tracking-tight transition-[transform] will-change-transform sm:text-7xl"
+      >
+        SAST Link
+      </h1>
+      <div className="mt-6 flex max-w-md flex-col items-center gap-2">
+        <p className="type-tech text-xs text-tertiary">WHAT IS SAST LINK ?</p>
+        <p className="type-tech text-xs text-tertiary/70">
+          SAST&apos;s OAuth &amp; profile provider.
+        </p>
+      </div>
+      <div className="mt-10 flex items-center gap-4">
+        <Button asChild variant="outline" size="lg">
+          <Link href="/register">注册</Link>
+        </Button>
+        <Button asChild size="lg">
+          <Link href="/login">登录</Link>
+        </Button>
+      </div>
+    </main>
   );
 }
