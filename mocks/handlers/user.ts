@@ -4,7 +4,7 @@ import { API_BASE_URL } from "@/lib/config/public";
 import type { UpdateProfileRequest } from "@/lib/api/types";
 import { bindTickets } from "../data/tickets";
 import { findUserByAccessToken, identity } from "../data/users";
-import { DEFAULT_AVATAR } from "@/lib/constants/profile";
+import { DEFAULT_AVATAR, MAX_AVATAR_UPLOAD_BYTES } from "@/lib/constants/profile";
 
 function ok<T>(data: T) { return HttpResponse.json({ code: 0, message: "ok", data }); }
 function fail(status: number, code: number, message: string) { return HttpResponse.json({ code, message, data: null }, { status }); }
@@ -37,7 +37,7 @@ export const userHandlers = [
     if (!user) return fail(401, 40100, "未登录");
     const data = await request.formData();
     const file = data.get("file");
-    if (!(file instanceof File) || !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) return fail(400, 40000, "头像格式或大小不符合要求");
+    if (!(file instanceof File) || !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > MAX_AVATAR_UPLOAD_BYTES) return fail(400, 40000, "头像格式或大小不符合要求");
     const avatarUrl = DEFAULT_AVATAR;
     user.profile.profile ??= {};
     user.profile.profile.avatar = avatarUrl;

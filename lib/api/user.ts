@@ -18,7 +18,9 @@ export function updateUserProfile(data: UpdateProfileRequest) {
 
 export function uploadAvatar(file: Blob) {
   const formData = new FormData();
-  formData.append("file", file, "avatar.png");
+  // 文件名仅作展示，后端按魔数识别格式；后缀跟 blob 类型走避免误导。
+  const ext = file.type === "image/webp" ? "webp" : "png";
+  formData.append("file", file, `avatar.${ext}`);
   return apiClient.put<ApiEnvelope<{ avatar_url: string }>>(
     "/user/avatar",
     formData,

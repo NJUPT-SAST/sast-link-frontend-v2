@@ -4,7 +4,7 @@ import useSWR from "swr";
 
 import { mapProfile } from "@/lib/api/mappers";
 import { getUserProfile } from "@/lib/api/user";
-import { getSession } from "@/lib/token";
+import { profileKey } from "@/lib/api/profile";
 import { useUserListStore } from "@/store/use-user-list-store";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 
@@ -12,15 +12,7 @@ export function useFetchProfile() {
   const setProfile = useUserProfileStore((state) => state.setProfile);
   const updateAccount = useUserListStore((state) => state.updateAccount);
 
-  const swr = useSWR(
-    () => {
-      const session = getSession();
-      if (!session) return null;
-      // Fingerprint the key by session so switching accounts or logging in
-      // again invalidates the previous account's cached profile instead of
-      // showing stale data under the new session.
-      return `user-profile:${session.accessToken.slice(0, 16)}`;
-    },
+  const swr = useSWR(profileKey,
     async () => {
       const response = await getUserProfile();
       const data = response.data.data;
