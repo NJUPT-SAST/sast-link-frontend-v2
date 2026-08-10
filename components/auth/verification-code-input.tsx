@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 import { cn } from "@/lib/utils";
+import { message } from "@/lib/message";
 
 interface VerificationCodeInputProps {
   onResend: () => Promise<void>;
@@ -35,6 +36,7 @@ export function VerificationCodeInput({ onResend }: VerificationCodeInputProps) 
       await onResend();
     } catch {
       setClickable(true);
+      message.error("验证码发送失败，请重试");
     }
   }, [onResend]);
 

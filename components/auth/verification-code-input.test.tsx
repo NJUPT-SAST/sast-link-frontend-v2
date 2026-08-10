@@ -1,9 +1,23 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+import { message } from "@/lib/message";
 import { VerificationCodeInput } from "./verification-code-input";
 
+jest.mock("@/lib/message", () => ({
+  message: {
+    error: jest.fn(),
+    success: jest.fn(),
+    warning: jest.fn(),
+    info: jest.fn(),
+    loading: jest.fn(),
+  },
+}));
+
 describe("VerificationCodeInput", () => {
+  beforeEach(() => {
+    (message.error as jest.Mock).mockClear();
+  });
   beforeEach(() => {
     jest.useFakeTimers();
   });
@@ -44,6 +58,25 @@ describe("VerificationCodeInput", () => {
       expect(onResend).toHaveBeenCalledTimes(1);
     });
     expect(screen.getByText("60s 后重新发送")).toBeInTheDocument();
+  });
+
+  it("shows an error and re-enables resend when the request fails", async () => {
+    const onResend = jest.fn().mockRejectedValue(new Error("boom"));
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+    render(<VerificationCodeInput onResend={onResend} />);
+
+    act(() => {
+      jest.advanceTimersByTime(61_000);
+    });
+
+    await user.click(screen.getByText("重新发送"));
+
+    await waitFor(() => {
+      expect(message.error).toHaveBeenCalledWith("验证码发送失败，请重试");
+    });
+    const resend = await screen.findByRole("button", { name: "重新发送" });
+    expect(resend).toBeEnabled();
   });
 
   it("uses semantic foreground colors for disabled and enabled states", () => {
