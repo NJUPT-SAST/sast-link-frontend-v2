@@ -177,7 +177,7 @@ jobs:
           target: ${{ env.SERVICE_DIR }}/
 
       - name: Deploy on server
-        uses: appleboy/ssh-action@v1.2.2
+        uses: appleboy/ssh-action@v1.2.5
         timeout-minutes: 15
         env:
           IMAGE: ${{ env.IMAGE }}
