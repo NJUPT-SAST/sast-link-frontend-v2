@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 interface UserListProps {
   users: UserProfileData[];
   loading?: boolean;
+  /** Read-only mode (e.g. lecturer): hides selection and edit/restore actions. */
+  canManage?: boolean;
   onRestore?: (user: UserProfileData) => void;
   selectedIds?: Set<number>;
   onToggleSelect?: (id: number) => void;
@@ -25,6 +27,7 @@ const ROLE_BADGE: Record<string, string> = {
 export function UserList({
   users,
   loading = false,
+  canManage = true,
   onRestore,
   selectedIds = new Set(),
   onToggleSelect,
@@ -38,18 +41,25 @@ export function UserList({
     );
   }
 
-  const allSelected = users.length > 0 && users.every((u) => selectedIds.has(u.id));
+  const allSelected = canManage && users.length > 0 && users.every((u) => selectedIds.has(u.id));
 
   return (
     <div className="border-t border-hairline">
-      <div className="hidden grid-cols-[40px_60px_1fr_120px_180px_80px_100px_80px_180px] gap-4 border-b border-hairline py-3 text-xs text-tertiary sm:grid">
-        <input
-          type="checkbox"
-          aria-label="全选本页用户"
-          checked={allSelected}
-          onChange={(event) => onToggleSelectAll?.(event.target.checked)}
-          className="size-4 accent-foreground"
-        />
+      <div
+        className={cn(
+          "hidden grid-cols-[60px_1fr_120px_180px_80px_100px_80px_180px] gap-4 border-b border-hairline py-3 text-xs text-tertiary sm:grid",
+          canManage && "sm:grid-cols-[40px_60px_1fr_120px_180px_80px_100px_80px_180px]",
+        )}
+      >
+        {canManage && (
+          <input
+            type="checkbox"
+            aria-label="全选本页用户"
+            checked={allSelected}
+            onChange={(event) => onToggleSelectAll?.(event.target.checked)}
+            className="size-4 accent-foreground"
+          />
+        )}
         <div>ID</div>
         <div>姓名</div>
         <div>学号</div>
@@ -60,22 +70,26 @@ export function UserList({
         <div className="text-right" aria-hidden />
       </div>
       {users.map((user) => {
-        const selected = selectedIds.has(user.id);
+        const selected = canManage && selectedIds.has(user.id);
         return (
           <div
             key={user.id}
             className={cn(
-              "grid grid-cols-1 gap-2 border-b border-hairline py-4 text-sm sm:grid-cols-[40px_60px_1fr_120px_180px_80px_100px_80px_180px] sm:items-center sm:gap-4",
+              "grid grid-cols-1 gap-2 border-b border-hairline py-4 text-sm sm:grid-cols-[60px_1fr_120px_180px_80px_100px_80px_180px] sm:items-center sm:gap-4",
+              canManage &&
+                "sm:grid-cols-[40px_60px_1fr_120px_180px_80px_100px_80px_180px]",
               selected && "bg-accent/40",
             )}
           >
-            <input
-              type="checkbox"
-              aria-label={`选择 ${user.name}`}
-              checked={selected}
-              onChange={() => onToggleSelect?.(user.id)}
-              className="size-4 accent-foreground"
-            />
+            {canManage && (
+              <input
+                type="checkbox"
+                aria-label={`选择 ${user.name}`}
+                checked={selected}
+                onChange={() => onToggleSelect?.(user.id)}
+                className="size-4 accent-foreground"
+              />
+            )}
             <Link
               href={`/admin/users/${user.id}`}
               className="text-tertiary transition-colors hover:text-link hover:underline"
@@ -105,18 +119,22 @@ export function UserList({
               <Button variant="ghost" size="sm" asChild>
                 <Link href={`/admin/users/${user.id}`}>查看</Link>
               </Button>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href={`/admin/users/${user.id}/edit`}>编辑</Link>
-              </Button>
-              {user.state === "is_deleted" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onRestore?.(user)}
-                  disabled={loading}
-                >
-                  恢复
-                </Button>
+              {canManage && (
+                <>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={`/admin/users/${user.id}/edit`}>编辑</Link>
+                  </Button>
+                  {user.state === "is_deleted" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onRestore?.(user)}
+                      disabled={loading}
+                    >
+                      恢复
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>

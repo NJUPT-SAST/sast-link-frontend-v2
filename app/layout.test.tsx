@@ -21,7 +21,7 @@ describe("RootLayout", () => {
       </RootLayout>
     );
 
-    expect(markup).toContain('<html lang="zh-CN">');
+    expect(markup).toContain('<html lang="zh-CN" data-scroll-behavior="smooth">');
     expect(markup).toContain("--font-geist-sans");
     expect(markup).toContain("--font-geist-mono");
     expect(markup).toContain("antialiased");

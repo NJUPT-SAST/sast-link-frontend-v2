@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -26,6 +26,11 @@ interface LoginAccountFieldProps {
   disableAtDetection?: boolean;
   /** Restrict the available domains. Defaults to all domains. */
   allowedDomains?: readonly Domain[];
+  /** Copy context for the resolved-email hint. Defaults to login ("继续"). */
+  context?: "login" | "reset";
+  /** Fired when Enter is pressed inside the address input (e.g. to send a code
+   *  when the form's submit button is disabled). */
+  onEnter?: () => void;
 }
 
 export function LoginAccountField({
@@ -36,8 +41,12 @@ export function LoginAccountField({
   autoComplete = "username",
   disableAtDetection = false,
   allowedDomains = DOMAINS,
+  context = "login",
+  onEnter,
 }: LoginAccountFieldProps) {
   const [focused, setFocused] = useState(false);
+  // id linking the input to its error / hint copy for screen readers.
+  const describedBy = useId();
   const domainOptions = useMemo(
     () => DOMAINS.filter((d) => allowedDomains.includes(d)),
     [allowedDomains],
@@ -79,8 +88,9 @@ export function LoginAccountField({
       </label>
       <div
         className={cn(
-          "flex h-12 items-center gap-2 border bg-card px-3.5 transition-colors",
+          "flex h-12 items-center gap-2 rounded-lg border bg-card px-3.5 transition-colors",
           focused ? "border-ring" : "border-input",
+          "focus-within:ring-2 focus-within:ring-ring/25",
         )}
       >
         <input
@@ -89,11 +99,18 @@ export function LoginAccountField({
           autoComplete={autoComplete}
           aria-label={label}
           aria-invalid={!!error}
+          aria-describedby={error || value.localPart ? describedBy : undefined}
           placeholder={placeholder}
           value={value.localPart}
           onChange={(event) => handleChange(event.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && onEnter) {
+              event.preventDefault();
+              onEnter();
+            }
+          }}
           className="min-w-0 flex-1 bg-transparent text-[15px] text-foreground placeholder:text-tertiary outline-none"
         />
         {!atResolved && (
@@ -130,14 +147,20 @@ export function LoginAccountField({
         )}
       </div>
       {error ? (
-        <p className="mt-1 min-h-4 text-xs text-destructive">{error}</p>
+        <p id={describedBy} className="mt-1 min-h-4 text-xs text-destructive">{error}</p>
       ) : value.localPart ? (
-        <p className="mt-1 min-h-4 text-xs text-muted-foreground">
-          将使用{" "}
-          {value.domain === OTHER_EMAIL || atResolved
-            ? value.localPart
-            : `${value.localPart}${value.domain}`}{" "}
-          继续
+        <p id={describedBy} className="mt-1 min-h-4 text-xs text-muted-foreground">
+          {context === "reset"
+            ? `将发送验证码到 ${
+                value.domain === OTHER_EMAIL || atResolved
+                  ? value.localPart
+                  : `${value.localPart}${value.domain}`
+              }`
+            : `将使用 ${
+                value.domain === OTHER_EMAIL || atResolved
+                  ? value.localPart
+                  : `${value.localPart}${value.domain}`
+              } 继续`}
         </p>
       ) : (
         <p className="mt-1 min-h-4" />

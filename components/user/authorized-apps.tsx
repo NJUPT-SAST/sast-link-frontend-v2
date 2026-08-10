@@ -35,6 +35,10 @@ export function AuthorizedApps() {
     getGrants().then((r) => r.data.data.grants),
   );
   const [detail, setDetail] = useState<OAuthGrant | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<{
+    clientId: number;
+    name: string;
+  } | null>(null);
   const [revokingId, setRevokingId] = useState<number | null>(null);
   const grants = data ?? [];
 
@@ -76,7 +80,12 @@ export function AuthorizedApps() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => revoke(grant.client_id, grant.client_name)}
+                  onClick={() =>
+                    setConfirmTarget({
+                      clientId: grant.client_id,
+                      name: grant.client_name,
+                    })
+                  }
                   disabled={revokingId === grant.client_id}
                 >
                   {revokingId === grant.client_id ? <DotLoading /> : "撤销授权"}
@@ -122,12 +131,50 @@ export function AuthorizedApps() {
             </Button>
             {detail && (
               <Button
-                onClick={() => revoke(detail.client_id, detail.client_name)}
+                onClick={() =>
+                  setConfirmTarget({
+                    clientId: detail.client_id,
+                    name: detail.client_name,
+                  })
+                }
                 disabled={revokingId === detail.client_id}
               >
                 {revokingId === detail.client_id ? <DotLoading /> : "撤销授权"}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke is destructive — require an explicit confirmation first. */}
+      <Dialog
+        open={confirmTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmTarget(null);
+        }}
+      >
+        <DialogContent className="border-border/60 bg-card/95 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>撤销授权</DialogTitle>
+            <DialogDescription>
+              撤销后将失去对「{confirmTarget?.name}」的登录授权，需重新授权才能恢复。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmTarget(null)}>
+              取消
+            </Button>
+            <Button
+              onClick={() => {
+                if (!confirmTarget) return;
+                const target = confirmTarget;
+                setConfirmTarget(null);
+                void revoke(target.clientId, target.name);
+              }}
+              disabled={revokingId === confirmTarget?.clientId}
+            >
+              {revokingId === confirmTarget?.clientId ? <DotLoading /> : "确认撤销"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -7,6 +7,7 @@ import { Activity, KeyRound, Users } from "lucide-react";
 import { getAdminStats } from "@/lib/api/admin";
 import { ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
 import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
+import { AdminErrorState } from "@/components/admin/error-state";
 import { DotLoading } from "@/components/ui/dot-loading";
 
 // A restrained categorical palette that reads on both light and dark.
@@ -132,8 +133,10 @@ function Donut({
 }
 
 export default function AdminOverviewPage() {
-  const { data, isLoading, error } = useSWR("admin:stats", () =>
-    getAdminStats().then((r) => r.data.data),
+  const { data, isLoading, error, mutate } = useSWR(
+    "admin:stats",
+    () => getAdminStats().then((r) => r.data.data),
+    { refreshInterval: 60000 },
   );
 
   return (
@@ -149,11 +152,7 @@ export default function AdminOverviewPage() {
         </div>
       )}
 
-      {error && (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
-          加载失败，请稍后重试
-        </div>
-      )}
+      {error && <AdminErrorState onRetry={() => mutate()} />}
 
       {!isLoading && !error && data && (
         <>
@@ -168,7 +167,7 @@ export default function AdminOverviewPage() {
             />
             <StatCard
               icon={<Activity className="size-5" />}
-              label="今日操作"
+              label="近期操作"
               value={data.audit.recent.length}
               href="/admin/audit-logs"
             />

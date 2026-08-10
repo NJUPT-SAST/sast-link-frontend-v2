@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 import { useHideCursor } from "@/hooks/use-hide-cursor";
 import { generateStars, type Star } from "@/lib/visual/starfield";
@@ -27,8 +26,6 @@ const CORNERS = [
  *  skippable, never under reduced-motion. Always dark: it is a boot survey. */
 export function SurveyIntro() {
   const [phase, setPhase] = useState<Phase>("hidden");
-  const pathname = usePathname();
-  const bootPathRef = useRef(pathname);
   const stars = useMemo<Star[]>(
     () => generateStars(INTRO_SEED, 1440, 900).slice(0, STAR_COUNT),
     [],
@@ -36,17 +33,13 @@ export function SurveyIntro() {
   const playing = phase !== "hidden" && phase !== "done";
   useHideCursor(playing);
 
-  // Run once on the boot route only. Depending on `pathname` would restart the
-  // intro whenever an SPA navigation happens inside the 2.9s window (e.g. a
-  // signed-in visitor hitting `/` and being bounced to `/home`).
+  // Play once per session as the app's opening sequence, on whatever route the
+  // visitor lands first — signed-in users land on /home, not `/`, and should
+  // see it too. Skippable, never under reduced-motion.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (sessionStorage.getItem(SEEN_KEY)) return setPhase("done");
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return setPhase("done");
-    // OAuth flows (third-party callback, consent, bind) drop in from another
-    // app mid-flow — the boot survey would be a jarring 3s blackout there.
-    // Not marking it seen so a normal first visit still gets the intro.
-    if (bootPathRef.current.startsWith("/oauth")) return setPhase("done");
 
     setPhase("play");
     const timers = [

@@ -3,14 +3,14 @@ import type { UserProfileType } from "@/lib/api/types";
 /** Fallback avatar path when a user has no avatar set. */
 export const DEFAULT_AVATAR = "/defaultAvatar.png";
 
-/** Fallback display name when a user has no name. */
-export const DEFAULT_NAME = "NJUPTer";
+/** Source image pick limit (5 MB): a memory guard for the cropper. The cropped
+ * 200×200 result is what gets uploaded, so this is not an upload bound. */
+export const MAX_AVATAR_SOURCE_BYTES = 5 * 1024 * 1024;
 
-/** Max accepted avatar upload size (5 MB). Shared with mock handlers. */
-export const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
-
-/** Bio length over which the homepage truncates with an expand toggle. */
-export const BIO_TRUNCATE_LENGTH = 120;
+/** Upload cap (1 MB), matching the backend PUT /user/avatar contract. The
+ * cropper's 200×200 output stays far under this; the bound guards a non-cropped
+ * upload path. */
+export const MAX_AVATAR_UPLOAD_BYTES = 1 * 1024 * 1024;
 
 /** Initial character for avatar fallbacks. */
 export function avatarFallbackChar(profile: Pick<UserProfileType, "nickname">): string {

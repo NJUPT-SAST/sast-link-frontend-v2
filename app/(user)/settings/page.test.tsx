@@ -46,6 +46,8 @@ describe("SettingsPage", () => {
       "href",
       "/settings/password",
     );
+    expect(screen.getByRole("heading", { name: "第三方账号" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "绑定邮箱" })).toBeInTheDocument();
     expect(screen.getByTestId("identity-list")).toBeInTheDocument();
     expect(screen.getByTestId("bound-email-section")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "已授权应用" })).toHaveAttribute(
@@ -53,5 +55,12 @@ describe("SettingsPage", () => {
       "/settings/apps",
     );
     expect(screen.getByRole("button", { name: "退出登录" })).toBeInTheDocument();
+  });
+
+  it("shows the current account context at the top", () => {
+    render(<SettingsPage />);
+
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getByText("b24040001@njupt.edu.cn")).toBeInTheDocument();
   });
 });

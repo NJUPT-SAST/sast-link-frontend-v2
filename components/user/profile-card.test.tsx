@@ -64,6 +64,23 @@ describe("ProfileCard", () => {
     expect(screen.getByRole("textbox", { name: "签名" })).toBeInTheDocument();
   });
 
+  it("enters inline editing via Enter on the signature block", () => {
+    render(<ProfileCard />);
+    fireEvent.keyDown(screen.getByText("你还没留下签名哦～"), { key: "Enter" });
+    expect(screen.getByRole("textbox", { name: "签名" })).toBeInTheDocument();
+  });
+
+  it("hides the double-click hint while editing", () => {
+    render(<ProfileCard />);
+    fireEvent.keyDown(screen.getByText("你还没留下签名哦～"), { key: "Enter" });
+    expect(screen.queryByText("双击编辑")).not.toBeInTheDocument();
+  });
+
+  it("shows a double-click hint in the idle state", () => {
+    render(<ProfileCard />);
+    expect(screen.getByText("双击编辑")).toBeInTheDocument();
+  });
+
   it("observes the card with a low threshold and top-bar root margin", () => {
     render(<ProfileCard />);
     expect(lastObserverOptions?.threshold).toBe(0.25);

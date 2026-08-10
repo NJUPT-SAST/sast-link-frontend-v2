@@ -124,11 +124,20 @@
   html {
     scroll-behavior: smooth;
     scroll-padding-top: 4rem;
+    /* No background-color here: an opaque one would sit over the -z-10
+       starfield canvas and hide the stars. The theme background lives on
+       body (via --background), and the anti-FOUC script sets that variable
+       inline for the first paint. */
   }
   body {
     @apply bg-background text-foreground;
     margin: 0;
     padding: 0;
+    /* Creates a stacking context so the -z-10 starfield canvas paints above
+       the body's opaque background instead of underneath it (a static body has
+       no stacking context, so a negative-z child would sit under the body
+       background and the stars would be invisible). */
+    isolation: isolate;
   }
 }
 
@@ -162,6 +171,29 @@
 @keyframes pt-in { from { opacity: 0; transform: translate(var(--pt-x, 10px), var(--pt-y, 0)); } to { opacity: 1; transform: none; } }
 .pt-transition { opacity: 0; animation: pt-in 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) forwards; }
 @media (prefers-reduced-motion: reduce) { .pt-transition { animation: none; opacity: 1; } }
+
+/* ---------- target cursor corner breathing ----------
+ * A GPU-only micro animation on each bracket corner, breathing outward/inward
+ * along its own diagonal. Runs even while the JS rAF loop is paused on an idle
+ * pointer (zero JS cost). Locked targets stay still for precision aiming. */
+.tc-corner {
+  will-change: transform;
+  animation-duration: 2.6s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+.tc-corner-tl { animation-name: tc-breathe-tl; }
+.tc-corner-tr { animation-name: tc-breathe-tr; }
+.tc-corner-bl { animation-name: tc-breathe-bl; }
+.tc-corner-br { animation-name: tc-breathe-br; }
+
+.tc-active [data-state="locked"] .tc-corner { animation: none; }
+@media (prefers-reduced-motion: reduce) { .tc-corner { animation: none; } }
+
+@keyframes tc-breathe-tl { 0%, 100% { transform: translate(-1.6px, -1.6px); } 50% { transform: translate(1.6px, 1.6px); } }
+@keyframes tc-breathe-tr { 0%, 100% { transform: translate(1.6px, -1.6px); } 50% { transform: translate(-1.6px, 1.6px); } }
+@keyframes tc-breathe-bl { 0%, 100% { transform: translate(-1.6px, 1.6px); } 50% { transform: translate(1.6px, -1.6px); } }
+@keyframes tc-breathe-br { 0%, 100% { transform: translate(1.6px, 1.6px); } 50% { transform: translate(-1.6px, -1.6px); } }
 
 /* page-transition variants: distinct entrance per route, shared curve */
 @keyframes pt-fade { from { opacity: 0; } to { opacity: 1; } }

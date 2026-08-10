@@ -1,33 +1,37 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { getSession } from "@/lib/token";
 import { Button } from "@/components/ui/button";
 
-// Session is a client-only value; the empty subscribe means we read it once on
-// mount so SSR and the first client render agree, then the real value takes over.
-const subscribeSession = () => () => {};
-
 /** `/` — the product's entry: a slow-moving starfield (rendered globally in
  *  Providers) with the SAST Link title tilting subtly toward the cursor, and a
- *  login / register pair. Signed-in visitors are bounced straight to /home. */
+ *  login / register pair. Signed-in visitors are bounced straight to /home.
+ *
+ *  The first frame renders nothing. SSR has no session, so rendering the
+ *  landing page immediately would flash login/register at a signed-in user
+ *  before the redirect lands. The global boot intro (SurveyIntro) covers the
+ *  empty frame, so the landing page only ever appears for signed-out visitors,
+ *  once the session check resolves. */
 export default function Home() {
   const router = useRouter();
-  const hasSession = useSyncExternalStore(
-    subscribeSession,
-    () => getSession() !== null,
-    () => false,
-  );
+  const [showLanding, setShowLanding] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    if (hasSession) router.replace("/home");
-  }, [hasSession, router]);
+    if (getSession() !== null) {
+      router.replace("/home");
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowLanding(true);
+    }
+  }, [router]);
 
   // Restrained parallax: the title tilts a few degrees toward the cursor.
+  // Runs once the landing is actually shown.
   useEffect(() => {
     const el = titleRef.current;
     if (!el) return;
@@ -55,9 +59,12 @@ export default function Home() {
       cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onPointer);
     };
-  }, []);
+  }, [showLanding]);
 
-  if (hasSession) return null;
+  // Until the session check resolves, cover the frame with black — the boot
+  // intro paints over the same color, so signed-out and signed-in visitors both
+  // see an unbroken dark opening instead of a white flash.
+  if (!showLanding) return <div aria-hidden="true" className="fixed inset-0 bg-black" />;
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center">

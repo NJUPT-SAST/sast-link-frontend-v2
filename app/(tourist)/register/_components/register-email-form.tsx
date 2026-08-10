@@ -32,10 +32,15 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
   const [countdownActive, setCountdownActive] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Prefill the domain capsule from the carried email (e.g. back from the
+  // details step with an @sast.fun account should keep showing @sast.fun).
+  const defaultSuffix = defaultEmail.split("@")[1];
+  const initialDomain = defaultSuffix === "sast.fun" ? "@sast.fun" : "@njupt.edu.cn";
+
   const form = useForm<RegisterVerifyFormValues>({
     resolver: zodResolver(registerVerifyFormSchema),
     defaultValues: {
-      account: { localPart: defaultEmail.split("@")[0] ?? "", domain: "@njupt.edu.cn" },
+      account: { localPart: defaultEmail.split("@")[0] ?? "", domain: initialDomain },
       code: "",
     },
   });
@@ -121,6 +126,9 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
                     error={errorMessage}
                     disableAtDetection
                     allowedDomains={["@njupt.edu.cn", "@sast.fun"]}
+                    onEnter={() => {
+                      if (!sent) void handleSendCode();
+                    }}
                   />
                 </FormItem>
               );

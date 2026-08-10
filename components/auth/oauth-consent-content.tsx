@@ -98,8 +98,11 @@ export function OAuthConsentContent() {
 
   if (loading) {
     return (
-      <div className="grid size-14 place-items-center">
-        <DotLoading />
+      <div className="flex flex-col items-center gap-4 text-center">
+        <div className="grid size-14 place-items-center">
+          <DotLoading />
+        </div>
+        <p className="type-tech text-tertiary">正在加载授权信息…</p>
       </div>
     );
   }

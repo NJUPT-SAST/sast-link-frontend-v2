@@ -28,6 +28,8 @@ const mockUpdateUserProfile = jest.fn();
 const mockSetProfile = jest.fn();
 const mockMutate = jest.fn();
 const mockRouterPush = jest.fn();
+const mockRouterBack = jest.fn();
+const mockRouterReplace = jest.fn();
 const mockScrollToFirstError = jest.fn();
 const mockMapProfile = jest.fn((data) => data);
 
@@ -46,7 +48,11 @@ jest.mock("swr", () => ({
 }));
 
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockRouterPush }),
+  useRouter: () => ({
+    push: mockRouterPush,
+    back: mockRouterBack,
+    replace: mockRouterReplace,
+  }),
 }));
 
 jest.mock("@/lib/form", () => ({
@@ -62,8 +68,12 @@ jest.mock("@/lib/api/mappers", () => ({
   mapProfile: (data: unknown) => mockMapProfile(data),
 }));
 
-jest.mock("@/components/navigation/back-button", () => ({
-  BackButton: () => <button data-testid="back-button">返回</button>,
+jest.mock("@/lib/api/profile", () => ({
+  profileKey: () => "user-profile:test",
+}));
+
+jest.mock("@/hooks/use-avatar-upload", () => ({
+  useAvatarUpload: () => jest.fn(),
 }));
 
 jest.mock("@/lib/message", () => ({
@@ -76,6 +86,8 @@ describe("EditPage", () => {
     mockSetProfile.mockReset();
     mockMutate.mockReset();
     mockRouterPush.mockReset();
+    mockRouterBack.mockReset();
+    mockRouterReplace.mockReset();
     mockScrollToFirstError.mockReset();
     mockMapProfile.mockReset().mockImplementation((data) => data);
   });
@@ -87,7 +99,23 @@ describe("EditPage", () => {
     expect(screen.getByText("学籍信息")).toBeInTheDocument();
     expect(screen.getByText("联系方式")).toBeInTheDocument();
     expect(screen.getByText("社交链接")).toBeInTheDocument();
+    expect(screen.getByText("点击头像更换")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "保存修改" })).toBeInTheDocument();
+  });
+
+  it("opens the avatar cropper dialog from the avatar block", async () => {
+    render(<EditPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "更换头像" }));
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "选择图片" })).toBeInTheDocument();
+  });
+
+  it("marks required fields with a star (nickname/name/major)", () => {
+    render(<EditPage />);
+
+    expect(screen.getAllByText("*")).toHaveLength(3);
   });
 
   it("pre-fills nickname from profile", () => {
@@ -215,12 +243,74 @@ describe("EditPage", () => {
 
     await waitFor(() => {
       expect(mockSetProfile).toHaveBeenCalled();
-      expect(mockMutate).toHaveBeenCalledWith("user-profile");
+      expect(mockMutate).toHaveBeenCalledWith("user-profile:test");
       expect(mockRouterPush).toHaveBeenCalledWith("/profile");
     });
 
     const updatedProfile = mockSetProfile.mock.calls[0][0];
     expect(updatedProfile.department).toBe("media");
+  });
+
+  it("prompts beforeunload while the form is dirty", () => {
+    render(<EditPage />);
+
+    const input = screen.getByLabelText("别名");
+    fireEvent.change(input, { target: { value: "Bob" } });
+
+    const event = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("does not prompt beforeunload when the form is clean", () => {
+    render(<EditPage />);
+
+    const event = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("blocks back navigation while dirty when the user cancels", () => {
+    const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(false);
+    render(<EditPage />);
+
+    fireEvent.change(screen.getByLabelText("别名"), { target: { value: "Bob" } });
+    fireEvent.click(screen.getByRole("button", { name: "返回" }));
+
+    expect(window.confirm).toHaveBeenCalledWith("有未保存的修改，确定要离开吗？");
+    expect(mockRouterBack).not.toHaveBeenCalled();
+    expect(mockRouterReplace).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it("leaves without confirming when the form is clean", () => {
+    const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(true);
+    render(<EditPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "返回" }));
+
+    expect(window.confirm).not.toHaveBeenCalled();
+    expect(mockRouterReplace).toHaveBeenCalledWith("/profile");
+    confirmSpy.mockRestore();
+  });
+
+  it("clears the dirty guard after a successful save", async () => {
+    mockUpdateUserProfile.mockResolvedValueOnce({
+      data: { data: { user: profile } },
+    });
+
+    render(<EditPage />);
+
+    fireEvent.change(screen.getByLabelText("别名"), { target: { value: "Bob" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+
+    await waitFor(() => {
+      expect(mockRouterPush).toHaveBeenCalledWith("/profile");
+    });
+
+    const event = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("calls scrollToFirstError when validation fails", async () => {

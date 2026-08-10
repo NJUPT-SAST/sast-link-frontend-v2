@@ -45,6 +45,15 @@ function setup(params: string) {
 }
 
 describe("OAuthConsentContent", () => {
+  it("shows a loading hint while fetching the consent info", () => {
+    setup("request_id=ar_123");
+    mockGetConsentInfo.mockImplementation(() => new Promise(() => {}));
+
+    render(<OAuthConsentContent />);
+
+    expect(screen.getByText("正在加载授权信息…")).toBeInTheDocument();
+  });
+
   it("shows the verified app name and scopes fetched from the backend", async () => {
     setup("request_id=ar_123");
     render(<OAuthConsentContent />);

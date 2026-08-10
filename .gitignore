@@ -51,3 +51,5 @@ next-env.d.ts
 openspec
 .claude
 .codex
+
+docs/superpowers/

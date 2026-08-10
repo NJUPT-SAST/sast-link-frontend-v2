@@ -62,6 +62,11 @@ function ResetFlow() {
     defaultValues: { code: "", password: "", confirmPassword: "" },
   });
 
+  const handleSendCodeSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void sendCode();
+  };
+
   const sendCode = async () => {
     setAccountError(undefined);
     const parsed = loginEmailSchema.safeParse(loginEmail);
@@ -102,7 +107,7 @@ function ResetFlow() {
               <h2 className="type-title1">重置密码</h2>
               <p className="text-[15px] text-muted-foreground">输入注册邮箱，我们发送验证码。</p>
             </div>
-            <div className="flex flex-col gap-4">
+            <form onSubmit={handleSendCodeSubmit} className="flex flex-col gap-4">
               <LoginAccountField
                 value={account}
                 onChange={setAccount}
@@ -110,12 +115,13 @@ function ResetFlow() {
                 error={accountError}
                 disableAtDetection
                 allowedDomains={ALLOWED_DOMAINS}
+                context="reset"
               />
-              <Button type="button" onClick={sendCode} disabled={sending} className="w-full">
+              <Button type="submit" disabled={sending} className="w-full">
                 {sending ? <DotLoading /> : "发送验证码"}
               </Button>
               <FormError message={form.formState.errors.root?.message} />
-            </div>
+            </form>
             <p className="mt-7 text-center text-sm text-muted-foreground">
               想起来了？
               <Link href="/login" className="text-link hover:underline">返回登录</Link>

@@ -127,10 +127,8 @@ const config: Config = {
     // Handle module aliases (this will be automatically configured for you by Next.js)
     "^@/(.*)$": "<rootDir>/$1",
 
-    // Handle CSS imports (with CSS modules)
-    "^.+\\.module\\.(css|sass|scss)$": "identity-obj-proxy",
-
-    // Handle CSS imports (without CSS modules)
+    // Handle CSS imports (without CSS modules; the project uses Tailwind global
+    // CSS, not CSS Modules — the identity-obj-proxy mapper was removed)
     "^.+\\.(css|sass|scss)$": "<rootDir>/__mocks__/styleMock.js",
 
     // Handle image imports

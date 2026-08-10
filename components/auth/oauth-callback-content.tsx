@@ -48,13 +48,18 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
   const addAccount = useUserListStore((state) => state.addAccount);
   const resetProfile = useUserProfileStore((state) => state.resetProfile);
   const [exchangeError, setExchangeError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const exchangedRef = useRef(false);
   const code = searchParams.get("code");
-  const inputError =
-    searchParams.get("error_description") ||
-    (!code && !searchParams.get("registration_state")
-      ? "缺少授权信息，请重新登录"
-      : null);
+  // The provider bounces back with an `error` query when the user cancels the
+  // consent step — treat that as "已取消登录", not a stale link.
+  const cancelled = searchParams.get("error") !== null;
+  const inputError = cancelled
+    ? null
+    : searchParams.get("error_description") ||
+      (!code && !searchParams.get("registration_state")
+        ? "缺少授权信息，请重新登录"
+        : null);
 
   useEffect(() => {
     const registrationState = searchParams.get("registration_state");
@@ -67,6 +72,7 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
     if (!code) return;
     if (exchangedRef.current) return;
     exchangedRef.current = true;
+    setExchangeError(null);
 
     exchangeLoginCode(code)
       .then((response) => {
@@ -88,7 +94,13 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
         router.replace(consumeAuthNext("/home"));
       })
       .catch((reason) => setExchangeError(toApiError(reason).message));
-  }, [addAccount, code, resetProfile, router, searchParams]);
+  }, [addAccount, code, resetProfile, router, searchParams, retryCount]);
+
+  const handleRetry = () => {
+    exchangedRef.current = false;
+    setExchangeError(null);
+    setRetryCount((count) => count + 1);
+  };
 
   const error = inputError || exchangeError;
 
@@ -97,14 +109,30 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
       <div className="grid size-14 place-items-center rounded border border-hairline bg-card [&_img]:size-7 [&_svg]:size-7">
         {provider.icon}
       </div>
-      {error ? (
+      {cancelled ? (
+        <>
+          <h1 className="type-title3">已取消登录</h1>
+          <Steps failed />
+          <p className="max-w-[360px] text-[15px] leading-[22px] text-muted-foreground">
+            已取消通过 {provider.name} 登录，未执行任何操作。
+          </p>
+          <div className="mt-2">
+            <Button onClick={() => router.replace("/login")}>返回登录</Button>
+          </div>
+        </>
+      ) : error ? (
         <>
           <h1 className="type-title3">登录链接已失效</h1>
           <Steps failed />
           <p className="max-w-[360px] text-[15px] leading-[22px] text-muted-foreground">
             {error}。返回登录页重新发起 {provider.name} 登录即可。
           </p>
-          <div className="mt-2">
+          <div className="mt-2 flex gap-3">
+            {exchangeError !== null && (
+              <Button variant="outline" onClick={handleRetry}>
+                重新尝试
+              </Button>
+            )}
             <Button onClick={() => router.replace("/login")}>返回登录</Button>
           </div>
         </>

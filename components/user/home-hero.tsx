@@ -20,7 +20,7 @@ export function HomeHero() {
   const displayName = profile.nickname || profile.name || "NJUPTer";
 
   return (
-    <section className="relative flex min-h-[calc(100vh-4rem)] snap-start flex-col items-center justify-center px-5 text-center sm:px-8">
+    <section className="relative flex min-h-[calc(100dvh-4rem)] snap-start flex-col items-center justify-center px-5 text-center sm:px-8">
       <div className="stagger-rise flex max-w-xl flex-col items-center gap-5">
         <div className="type-tech text-tertiary">{dateLabel}</div>
         <h1 className="type-title1" data-cursor-target>
@@ -28,7 +28,7 @@ export function HomeHero() {
         </h1>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
           <Button variant="ghost" asChild>
-            <Link href="/profile">账户设置</Link>
+            <Link href="/profile">个人资料</Link>
           </Button>
         </div>
       </div>

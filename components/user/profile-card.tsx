@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Pencil } from "lucide-react";
 
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { updateUserProfile } from "@/lib/api/user";
@@ -63,7 +64,7 @@ export function ProfileCard() {
   };
 
   return (
-    <section ref={sectionRef} id="profile-card" className="grid min-h-screen snap-start scroll-mt-16 place-items-center px-5 py-24 sm:px-8">
+    <section ref={sectionRef} id="profile-card" className="grid min-h-dvh snap-start scroll-mt-16 place-items-center px-5 py-24 sm:px-8">
       <article
         aria-label="个人名片"
         className={`grid w-full max-w-[760px] border border-hairline bg-background/78 backdrop-blur-md transition-[opacity,transform] duration-500 ease-out md:grid-cols-[230px_minmax(0,1fr)] ${visible ? "translate-y-0 opacity-100" : "translate-y-[18px] opacity-0"}`}
@@ -77,8 +78,27 @@ export function ProfileCard() {
             <div className="mt-5 text-2xl font-semibold tracking-tight">{profile.nickname}</div>
           </div>
 
-          <div data-cursor-target onDoubleClick={() => setEditing(true)}>
-            <div className="type-tech mb-2 text-tertiary">签名</div>
+          <div
+            data-cursor-target
+            tabIndex={0}
+            onDoubleClick={() => setEditing(true)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !editing) {
+                event.preventDefault();
+                setEditing(true);
+              }
+            }}
+            className="group cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
+          >
+            <div className="mb-2 flex items-center gap-1.5">
+              <span className="type-tech text-tertiary">签名</span>
+              {!editing && (
+                <span className="flex items-center gap-1 text-[11px] text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                  <Pencil size={11} />
+                  双击编辑
+                </span>
+              )}
+            </div>
             {editing ? (
               <input
                 ref={inputRef}

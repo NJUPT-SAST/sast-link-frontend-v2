@@ -19,11 +19,12 @@ describe("Home Page", () => {
     mockGetSession.mockReturnValue(null);
   });
 
-  it("redirects to /home when already signed in", () => {
+  it("renders nothing and bounces signed-in users straight to /home (no landing flash)", () => {
     mockGetSession.mockReturnValue({ accessToken: "a", refreshToken: "r", expiresAt: 1 });
     render(<Home />);
     expect(mockReplace).toHaveBeenCalledWith("/home");
-    expect(mockReplace).not.toHaveBeenCalledWith("/login");
+    expect(screen.queryByRole("heading", { name: "SAST Link" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "登录" })).not.toBeInTheDocument();
   });
 
   it("shows the starfield landing with login and register entry when signed out", () => {

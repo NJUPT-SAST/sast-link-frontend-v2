@@ -34,6 +34,20 @@ if (!window.matchMedia) {
   });
 }
 
+if (!("ResizeObserver" in globalThis)) {
+  // Radix UI's use-size reads element size via ResizeObserver (e.g. the Slider
+  // used in the avatar cropper); jsdom does not implement it.
+  class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    writable: true,
+    value: ResizeObserverMock,
+  });
+}
+
 type MockNextImageProps = React.ComponentPropsWithoutRef<'img'> & {
   priority?: boolean;
   fill?: boolean;

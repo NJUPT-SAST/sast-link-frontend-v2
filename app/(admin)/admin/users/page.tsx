@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useSWRConfig } from "swr";
 
 import type {
@@ -15,10 +15,13 @@ import { updateAdminUser } from "@/lib/api/admin";
 import { message } from "@/lib/message";
 import { useAdminUsers, buildAdminUsersKey } from "@/hooks/use-admin-users";
 import { useAdminMutations } from "@/hooks/use-admin-mutations";
+import { useUserProfileStore } from "@/store/use-user-profile-store";
+import { canManageUsers } from "@/components/admin/permissions";
 import { UserFilters } from "@/components/admin/user-filters";
 import { UserList } from "@/components/admin/user-list";
 import { Pagination } from "@/components/admin/pagination";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { AdminErrorState } from "@/components/admin/error-state";
 import {
   UserBatchEditDialog,
   type BatchEditFields,
@@ -28,6 +31,8 @@ import { Button } from "@/components/ui/button";
 
 export default function AdminUsersPage() {
   const { mutate } = useSWRConfig();
+  const role = useUserProfileStore((state) => state.profile.role);
+  const canManage = canManageUsers(role);
   const [filters, setFilters] = useState<AdminUserListParams>({ page: 1, page_size: 20 });
   const { data, isLoading, error } = useAdminUsers(filters);
   const { deleteUser, restoreUser, isLoading: mutationLoading } = useAdminMutations();
@@ -64,13 +69,6 @@ export default function AdminUsersPage() {
     },
     [data],
   );
-
-  // Changing filters or page changes the visible scope — drop the selection so a
-  // batch action never silently applies to users that are no longer on screen.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSelectedIds(new Set());
-  }, [filters]);
 
   const handleBatchConfirm = async (fields: BatchEditFields) => {
     setBatchOpen(false);
@@ -137,7 +135,7 @@ export default function AdminUsersPage() {
           <h1 className="type-title2">用户管理</h1>
           <p className="mt-1 text-sm text-tertiary">查看、编辑和管理系统用户</p>
         </div>
-        {selectedIds.size > 0 && (
+        {canManage && selectedIds.size > 0 && (
           <Button onClick={() => setBatchOpen(true)} disabled={batchLoading}>
             批量修改（{selectedIds.size}）
           </Button>
@@ -146,23 +144,29 @@ export default function AdminUsersPage() {
 
       <UserFilters value={filters} onChange={handleFiltersChange} />
 
+      {canManage && selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 text-sm text-tertiary">
+          <span>已选 {selectedIds.size} 人</span>
+          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+            清除选择
+          </Button>
+        </div>
+      )}
+
       {isLoading && (
         <div className="flex h-40 items-center justify-center">
           <DotLoading />
         </div>
       )}
 
-      {error && (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
-          加载失败，请稍后重试
-        </div>
-      )}
+      {error && <AdminErrorState onRetry={() => mutate(buildAdminUsersKey(filters))} />}
 
       {!isLoading && !error && data && (
         <>
           <UserList
             users={data.users}
             loading={mutationLoading}
+            canManage={canManage}
             onRestore={handleRestore}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
