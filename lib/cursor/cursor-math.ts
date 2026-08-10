@@ -1,4 +1,4 @@
-export const LOCK_SELECTOR = 'a, button, [role="button"], [data-cursor-target]';
+const LOCK_SELECTOR = 'a, button, [role="button"], [data-cursor-target]';
 const TEXT_CONTROL_SELECTOR =
   'input, textarea, select, [contenteditable=""], [contenteditable="true"]';
 
