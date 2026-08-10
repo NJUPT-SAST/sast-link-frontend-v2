@@ -56,7 +56,7 @@ describe("HomePage", () => {
     expect(screen.getByRole("heading", { name: /Alice/ })).toBeInTheDocument();
     expect(screen.queryByText("成员 · SAST 成员")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "编辑资料" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "账户设置" })).toHaveAttribute("href", "/profile");
+    expect(screen.getByRole("link", { name: "个人资料" })).toHaveAttribute("href", "/profile");
     expect(screen.queryByRole("link", { name: "查看名片" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "查看个人名片" })).toHaveAttribute("href", "#profile-card");
     expect(screen.getByRole("region", { name: "个人名片" })).toBeInTheDocument();
