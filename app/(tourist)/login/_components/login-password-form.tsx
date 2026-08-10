@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
@@ -27,11 +27,21 @@ interface LoginPasswordFormProps {
   onBack: () => void;
 }
 
+const LOGIN_ACCOUNT_KEY = "sast:login-account";
+
 export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordFormProps) {
   const router = useRouter();
   const addAccount = useUserListStore((state) => state.addAccount);
   const resetProfile = useUserProfileStore((state) => state.resetProfile);
   const [loading, setLoading] = useState(false);
+
+  // Safety net: whenever the password step is shown, persist the account and
+  // stamp the URL marker so a refresh or back-nav keeps the flow in place.
+  useEffect(() => {
+    sessionStorage.setItem(LOGIN_ACCOUNT_KEY, loginEmail);
+    router.replace("/login?step=password");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const form = useForm<LoginPasswordFormValues>({
     resolver: zodResolver(loginPasswordFormSchema),
     defaultValues: { password: "" },
@@ -57,8 +67,11 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
         avatar: null,
         session,
       });
-      // Mid-flow redirect (e.g. back to an OAuth consent request) lands the
-      // user where they were heading; a normal sign-in goes to the homepage.
+      // Drop the stored account so a later /login?step=password never restores
+      // a stale session entry. Mid-flow redirect (e.g. back to an OAuth
+      // consent request) lands the user where they were heading; a normal
+      // sign-in goes to the homepage.
+      sessionStorage.removeItem(LOGIN_ACCOUNT_KEY);
       router.replace(consumeAuthNext("/home"));
     } catch (error) {
       form.setError("password", { message: toApiError(error).message });
