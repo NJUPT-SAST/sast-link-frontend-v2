@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AuthShell } from "@/components/auth/auth-shell";
@@ -23,6 +23,14 @@ function RegisterFlow() {
       ? sessionStorage.getItem(TICKET_KEY) ?? ""
       : "";
   const position = phase === "details" ? "rightToLeft" : "leftToRight";
+
+  // Landing straight on ?phase=details without a ticket (manual URL, expired
+  // session) would strand the user on the details step — bounce back to email.
+  useEffect(() => {
+    if (phase === "details" && !registerTicket) {
+      router.replace("/register");
+    }
+  }, [phase, registerTicket, router]);
 
   return (
     <AuthShell wide={phase === "details"}>
