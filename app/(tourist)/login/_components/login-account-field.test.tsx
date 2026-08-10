@@ -69,6 +69,17 @@ describe("LoginAccountField", () => {
     expect(screen.getByText("将使用 bob@sast.fun 继续")).toBeInTheDocument();
   });
 
+  it("uses reset copy for the hint when context=reset", () => {
+    render(
+      <LoginAccountField
+        value={{ localPart: "alice", domain: "@njupt.edu.cn" }}
+        onChange={jest.fn()}
+        context="reset"
+      />,
+    );
+    expect(screen.getByText("将发送验证码到 alice@njupt.edu.cn")).toBeInTheDocument();
+  });
+
   it("hides the domain pill once the input contains an @", () => {
     render(
       <LoginAccountField
