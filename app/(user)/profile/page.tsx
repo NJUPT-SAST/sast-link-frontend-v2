@@ -1,11 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { Camera } from "lucide-react";
 
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { avatarFallbackChar, DEFAULT_AVATAR, ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
 import { cn } from "@/lib/utils";
+import { useAvatarUpload } from "@/hooks/use-avatar-upload";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarCropperDialog } from "@/components/user/avatar-cropper-dialog";
+import { IdentityList } from "@/components/user/identity-list";
 
 const DEPARTMENT_LABELS: Record<string, string> = {
   software: "软件研发部",
@@ -37,14 +42,26 @@ function Field({
 
 export default function ProfilePage() {
   const profile = useUserProfileStore((state) => state.profile);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const handleAvatarUploaded = useAvatarUpload();
 
   return (
     <main className="stagger-rise mx-auto flex w-full max-w-[760px] flex-col gap-14 px-5 pb-20 pt-14 sm:px-8">
       <section aria-label="基本资料" className="flex items-center gap-6">
-        <Avatar className="size-20 border border-foreground">
-          <AvatarImage src={profile.avatar ?? DEFAULT_AVATAR} alt={profile.nickname} />
-          <AvatarFallback className="text-2xl">{avatarFallbackChar(profile)}</AvatarFallback>
-        </Avatar>
+        <button
+          type="button"
+          onClick={() => setAvatarOpen(true)}
+          aria-label="更换头像"
+          className="group relative shrink-0 rounded-full transition-transform hover:scale-[1.02] active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        >
+          <Avatar className="size-20 border border-foreground">
+            <AvatarImage src={profile.avatar ?? DEFAULT_AVATAR} alt={profile.nickname} />
+            <AvatarFallback className="text-2xl">{avatarFallbackChar(profile)}</AvatarFallback>
+          </Avatar>
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/0 opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100 group-focus-visible:bg-black/40 group-focus-visible:opacity-100">
+            <Camera size={20} className="text-foreground" />
+          </span>
+        </button>
         <div className="min-w-0">
           <h1 className="type-title2 truncate">{profile.nickname || profile.name}</h1>
           <div className="mt-1 text-sm text-muted-foreground">
@@ -79,8 +96,23 @@ export default function ProfilePage() {
         <Field label="手机号" value={profile.phoneNumber} />
         <Field label="QQ" value={profile.qqNumber} />
         <Field label="博客" value={profile.blogUrl} />
-        <Field label="GitHub" value={profile.githubUrl} />
+        <Field label="GitHub 链接" value={profile.githubUrl} />
       </section>
+
+      <section aria-label="已关联账号">
+        <h2 className="type-tech mb-3 text-tertiary">已关联账号</h2>
+        <div className="border-t border-hairline">
+          <IdentityList />
+        </div>
+      </section>
+
+      <AvatarCropperDialog
+        open={avatarOpen}
+        onOpenChange={setAvatarOpen}
+        avatarUrl={profile.avatar}
+        fallbackChar={avatarFallbackChar(profile)}
+        onUploaded={handleAvatarUploaded}
+      />
     </main>
   );
 }

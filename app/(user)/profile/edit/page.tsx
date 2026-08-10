@@ -5,13 +5,17 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useSWRConfig } from "swr";
+import { ArrowLeft, Camera } from "lucide-react";
 
 import { updateUserProfile } from "@/lib/api/user";
 import { toApiError } from "@/lib/api/errors";
 import { mapProfile } from "@/lib/api/mappers";
+import { profileKey } from "@/lib/api/profile";
 import { COLLEGES, type UpdateProfileRequest } from "@/lib/api/types";
 import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
+import { avatarFallbackChar, DEFAULT_AVATAR } from "@/lib/constants/profile";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
+import { useAvatarUpload } from "@/hooks/use-avatar-upload";
 import { message } from "@/lib/message";
 import {
   profileEditSchema,
@@ -19,11 +23,12 @@ import {
 } from "@/lib/validations/profile";
 import { scrollToFirstError } from "@/lib/form";
 import { AuthFormField } from "@/components/auth/auth-form-field";
-import { BackButton } from "@/components/navigation/back-button";
 import { FormError } from "@/components/ui/form-error";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { DotLoading } from "@/components/ui/dot-loading";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { AvatarCropperDialog } from "@/components/user/avatar-cropper-dialog";
 import {
   Form,
   FormField,
@@ -45,6 +50,32 @@ const FIELD_ORDER = [
   "blogUrl",
   "githubUrl",
 ];
+
+/**
+ * Warns the user before they lose unsaved edits:
+ * - `beforeunload` prompts on refresh / close / external navigation.
+ * - the returned `guard` lets in-page exits (e.g. the back button) confirm first.
+ * The guard must only see a dirty flag while edits are actually pending — callers
+ * reset the form (clearing dirty) right before navigating after a successful save.
+ */
+function useDirtyGuard(isDirty: boolean) {
+  useEffect(() => {
+    if (!isDirty) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
+
+  return (action: () => void) => {
+    if (isDirty && !window.confirm("有未保存的修改，确定要离开吗？")) {
+      return;
+    }
+    action();
+  };
+}
 
 function toUpdateRequest(values: ProfileEditFormValues): UpdateProfileRequest {
   return {
@@ -69,6 +100,8 @@ export default function EditPage() {
   const { mutate } = useSWRConfig();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const handleAvatarUploaded = useAvatarUpload();
 
   const form = useForm<ProfileEditFormValues>({
     resolver: zodResolver(profileEditSchema),
@@ -85,6 +118,7 @@ export default function EditPage() {
       githubUrl: profile.githubUrl ?? "",
     },
   });
+  const guard = useDirtyGuard(form.formState.isDirty);
 
   // profile loads async after mount - reseed the form once it arrives so a
   // direct visit/refresh to /profile/edit isn't stuck on empty defaults.
@@ -114,7 +148,11 @@ export default function EditPage() {
     try {
       const response = await updateUserProfile(toUpdateRequest(values));
       setProfile(mapProfile(response.data.data.user));
-      mutate("user-profile");
+      const key = profileKey();
+      if (key) mutate(key);
+      // Reset the form (clears dirty) so the guard doesn't block the navigation
+      // that follows — a successful save is an intended leave.
+      form.reset(values);
       message.success("修改成功");
       router.push("/profile");
     } catch (error) {
@@ -131,12 +169,12 @@ export default function EditPage() {
   const submit = form.handleSubmit(onValid, onInvalid);
 
   const textFields = [
-    { name: "nickname" as const, label: "别名" },
-    { name: "name" as const, label: "真实姓名" },
+    { name: "nickname" as const, label: "别名", required: true },
+    { name: "name" as const, label: "真实姓名", required: true },
   ];
 
   const academicFields = [
-    { name: "major" as const, label: "专业" },
+    { name: "major" as const, label: "专业", required: true },
   ];
 
   const contactFields = [
@@ -151,7 +189,40 @@ export default function EditPage() {
 
   return (
     <main className="pt-transition mx-auto flex w-full max-w-[760px] flex-col gap-14 px-5 pb-20 pt-14 sm:px-8">
-      <BackButton />
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-fit text-muted-foreground"
+        onClick={() =>
+          guard(() => {
+            // Direct visits (no history) have nowhere to go back to — fall back
+            // to a sensible page instead of leaving the site.
+            if (window.history.length > 1) router.back();
+            else router.replace("/profile");
+          })
+        }
+      >
+        <ArrowLeft size={16} />
+        返回
+      </Button>
+
+      <section aria-label="头像" className="flex flex-col items-start gap-4">
+        <button
+          type="button"
+          onClick={() => setAvatarOpen(true)}
+          aria-label="更换头像"
+          className="group relative rounded-full transition-transform hover:scale-[1.02] active:scale-[.98]"
+        >
+          <Avatar className="size-24 border border-foreground">
+            <AvatarImage src={profile.avatar ?? DEFAULT_AVATAR} alt={profile.nickname} />
+            <AvatarFallback className="text-3xl">{avatarFallbackChar(profile)}</AvatarFallback>
+          </Avatar>
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-black/0 opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
+            <Camera size={24} className="text-foreground" />
+          </span>
+        </button>
+        <p className="text-xs text-tertiary">点击头像更换</p>
+      </section>
 
       <Form {...form}>
         <form onSubmit={submit} noValidate className="flex flex-col gap-14">
@@ -159,7 +230,7 @@ export default function EditPage() {
           <section aria-label="基本资料">
             <h2 className="type-tech mb-3 text-tertiary">基本资料</h2>
             <div className="flex flex-col gap-4">
-              {textFields.map(({ name, label }) => (
+              {textFields.map(({ name, label, required }) => (
                 <FormField
                   key={name}
                   control={form.control}
@@ -170,6 +241,7 @@ export default function EditPage() {
                         {...field}
                         ref={field.ref}
                         label={label}
+                        required={required}
                         invalid={fieldState.invalid}
                         error={fieldState.error?.message}
                       />
@@ -237,7 +309,7 @@ export default function EditPage() {
                 )}
               />
 
-              {academicFields.map(({ name, label }) => (
+              {academicFields.map(({ name, label, required }) => (
                 <FormField
                   key={name}
                   control={form.control}
@@ -248,6 +320,7 @@ export default function EditPage() {
                         {...field}
                         ref={field.ref}
                         label={label}
+                        required={required}
                         invalid={fieldState.invalid}
                         error={fieldState.error?.message}
                       />
@@ -329,6 +402,14 @@ export default function EditPage() {
           </div>
         </form>
       </Form>
+
+      <AvatarCropperDialog
+        open={avatarOpen}
+        onOpenChange={setAvatarOpen}
+        avatarUrl={profile.avatar}
+        fallbackChar={avatarFallbackChar(profile)}
+        onUploaded={handleAvatarUploaded}
+      />
     </main>
   );
 }

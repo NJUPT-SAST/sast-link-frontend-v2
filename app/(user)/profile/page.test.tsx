@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import ProfilePage from "./page";
 
@@ -30,6 +30,14 @@ jest.mock("@/store/use-user-profile-store", () => ({
     selector({ profile }),
 }));
 
+jest.mock("@/hooks/use-avatar-upload", () => ({
+  useAvatarUpload: () => jest.fn(),
+}));
+
+jest.mock("@/components/user/identity-list", () => ({
+  IdentityList: () => <div data-testid="identity-list" />,
+}));
+
 describe("ProfilePage", () => {
   it("renders the complete profile grouped into sections", () => {
     render(<ProfilePage />);
@@ -46,6 +54,14 @@ describe("ProfilePage", () => {
     expect(screen.getByText("https://github.com/alice")).toBeInTheDocument();
     expect(screen.getByText("正在四处游荡中...")).toBeInTheDocument();
     expect(screen.getByText("注册邮箱")).toBeInTheDocument();
+    expect(screen.getByText("GitHub 链接")).toBeInTheDocument();
+  });
+
+  it("renders a read-only linked-accounts section", () => {
+    render(<ProfilePage />);
+
+    expect(screen.getByRole("heading", { name: "已关联账号" })).toBeInTheDocument();
+    expect(screen.getByTestId("identity-list")).toBeInTheDocument();
   });
 
   it("shows the empty signature placeholder when intro is missing", () => {
@@ -61,5 +77,14 @@ describe("ProfilePage", () => {
     const link = screen.getByRole("link", { name: "编辑" });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute("href", "/profile/edit");
+  });
+
+  it("opens the avatar cropper dialog when the avatar is clicked", async () => {
+    render(<ProfilePage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "更换头像" }));
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "选择图片" })).toBeInTheDocument();
   });
 });
