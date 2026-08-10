@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Mail } from "lucide-react";
 
 import { useIdentities } from "@/hooks/use-identities";
 import { message } from "@/lib/message";
@@ -106,11 +107,15 @@ export function BoundEmailSection() {
       {others.length === 0 ? (
         <p className="py-4 text-sm text-muted-foreground">你还没有绑定其他邮箱哦</p>
       ) : (
-        <ul>
+        <div className="flex flex-col gap-2">
           {others.map((o) => (
-            <li key={o.id} className="border-b border-hairline">
-              <div className="flex min-h-[44px] items-center justify-between py-3 text-sm">
-                <span className="truncate">{o.email}</span>
+            <div
+              key={o.id}
+              className="rounded-xl border border-hairline bg-muted/40"
+            >
+              <div className="flex min-h-[46px] items-center gap-2.5 px-4 py-2.5 text-sm">
+                <Mail size={15} className="shrink-0 text-tertiary" />
+                <span className="min-w-0 truncate">{o.email}</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -118,13 +123,13 @@ export function BoundEmailSection() {
                     setError("");
                     setMode({ kind: "unbind", identity: o });
                   }}
-                  className="ml-3 shrink-0 text-xs text-tertiary transition-colors hover:text-destructive"
+                  className="ml-auto shrink-0 rounded-md border border-hairline px-2.5 py-1 text-xs text-tertiary transition-colors hover:border-destructive/40 hover:text-destructive"
                 >
                   解绑
                 </button>
               </div>
               {mode.kind === "unbind" && mode.identity.id === o.id && (
-                <div className="flex flex-col gap-3 border-t border-hairline pb-4 pt-4 sm:flex-row sm:items-start">
+                <div className="flex flex-col gap-3 border-t border-hairline px-4 pb-4 pt-4 sm:flex-row sm:items-start">
                   <div className="flex-1">
                     <AuthFormField
                       label="当前密码"
@@ -144,9 +149,9 @@ export function BoundEmailSection() {
                   </div>
                 </div>
               )}
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
       {mode.kind === "add-email" ? (

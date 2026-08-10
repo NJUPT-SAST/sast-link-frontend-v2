@@ -31,7 +31,7 @@ interface IdentityListProps {
  * (read-only) and the settings page (with bind/unbind actions).
  */
 export function IdentityList({ actionable }: IdentityListProps) {
-  const { identities, mutate } = useIdentities();
+  const { identities, isLoading, mutate } = useIdentities();
   const [unbindTarget, setUnbindTarget] = useState<Identity | null>(null);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -105,17 +105,27 @@ export function IdentityList({ actionable }: IdentityListProps) {
                   bound ? "text-success" : "text-tertiary"
                 }`}
               >
-                <span
-                  className={`size-1.5 ${
-                    bound ? "status-dot-pulse bg-current" : "bg-tertiary"
-                  }`}
-                />
-                {bound ? "已绑定" : "未绑定"}
+                {isLoading ? (
+                  <>
+                    <span className="size-1.5 rounded-full bg-tertiary" />
+                    加载中
+                  </>
+                ) : (
+                  <>
+                    <span
+                      className={`size-1.5 ${
+                        bound ? "status-dot-pulse bg-current" : "bg-tertiary"
+                      }`}
+                    />
+                    {bound ? "已绑定" : "未绑定"}
+                  </>
+                )}
               </span>
               {actionable && (
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={isLoading}
                   onClick={
                     bound
                       ? () => {
