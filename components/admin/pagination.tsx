@@ -26,7 +26,7 @@ export function Pagination({
     <div className="flex items-center justify-between gap-4 border-t border-hairline py-4">
       <div className="flex items-center gap-3 text-sm text-tertiary">
         <span>
-          共 {total} 条，第 {start}-{end} 条
+          {total === 0 ? "共 0 条" : `共 ${total} 条，第 ${start}-${end} 条`}
         </span>
         {onPageSizeChange && (
           <Select

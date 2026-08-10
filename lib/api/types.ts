@@ -163,21 +163,6 @@ export interface UserAccount {
 }
 
 /**
- * Public profile card. GET /card/:id returns this as a **bare JSON object**,
- * not wrapped in the standard ApiEnvelope envelope (only error responses go
- * through the envelope). Mirrors backend cardDTO (card.go:16).
- */
-export interface CardData {
-  id: number;
-  nickname: string | null;
-  department: string | null;
-  intro: string | null;
-  avatar: string | null;
-  blog_url: string | null;
-  github_url: string | null;
-}
-
-/**
  * Service health. GET /health returns this as a **bare JSON object**, not
  * wrapped in ApiEnvelope. Mirrors backend healthResponse (health/handler.go:48).
  */

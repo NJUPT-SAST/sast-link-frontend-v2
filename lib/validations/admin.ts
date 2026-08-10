@@ -98,32 +98,27 @@ export const adminOAuthClientSchema = z.object({
 
 export type AdminOAuthClientFormValues = z.infer<typeof adminOAuthClientSchema>;
 
-export const adminUpdateOAuthClientSchema = adminOAuthClientSchema
-  .partial()
-  .extend({
-    client_name: z.string().trim().min(1, "应用名称不可为空").max(100).optional(),
-    redirect_uris: z
-      .array(redirectUriSchema)
-      .max(10, "最多 10 个回调地址")
-      .refine((items) => !items || new Set(items).size === items.length, "回调地址不能重复")
+export const adminAuditLogFiltersSchema = z
+  .object({
+    page: z.coerce.number().int().min(1),
+    page_size: z.coerce.number().int().min(1).max(100),
+    user_id: z
+      .string()
+      .trim()
+      .refine((v) => v === "" || /^\d+$/.test(v), "请输入有效的数字")
       .optional(),
-    grant_types: z.array(grantTypeSchema).optional(),
-    scopes: z.array(scopeSchema).optional(),
-    is_active: z.boolean().optional(),
+    action: z.string().trim().optional(),
+    resource: z.string().trim().optional(),
+    success: z.enum(["true", "false", ""]).optional(),
+    start_time: z.string().trim().optional(),
+    end_time: z.string().trim().optional(),
   })
-  .refine((values) => Object.keys(values).length > 0, "至少修改一个字段");
-
-export type AdminUpdateOAuthClientFormValues = z.infer<typeof adminUpdateOAuthClientSchema>;
-
-export const adminAuditLogFiltersSchema = z.object({
-  page: z.coerce.number().int().min(1),
-  page_size: z.coerce.number().int().min(1).max(100),
-  user_id: z.coerce.number().int().positive().optional(),
-  action: z.string().trim().optional(),
-  resource: z.string().trim().optional(),
-  success: z.enum(["true", "false", ""]).optional(),
-  start_time: z.string().trim().optional(),
-  end_time: z.string().trim().optional(),
-});
+  .refine(
+    (values) => {
+      if (!values.start_time || !values.end_time) return true;
+      return values.start_time <= values.end_time;
+    },
+    { message: "开始时间不能晚于结束时间", path: ["end_time"] },
+  );
 
 export type AdminAuditLogFiltersFormValues = z.infer<typeof adminAuditLogFiltersSchema>;

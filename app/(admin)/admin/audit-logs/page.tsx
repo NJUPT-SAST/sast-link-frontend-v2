@@ -1,15 +1,18 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useSWRConfig } from "swr";
 
 import type { AdminAuditLogListParams } from "@/lib/api/types";
-import { useAdminAuditLogs } from "@/hooks/use-admin-audit-logs";
+import { useAdminAuditLogs, buildAdminAuditLogsKey } from "@/hooks/use-admin-audit-logs";
 import { AuditLogFilters } from "@/components/admin/audit-log-filters";
 import { AuditLogList } from "@/components/admin/audit-log-list";
 import { Pagination } from "@/components/admin/pagination";
+import { AdminErrorState } from "@/components/admin/error-state";
 import { DotLoading } from "@/components/ui/dot-loading";
 
 export default function AdminAuditLogsPage() {
+  const { mutate } = useSWRConfig();
   const [filters, setFilters] = useState<AdminAuditLogListParams>({ page: 1, page_size: 20 });
   const { data, isLoading, error } = useAdminAuditLogs(filters);
 
@@ -41,9 +44,7 @@ export default function AdminAuditLogsPage() {
       )}
 
       {error && (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
-          加载失败，请稍后重试
-        </div>
+        <AdminErrorState onRetry={() => mutate(buildAdminAuditLogsKey(filters))} />
       )}
 
       {!isLoading && !error && data && (

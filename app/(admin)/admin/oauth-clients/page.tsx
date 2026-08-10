@@ -1,17 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import { useSWRConfig } from "swr";
 
 import type {
   AdminCreateOAuthClientRequest,
   AdminOAuthClient,
   AdminUpdateOAuthClientRequest,
 } from "@/lib/api/types";
-import { useAdminOAuthClients } from "@/hooks/use-admin-oauth-clients";
+import {
+  useAdminOAuthClients,
+  ADMIN_OAUTH_CLIENTS_KEY,
+} from "@/hooks/use-admin-oauth-clients";
 import { useAdminMutations } from "@/hooks/use-admin-mutations";
 import { OAuthClientList } from "@/components/admin/oauth-client-list";
 import { OAuthClientForm } from "@/components/admin/oauth-client-form";
 import { OAuthClientSecretDialog } from "@/components/admin/oauth-client-secret-dialog";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { AdminErrorState } from "@/components/admin/error-state";
 import {
   Dialog,
   DialogContent,
@@ -22,11 +28,13 @@ import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
 
 export default function AdminOAuthClientsPage() {
+  const { mutate } = useSWRConfig();
   const { data: clients, isLoading, error } = useAdminOAuthClients();
   const { createOAuthClient, updateOAuthClient, isLoading: mutationLoading } = useAdminMutations();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<AdminOAuthClient | undefined>(undefined);
+  const [toggleConfirm, setToggleConfirm] = useState<AdminOAuthClient | null>(null);
   const [secretDialog, setSecretDialog] = useState<{ open: boolean; name: string; secret: string }>({
     open: false,
     name: "",
@@ -53,8 +61,15 @@ export default function AdminOAuthClientsPage() {
     setFormOpen(true);
   };
 
-  const handleToggleActive = async (client: AdminOAuthClient) => {
-    await updateOAuthClient(client.id, { is_active: !client.is_active });
+  const handleToggleActive = (client: AdminOAuthClient) => {
+    setToggleConfirm(client);
+  };
+
+  const handleToggleConfirm = async () => {
+    if (!toggleConfirm) return;
+    const nextActive = !toggleConfirm.is_active;
+    setToggleConfirm(null);
+    await updateOAuthClient(toggleConfirm.id, { is_active: nextActive });
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -82,11 +97,7 @@ export default function AdminOAuthClientsPage() {
         </div>
       )}
 
-      {error && (
-        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
-          加载失败，请稍后重试
-        </div>
-      )}
+      {error && <AdminErrorState onRetry={() => mutate(ADMIN_OAUTH_CLIENTS_KEY)} />}
 
       {!isLoading && !error && clients && (
         <OAuthClientList
@@ -113,6 +124,25 @@ export default function AdminOAuthClientsPage() {
           />
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={toggleConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setToggleConfirm(null);
+        }}
+        title={toggleConfirm?.is_active ? "确认停用客户端" : "确认启用客户端"}
+        description={
+          toggleConfirm
+            ? toggleConfirm.is_active
+              ? `确定要停用「${toggleConfirm.client_name}」吗？停用后相关应用的登录授权将立即失效。`
+              : `确定要启用「${toggleConfirm.client_name}」吗？启用后相关应用可恢复登录授权。`
+            : ""
+        }
+        confirmLabel={toggleConfirm?.is_active ? "停用" : "启用"}
+        confirmVariant={toggleConfirm?.is_active ? "destructive" : "default"}
+        loading={mutationLoading}
+        onConfirm={handleToggleConfirm}
+      />
 
       <OAuthClientSecretDialog
         open={secretDialog.open}

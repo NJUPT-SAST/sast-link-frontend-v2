@@ -9,6 +9,10 @@ import {
   adminAuditLogFiltersSchema,
   type AdminAuditLogFiltersFormValues,
 } from "@/lib/validations/admin";
+import {
+  AUDIT_ACTION_LABELS,
+  AUDIT_RESOURCE_LABELS,
+} from "@/lib/constants/admin";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { AuthFormField } from "@/components/auth/auth-form-field";
@@ -24,6 +28,16 @@ const SUCCESS_OPTIONS = [
   { value: "false", label: "失败" },
 ];
 
+const ACTION_OPTIONS = [
+  { value: "", label: "全部操作" },
+  ...Object.entries(AUDIT_ACTION_LABELS).map(([value, label]) => ({ value, label })),
+];
+
+const RESOURCE_OPTIONS = [
+  { value: "", label: "全部资源" },
+  ...Object.entries(AUDIT_RESOURCE_LABELS).map(([value, label]) => ({ value, label })),
+];
+
 const selectClass =
   "h-11 w-full rounded-lg border border-input bg-card px-3 text-[15px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
 
@@ -31,7 +45,7 @@ function toFormValues(params: AdminAuditLogListParams): AdminAuditLogFiltersForm
   return {
     page: params.page ?? 1,
     page_size: params.page_size ?? 20,
-    user_id: params.user_id,
+    user_id: params.user_id === undefined ? "" : String(params.user_id),
     action: params.action ?? "",
     resource: params.resource ?? "",
     success: params.success === undefined ? "" : params.success ? "true" : "false",
@@ -44,7 +58,7 @@ function toParams(values: AdminAuditLogFiltersFormValues): AdminAuditLogListPara
   return {
     page: 1,
     page_size: 20,
-    user_id: values.user_id,
+    user_id: values.user_id ? Number(values.user_id) : undefined,
     action: values.action?.trim() || undefined,
     resource: values.resource?.trim() || undefined,
     success: !values.success ? undefined : values.success === "true",
@@ -58,6 +72,8 @@ export function AuditLogFilters({ value, onChange }: AuditLogFiltersProps) {
     resolver: zodResolver(adminAuditLogFiltersSchema),
     defaultValues: toFormValues(value),
   });
+
+  const errors = form.formState.errors;
 
   useEffect(() => {
     form.reset(toFormValues(value));
@@ -81,19 +97,30 @@ export function AuditLogFilters({ value, onChange }: AuditLogFiltersProps) {
           label="用户 ID"
           type="number"
           placeholder="数字"
-          {...form.register("user_id", { valueAsNumber: true })}
+          invalid={Boolean(errors.user_id)}
+          error={errors.user_id?.message}
+          {...form.register("user_id")}
         />
       </div>
       <div className="w-[160px]">
-        <AuthFormField id="action" label="操作" placeholder="如 login" {...form.register("action")} />
+        <label htmlFor="action" className="mb-1.5 block text-xs text-muted-foreground">
+          操作
+        </label>
+        <Select id="action" {...form.register("action")} className={selectClass}>
+          {ACTION_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </Select>
       </div>
       <div className="w-[160px]">
-        <AuthFormField
-          id="resource"
-          label="资源"
-          placeholder="如 user"
-          {...form.register("resource")}
-        />
+        <label htmlFor="resource" className="mb-1.5 block text-xs text-muted-foreground">
+          资源
+        </label>
+        <Select id="resource" {...form.register("resource")} className={selectClass}>
+          {RESOURCE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </Select>
       </div>
       <div className="w-[120px]">
         <label htmlFor="success" className="mb-1.5 block text-xs text-muted-foreground">
@@ -118,6 +145,8 @@ export function AuditLogFilters({ value, onChange }: AuditLogFiltersProps) {
           id="end_time"
           label="结束时间"
           type="datetime-local"
+          invalid={Boolean(errors.end_time)}
+          error={errors.end_time?.message}
           {...form.register("end_time")}
         />
       </div>

@@ -6,6 +6,8 @@ import Link from "next/link";
 
 import { useAdminUser } from "@/hooks/use-admin-users";
 import { useAdminMutations } from "@/hooks/use-admin-mutations";
+import { useUserProfileStore } from "@/store/use-user-profile-store";
+import { canManageUsers } from "@/components/admin/permissions";
 import { UserDetailCard } from "@/components/admin/user-detail-card";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { BackButton } from "@/components/navigation/back-button";
@@ -18,6 +20,7 @@ export function AdminUserDetailContent() {
   const id = Number(params.id);
   const { data: user, isLoading, error } = useAdminUser(id);
   const { deleteUser, restoreUser, isLoading: mutationLoading } = useAdminMutations();
+  const canManage = canManageUsers(useUserProfileStore((state) => state.profile.role));
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleDelete = async () => {
@@ -56,16 +59,18 @@ export function AdminUserDetailContent() {
           <h1 className="type-title2">{user.name}</h1>
           <p className="mt-1 text-sm text-tertiary">{user.login_email}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" asChild><Link href={`/admin/users/${user.id}/edit`}>编辑</Link></Button>
-          <Button
-            variant={isDeleted ? "default" : "destructive"}
-            onClick={() => setConfirmOpen(true)}
-            disabled={mutationLoading}
-          >
-            {isDeleted ? "恢复" : "注销"}
-          </Button>
-        </div>
+        {canManage && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" asChild><Link href={`/admin/users/${user.id}/edit`}>编辑</Link></Button>
+            <Button
+              variant={isDeleted ? "default" : "destructive"}
+              onClick={() => setConfirmOpen(true)}
+              disabled={mutationLoading}
+            >
+              {isDeleted ? "恢复" : "注销"}
+            </Button>
+          </div>
+        )}
       </div>
       <UserDetailCard user={user} />
       <ConfirmDialog

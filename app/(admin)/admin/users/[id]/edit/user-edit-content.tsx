@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 import type { AdminUpdateUserRequest } from "@/lib/api/types";
 import { useAdminUser } from "@/hooks/use-admin-users";
 import { useAdminMutations } from "@/hooks/use-admin-mutations";
+import { useUserProfileStore } from "@/store/use-user-profile-store";
+import { canManageUsers } from "@/components/admin/permissions";
 import { UserEditForm } from "@/components/admin/user-edit-form";
 import { BackButton } from "@/components/navigation/back-button";
 import { Button } from "@/components/ui/button";
@@ -17,6 +20,15 @@ export function AdminUserEditContent() {
   const id = Number(params.id);
   const { data: user, isLoading } = useAdminUser(id);
   const { updateUser, isLoading: mutationLoading } = useAdminMutations();
+  const canManage = canManageUsers(useUserProfileStore((state) => state.profile.role));
+
+  useEffect(() => {
+    if (!canManage) router.replace("/admin/users");
+  }, [canManage, router]);
+
+  if (!canManage) {
+    return <div className="flex h-64 items-center justify-center text-sm text-tertiary">正在跳转…</div>;
+  }
 
   const handleSubmit = async (data: AdminUpdateUserRequest) => {
     await updateUser(id, data);
