@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-export type Theme = "light" | "dark" | "system";
+type Theme = "light" | "dark" | "system";
 
 const STORAGE_KEY = "theme";
 const listeners = new Set<() => void>();
@@ -12,9 +12,18 @@ function prefersLight() {
   return window.matchMedia("(prefers-color-scheme: light)");
 }
 
+// Inline --background mirrors the globals.css token so the first paint is the
+// correct theme color even before CSS applies. Setting the variable (not the
+// background itself) keeps <html> background-less so the -z-10 starfield canvas
+// stays visible above it. Keep #060606 / #fafafa in sync with globals.css.
+const DARK_BG = "#060606";
+const LIGHT_BG = "#fafafa";
+
 function applyTheme(theme: Theme) {
   const dark = theme === "dark" || (theme === "system" && !prefersLight().matches);
-  document.documentElement.classList.toggle("dark", dark);
+  const el = document.documentElement;
+  el.style.setProperty("--background", dark ? DARK_BG : LIGHT_BG);
+  el.classList.toggle("dark", dark);
 }
 
 function getSnapshot(): Theme {
@@ -46,7 +55,7 @@ function subscribe(callback: () => void) {
   };
 }
 
-export function setTheme(next: Theme) {
+function setTheme(next: Theme) {
   localStorage.setItem(STORAGE_KEY, next);
 
   const run = () => {

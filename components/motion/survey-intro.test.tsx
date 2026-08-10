@@ -19,7 +19,7 @@ describe("SurveyIntro", () => {
     mockReducedMotion(false);
   });
 
-  it("plays on the first visit of a session", () => {
+  it("plays once on the first visit of a session, on any route", () => {
     render(<SurveyIntro />);
     expect(screen.getByTestId("survey-intro")).toBeInTheDocument();
   });

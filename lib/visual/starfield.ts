@@ -1,6 +1,6 @@
 import { mulberry32 } from "./random";
 
-export type StarLayer = 0 | 1 | 2; // far / mid / near
+type StarLayer = 0 | 1 | 2; // far / mid / near
 
 export interface Star {
   x: number; // 0..1 normalized
@@ -14,7 +14,7 @@ export interface Star {
   driftY: number;
 }
 
-export const PARALLAX_PX: readonly [number, number, number] = [6, 14, 26];
+const PARALLAX_PX: readonly [number, number, number] = [6, 14, 26];
 export const MAX_STARS = 200;
 const AREA_PER_STAR = 9000;
 const PLUS_PROBABILITY = 0.05;
