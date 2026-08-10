@@ -17,6 +17,7 @@ jest.mock("lucide-react", () => ({
 }));
 
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { OAuthCallbackContent } from "./oauth-callback-content";
 
 const mockReplace = jest.fn();
@@ -79,5 +80,39 @@ describe("OAuthCallbackContent", () => {
 
     expect(screen.getByText(/登录链接已失效/)).toBeInTheDocument();
     expect(mockExchangeLoginCode).not.toHaveBeenCalled();
+  });
+
+  it("shows a cancellation message when the provider returns an error", () => {
+    setup("error=access_denied");
+
+    render(<OAuthCallbackContent provider={provider} />);
+
+    expect(screen.getByText("已取消登录")).toBeInTheDocument();
+    expect(screen.queryByText(/登录链接已失效/)).not.toBeInTheDocument();
+    expect(mockExchangeLoginCode).not.toHaveBeenCalled();
+  });
+
+  it("retries the exchange after a transient failure", async () => {
+    setup("code=lc_123");
+    mockExchangeLoginCode
+      .mockRejectedValueOnce({ message: "boom" })
+      .mockResolvedValueOnce({
+        data: {
+          data: {
+            access_token: "at",
+            refresh_token: "rt",
+            expires_in: 3600,
+            user: { id: 1, name: "Alice", login_email: "a@b.com" },
+          },
+        },
+      });
+
+    render(<OAuthCallbackContent provider={provider} />);
+
+    expect(await screen.findByText(/登录链接已失效/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "重新尝试" }));
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/home"));
+    expect(mockExchangeLoginCode).toHaveBeenCalledTimes(2);
   });
 });

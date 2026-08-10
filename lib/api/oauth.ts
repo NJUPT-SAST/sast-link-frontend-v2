@@ -86,7 +86,7 @@ function bindSettings(provider: OAuthProvider): {
 }
 
 /** sessionStorage key holding the pending bind `state` for one provider. */
-export const BIND_STATE_KEY = "sast:oauth-bind:state";
+const BIND_STATE_KEY = "sast:oauth-bind:state";
 
 export function buildBindOAuthUrl(provider: OAuthProvider): string | null {
   const { clientId, redirectUri } = bindSettings(provider);

@@ -21,8 +21,18 @@ jest.mock("lucide-react", () => ({
   Loader2: () => <div data-testid="loader" />,
 }));
 
+jest.mock("@/lib/message", () => ({
+  message: {
+    success: jest.fn(),
+    error: jest.fn(),
+    warning: jest.fn(),
+    info: jest.fn(),
+  },
+}));
+
 import { render, screen, waitFor } from "@testing-library/react";
 import { OAuthBindContent } from "./oauth-bind-content";
+import { message } from "@/lib/message";
 
 const mockReplace = jest.fn();
 const mockMutate = jest.fn();
@@ -34,6 +44,7 @@ function setup(params: string) {
   mockReplace.mockClear();
   mockMutate.mockClear();
   mockBindLark.mockClear();
+  jest.clearAllMocks();
 }
 
 describe("OAuthBindContent", () => {
@@ -73,6 +84,27 @@ describe("OAuthBindContent", () => {
     render(<OAuthBindContent provider="github" providerName="GitHub" icon={null} />);
 
     expect(mockBindLark).not.toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith("/settings");
+  });
+
+  it("shows a back-to-settings button while the bind is in flight", async () => {
+    sessionStorage.setItem("sast:oauth-bind:state:lark", "st1");
+    setup("code=abc&state=st1");
+    mockBindLark.mockImplementation(() => new Promise(() => {}));
+
+    render(<OAuthBindContent provider="lark" providerName="飞书" icon={null} />);
+
+    expect(screen.getByRole("button", { name: "返回设置" })).toBeInTheDocument();
+    expect(screen.getByText("正在绑定飞书")).toBeInTheDocument();
+  });
+
+  it("treats a provider error as a cancelled bind", () => {
+    setup("error=access_denied&state=st1");
+
+    render(<OAuthBindContent provider="lark" providerName="飞书" icon={null} />);
+
+    expect(mockBindLark).not.toHaveBeenCalled();
+    expect(message.warning).toHaveBeenCalledWith("已取消绑定");
     expect(mockReplace).toHaveBeenCalledWith("/settings");
   });
 

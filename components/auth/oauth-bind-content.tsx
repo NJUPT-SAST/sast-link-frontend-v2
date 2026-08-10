@@ -36,10 +36,19 @@ export function OAuthBindContent({
 
   const code = searchParams.get("code");
   const state = searchParams.get("state");
+  const urlError = searchParams.get("error");
 
   useEffect(() => {
     if (ranRef.current) return;
     ranRef.current = true;
+
+    // The provider may bounce back with an error (e.g. the user cancelled the
+    // authorization). Treat that as a cancellation, not a missing code.
+    if (urlError) {
+      message.warning("已取消绑定");
+      router.replace("/settings");
+      return;
+    }
 
     // Synchronous validation failures bounce back with a toast — no React state
     // needed for an outcome the user cannot act on here.
@@ -78,7 +87,7 @@ export function OAuthBindContent({
         router.replace("/settings");
       })
       .catch((reason) => setError(toApiError(reason).message));
-  }, [code, mutate, provider, router, state]);
+  }, [code, mutate, provider, router, state, urlError]);
 
   if (error) {
     return (
@@ -103,6 +112,9 @@ export function OAuthBindContent({
       <h1 className="type-title3">正在绑定{providerName}</h1>
       <p className="type-tech text-tertiary">正在完成绑定…</p>
       <Loader2 size={28} className="animate-spin text-link" />
+      <Button variant="outline" size="sm" onClick={() => router.replace("/settings")}>
+        返回设置
+      </Button>
     </div>
   );
 }
