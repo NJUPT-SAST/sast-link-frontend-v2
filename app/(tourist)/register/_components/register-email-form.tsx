@@ -124,7 +124,6 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
                     onChange={field.onChange}
                     label="邮箱"
                     error={errorMessage}
-                    disableAtDetection
                     allowedDomains={["@njupt.edu.cn", "@sast.fun"]}
                     onEnter={() => {
                       if (!sent) void handleSendCode();

@@ -114,10 +114,13 @@ export const loginAccountFormSchema = z.object({
         return;
       }
       if (domain === "其他邮箱") {
-        if (!/^[^\s@]+@(njupt\.edu\.cn|sast\.fun)$/i.test(localPart)) {
+        // An other_mail identity can be any address the user bound (qq, gmail…),
+        // so only shape is checked here — the domain allow-list applies to
+        // registration, not to logging in with an already-bound other_mail.
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(localPart)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: "仅支持 @njupt.edu.cn 或 @sast.fun 邮箱",
+            message: "请输入完整的邮箱地址",
             path: ["localPart"],
           });
         }
