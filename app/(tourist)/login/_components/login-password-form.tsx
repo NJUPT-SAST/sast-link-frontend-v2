@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
@@ -49,7 +49,12 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
     defaultValues: { password: "" },
   });
 
-  const handleSubmit = form.handleSubmit(async ({ password }) => {
+  // `disabled={loading}` cannot stop a same-frame double click (the state has
+  // not committed yet); a ref guard makes a repeat submit a no-op.
+  const submittingRef = useRef(false);
+  const onValidSubmit = async ({ password }: LoginPasswordFormValues) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     try {
       const response = await passwordLogin(loginEmail, password);
@@ -79,8 +84,13 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
       form.setError("password", { message: toApiError(error).message });
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
-  });
+  };
+  // The guard only runs in a submit handler, never during render; the rule
+  // cannot see through react-hook-form's handleSubmit wrapper.
+  // eslint-disable-next-line react-hooks/refs
+  const handleSubmit = form.handleSubmit(onValidSubmit);
 
   return (
     <PageTransition className="flex w-full flex-col">
