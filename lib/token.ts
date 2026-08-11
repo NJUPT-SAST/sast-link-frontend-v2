@@ -38,7 +38,9 @@ export function createSession(
 let cachedSession: TokenPair | null = null;
 
 export function getSession(): TokenPair | null {
-  if (cachedSession) return cachedSession;
+  // Return a copy, never the module-level reference, so a caller mutating the
+  // returned object cannot poison the cache. Refresh replaces via setSession.
+  if (cachedSession) return { ...cachedSession };
   if (typeof window === "undefined") return null;
 
   try {

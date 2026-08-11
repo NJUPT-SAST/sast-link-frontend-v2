@@ -34,6 +34,22 @@ describe("session helpers", () => {
     expect(sessionStorage.getItem("Token")).not.toBeNull();
   });
 
+  it("returns a copy so mutating it cannot poison the cached session", async () => {
+    const { getSession, setSession } = await import("./token");
+    const session = {
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+      expiresAt: Date.now() + 3600_000,
+    };
+    setSession(session);
+
+    const first = getSession();
+    if (first) first.accessToken = "mutated";
+
+    expect(getSession()).toEqual(session);
+    expect(getSession()?.accessToken).toBe("access-token");
+  });
+
   it("removes legacy and malformed token payloads", async () => {
     const { getSession } = await import("./token");
 
