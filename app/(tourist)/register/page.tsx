@@ -35,9 +35,11 @@ function RegisterFlow() {
     if (phase === "details" && !registerTicket) {
       sessionStorage.removeItem(TICKET_KEY);
       sessionStorage.removeItem(EMAIL_KEY);
-      // The navigation re-reads sessionStorage on mount, so the step resets to
-      // email there; a synchronous setLoginEmail here would trip the
-      // set-state-in-effect lint rule.
+      // A same-route replace does not remount the page, so the step state must
+      // be reset here; relying on a re-read of sessionStorage on mount would
+      // leave the user on the details step with an empty ticket.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoginEmail("");
       router.replace("/register");
     }
   }, [phase, registerTicket, router]);

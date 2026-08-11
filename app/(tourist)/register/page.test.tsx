@@ -37,10 +37,11 @@ describe("RegisterPage", () => {
 
     render(<RegisterPage />);
 
-    // The replace to /register re-mounts from sessionStorage (now cleared), so
-    // the page resets to the email step there; with a mocked router the current
-    // render stays on details, so the assertion is the redirect.
     expect(mockReplace).toHaveBeenCalledWith("/register");
+    // State is reset synchronously in the effect, so the email step shows even
+    // though the mocked router performs no real navigation.
+    expect(screen.getByRole("button", { name: "继续" })).toBeInTheDocument();
+    expect(screen.queryByText(/正在使用 alice@njupt\.edu\.cn 注册/)).not.toBeInTheDocument();
   });
 
   it("keeps the details step when an account and a ticket are stored", () => {
