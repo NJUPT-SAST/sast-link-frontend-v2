@@ -30,7 +30,7 @@ describe("LoginPage", () => {
     expect(screen.getByRole("link", { name: "注册" })).toBeInTheDocument();
   });
 
-  it("stores the account and rewrites the URL when continuing to the password step", async () => {
+  it("stores the account and shows the password step without touching the URL", async () => {
     setup();
     render(<LoginPage />);
 
@@ -38,12 +38,12 @@ describe("LoginPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "继续" }));
 
     expect(sessionStorage.getItem(LOGIN_ACCOUNT_KEY)).toBe("bob@njupt.edu.cn");
-    expect(mockReplace).toHaveBeenCalledWith("/login?step=password");
+    expect(mockReplace).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "输入密码" })).toBeInTheDocument();
   });
 
-  it("restores the password step from step=password and a stored account", () => {
-    setup("step=password");
+  it("restores the password step from a stored account", () => {
+    setup();
     sessionStorage.setItem(LOGIN_ACCOUNT_KEY, "alice@njupt.edu.cn");
 
     render(<LoginPage />);
@@ -52,24 +52,24 @@ describe("LoginPage", () => {
     expect(screen.getByText(/正在登录 alice@njupt\.edu\.cn/)).toBeInTheDocument();
   });
 
-  it("falls back to the account step when step=password has no stored account", () => {
-    setup("step=password");
+  it("shows the account step when no account is stored", () => {
+    setup();
 
     render(<LoginPage />);
 
-    expect(mockReplace).toHaveBeenCalledWith("/login");
+    expect(mockReplace).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
   });
 
   it("returns to the account step via the back button", async () => {
-    setup("step=password");
+    setup();
     sessionStorage.setItem(LOGIN_ACCOUNT_KEY, "alice@njupt.edu.cn");
 
     render(<LoginPage />);
     await userEvent.click(screen.getByRole("button", { name: "返回上一步" }));
 
     expect(sessionStorage.getItem(LOGIN_ACCOUNT_KEY)).toBeNull();
-    expect(mockReplace).toHaveBeenCalledWith("/login");
+    expect(mockReplace).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
   });
 });

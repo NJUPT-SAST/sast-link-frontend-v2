@@ -38,7 +38,7 @@ const departmentSchema = z.enum([
 ]);
 const emailTypeSchema = z.enum(["njupt_email", "sast_email"]);
 const grantTypeSchema = z.enum(["authorization_code", "refresh_token"]);
-const scopeSchema = z.enum(["openid", "profile", "email"]);
+const scopeSchema = z.enum(["openid", "profile", "email", "admin:read", "admin:write", "user:read", "user:write"]);
 
 export const adminUserFiltersSchema = z.object({
   page: z.coerce.number().int().min(1),
@@ -77,24 +77,40 @@ export const adminUpdateUserSchema = z
 
 export type AdminUpdateUserFormValues = z.infer<typeof adminUpdateUserSchema>;
 
-export const adminOAuthClientSchema = z.object({
-  client_name: z.string().trim().min(1, "应用名称不可为空").max(100),
-  client_type: z.enum(["first_party", "third_party"]),
-  redirect_uris: z
-    .array(redirectUriSchema)
-    .min(1, "至少填写一个回调地址")
-    .max(10, "最多 10 个回调地址")
-    .refine((items) => new Set(items).size === items.length, "回调地址不能重复"),
-  grant_types: z
-    .array(grantTypeSchema)
-    .min(1, "至少选择一种授权类型")
-    .refine((items) => items.includes("authorization_code"), "必须包含 authorization_code"),
-  scopes: z
-    .array(scopeSchema)
-    .min(1, "至少选择一个权限范围")
-    .refine((items) => items.includes("openid"), "必须包含 openid"),
-  is_active: z.boolean(),
-});
+export const adminOAuthClientSchema = z
+  .object({
+    client_name: z.string().trim().min(1, "应用名称不可为空").max(100),
+    client_type: z.enum(["first_party", "third_party"]),
+    redirect_uris: z
+      .array(redirectUriSchema)
+      .min(1, "至少填写一个回调地址")
+      .max(10, "最多 10 个回调地址")
+      .refine((items) => new Set(items).size === items.length, "回调地址不能重复"),
+    grant_types: z
+      .array(grantTypeSchema)
+      .min(1, "至少选择一种授权类型")
+      .refine((items) => items.includes("authorization_code"), "必须包含 authorization_code"),
+    scopes: z
+      .array(scopeSchema)
+      .min(1, "至少选择一个权限范围")
+      .refine((items) => items.includes("openid"), "必须包含 openid"),
+    is_active: z.boolean(),
+  })
+  .superRefine((values, ctx) => {
+    // Mirrors the backend grant door: admin:* is confined to confidential
+    // (third_party) clients, so a first_party registration carrying one is refused
+    // up front rather than surfacing as a server 400.
+    if (
+      values.client_type === "first_party" &&
+      values.scopes.some((scope) => scope === "admin:read" || scope === "admin:write")
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["scopes"],
+        message: "admin scope 仅可授予 third_party 客户端",
+      });
+    }
+  });
 
 export type AdminOAuthClientFormValues = z.infer<typeof adminOAuthClientSchema>;
 

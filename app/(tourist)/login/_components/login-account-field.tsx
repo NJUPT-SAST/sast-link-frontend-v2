@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -72,10 +72,22 @@ export function LoginAccountField({
     onChange({ ...value, localPart: raw });
   };
 
-  // Hint follows the selected domain: @njupt.edu.cn accounts are student ids,
-  // @sast.fun accounts are a custom email prefix.
-  const placeholder =
-    value.domain === OTHER_EMAIL
+  // When the domain pill is hidden (<300px) the input becomes a plain full-email
+  // field, so the hint must say which domains are allowed instead of the
+  // local-part conventions of the visible pill.
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 299px)").matches : false,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 299px)");
+    const onChange = (event: MediaQueryListEvent) => setNarrow(event.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const placeholder = narrow
+    ? "@njupt.edu.cn / @sast.fun"
+    : value.domain === OTHER_EMAIL
       ? "完整邮箱地址"
       : value.domain === "@sast.fun"
         ? "邮箱前缀"
@@ -88,7 +100,7 @@ export function LoginAccountField({
       </label>
       <div
         className={cn(
-          "flex h-12 items-center gap-2 rounded-lg border bg-card px-3.5 transition-colors",
+          "relative flex h-12 items-center rounded-lg border bg-card px-3.5 transition-colors",
           focused ? "border-ring" : "border-input",
           "focus-within:ring-2 focus-within:ring-ring/25",
         )}
@@ -111,7 +123,7 @@ export function LoginAccountField({
               onEnter();
             }
           }}
-          className="min-w-0 flex-1 bg-transparent text-[15px] text-foreground placeholder:text-tertiary outline-none"
+          className="w-full pr-28 bg-transparent text-[15px] text-foreground placeholder:text-tertiary outline-none"
         />
         {!atResolved && (
           <DropdownMenu>
@@ -120,7 +132,11 @@ export function LoginAccountField({
                 type="button"
                 aria-label="选择邮箱域名"
                 className={cn(
-                  "shrink-0 rounded-md px-2.5 py-1 text-sm font-medium transition-colors",
+                  // The pill overlays the input's right edge like the code field's
+                  // resend button, so both fields share the same input width and
+                  // right-aligned edge. Below 300px it disappears and the input
+                  // becomes a plain full-email field (typing @ resolves it).
+                  "absolute right-3.5 top-1/2 -translate-y-1/2 max-[299px]:hidden rounded-md px-2.5 py-1 text-sm font-medium transition-colors",
                   "bg-secondary/80 text-muted-foreground hover:bg-secondary",
                   "dark:bg-muted/60 dark:hover:bg-muted",
                 )}

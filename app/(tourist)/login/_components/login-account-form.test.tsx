@@ -56,14 +56,24 @@ describe("LoginAccountForm", () => {
     expect(onNext).toHaveBeenCalledWith("alice@sast.fun");
   });
 
-  it("rejects unsupported emails in the other-email branch", async () => {
+  it("submits any valid email in the other-email branch (other_mail login)", async () => {
     const onNext = jest.fn();
     render(<LoginAccountForm onNext={onNext} />);
     await userEvent.click(screen.getByRole("button", { name: "选择邮箱域名" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "其他邮箱" }));
     await userEvent.type(screen.getByLabelText("账户"), "alice@example.com");
     await userEvent.click(screen.getByRole("button", { name: "继续" }));
-    expect(screen.getByText("仅支持 @njupt.edu.cn 或 @sast.fun 邮箱")).toBeInTheDocument();
+    expect(onNext).toHaveBeenCalledWith("alice@example.com");
+  });
+
+  it("rejects malformed emails in the other-email branch", async () => {
+    const onNext = jest.fn();
+    render(<LoginAccountForm onNext={onNext} />);
+    await userEvent.click(screen.getByRole("button", { name: "选择邮箱域名" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "其他邮箱" }));
+    await userEvent.type(screen.getByLabelText("账户"), "not-an-email");
+    await userEvent.click(screen.getByRole("button", { name: "继续" }));
+    expect(screen.getByText("请输入完整的邮箱地址")).toBeInTheDocument();
     expect(onNext).not.toHaveBeenCalled();
   });
 });

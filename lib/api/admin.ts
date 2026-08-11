@@ -59,13 +59,18 @@ export function getAdminOAuthClients() {
 }
 
 export function createAdminOAuthClient(data: AdminCreateOAuthClientRequest) {
-  return apiClient.post<ApiEnvelope<{ client: AdminOAuthClient }>>("/admin/oauth-clients", data);
+  // The backend answers the registration with a flat DTO (client fields +
+  // client_secret), not wrapped in a `client` key.
+  return apiClient.post<ApiEnvelope<AdminOAuthClient>>("/admin/oauth-clients", data);
 }
 
 export function updateAdminOAuthClient(id: number, data: AdminUpdateOAuthClientRequest) {
-  return apiClient.put<ApiEnvelope<{ message: string; client: AdminOAuthClient }>>(
-    `/admin/oauth-clients/${id}`,
-    data,
+  return apiClient.put<ApiEnvelope<{ message: string }>>(`/admin/oauth-clients/${id}`, data);
+}
+
+export function rotateAdminOAuthClientSecret(id: number) {
+  return apiClient.post<ApiEnvelope<{ id: number; client_secret: string }>>(
+    `/admin/oauth-clients/${id}/rotate-secret`,
   );
 }
 

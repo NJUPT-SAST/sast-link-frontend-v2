@@ -12,6 +12,7 @@ import {
   createAdminOAuthClient,
   deleteAdminUser,
   restoreAdminUser,
+  rotateAdminOAuthClientSecret,
   updateAdminOAuthClient,
   updateAdminUser,
 } from "@/lib/api/admin";
@@ -29,6 +30,7 @@ interface UseAdminMutationsResult {
   restoreUser: (id: number, listParams?: Parameters<typeof buildAdminUsersKey>[0]) => Promise<void>;
   createOAuthClient: (data: AdminCreateOAuthClientRequest) => Promise<string | null>;
   updateOAuthClient: (id: number, data: AdminUpdateOAuthClientRequest) => Promise<void>;
+  rotateOAuthClientSecret: (id: number) => Promise<string | null>;
 }
 
 export function useAdminMutations(): UseAdminMutationsResult {
@@ -96,7 +98,7 @@ export function useAdminMutations(): UseAdminMutationsResult {
         const response = await createAdminOAuthClient(data);
         message.success("OAuth 客户端注册成功");
         await mutate(ADMIN_OAUTH_CLIENTS_KEY);
-        return response.data.data.client.client_secret ?? null;
+        return response.data.data.client_secret ?? null;
       } catch (error) {
         message.error(toApiError(error).message);
         throw error;
@@ -111,9 +113,30 @@ export function useAdminMutations(): UseAdminMutationsResult {
     async (id: number, data: AdminUpdateOAuthClientRequest) => {
       setIsLoading(true);
       try {
-        await updateAdminOAuthClient(id, data);
-        message.success("客户端信息更新成功");
+        const response = await updateAdminOAuthClient(id, data);
+        // The backend says so when a deactivation revoked every token; surface it
+        // rather than always claiming a plain "updated". `||` (not `??`) so an
+        // empty-string message falls back instead of showing a blank toast.
+        message.success(response.data.data.message || "客户端信息更新成功");
         await mutate(ADMIN_OAUTH_CLIENTS_KEY);
+      } catch (error) {
+        message.error(toApiError(error).message);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [mutate],
+  );
+
+  const rotateOAuthClientSecret = useCallback(
+    async (id: number): Promise<string | null> => {
+      setIsLoading(true);
+      try {
+        const response = await rotateAdminOAuthClientSecret(id);
+        message.success("client_secret 已轮换");
+        await mutate(ADMIN_OAUTH_CLIENTS_KEY);
+        return response.data.data.client_secret ?? null;
       } catch (error) {
         message.error(toApiError(error).message);
         throw error;
@@ -131,5 +154,6 @@ export function useAdminMutations(): UseAdminMutationsResult {
     restoreUser,
     createOAuthClient,
     updateOAuthClient,
+    rotateOAuthClientSecret,
   };
 }

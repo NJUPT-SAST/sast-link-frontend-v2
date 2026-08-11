@@ -14,8 +14,8 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
 ];
 
 export const CLIENT_TYPE_LABELS: Record<ClientType, string> = {
-  first_party: "内部应用",
-  third_party: "第三方应用",
+  first_party: "first_party",
+  third_party: "third_party",
 };
 
 export const GRANT_TYPE_LABELS: Record<GrantType, string> = {
@@ -27,7 +27,17 @@ export const SCOPE_LABELS: Record<Scope, string> = {
   openid: "OpenID",
   profile: "资料",
   email: "邮箱",
+  "admin:read": "管理·只读",
+  "admin:write": "管理·写入",
+  "user:read": "自助·只读",
+  "user:write": "自助·写入",
 };
+
+/** Renders a scope as `raw · label` for admin surfaces (client list, form chips),
+ *  so an administrator can always see the exact scope value behind the label. */
+export function formatScope(scope: Scope): string {
+  return `${scope} · ${SCOPE_LABELS[scope]}`;
+}
 
 export const DEPARTMENT_LABELS: Record<Department, string> = {
   software: "软件研发部",

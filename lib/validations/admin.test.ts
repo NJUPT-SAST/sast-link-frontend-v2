@@ -1,4 +1,4 @@
-import { adminAuditLogFiltersSchema } from "./admin";
+import { adminAuditLogFiltersSchema, adminOAuthClientSchema } from "./admin";
 
 const base = { page: 1, page_size: 20 };
 
@@ -55,6 +55,48 @@ describe("adminAuditLogFiltersSchema", () => {
     ).toBe(true);
     expect(
       adminAuditLogFiltersSchema.safeParse({ ...base, end_time: "2026-08-01T00:00" }).success,
+    ).toBe(true);
+  });
+});
+
+describe("adminOAuthClientSchema", () => {
+  const client = {
+    client_name: "Evento",
+    client_type: "third_party" as const,
+    redirect_uris: ["https://evento.sast.fun/callback"],
+    grant_types: ["authorization_code"] as const,
+    scopes: ["openid", "profile"] as const,
+    is_active: true,
+  };
+
+  it("allows admin scopes on a third_party client", () => {
+    const result = adminOAuthClientSchema.safeParse({
+      ...client,
+      scopes: ["openid", "admin:read"],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects admin scopes on a first_party client", () => {
+    const result = adminOAuthClientSchema.safeParse({
+      ...client,
+      client_type: "first_party",
+      scopes: ["openid", "admin:write"],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path.join(".") === "scopes");
+      expect(issue?.message).toBe("admin scope 仅可授予 third_party 客户端");
+    }
+  });
+
+  it("allows user scopes on any client type", () => {
+    expect(
+      adminOAuthClientSchema.safeParse({
+        ...client,
+        client_type: "first_party",
+        scopes: ["openid", "user:read"],
+      }).success,
     ).toBe(true);
   });
 });

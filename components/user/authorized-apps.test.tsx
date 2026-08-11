@@ -55,7 +55,7 @@ describe("AuthorizedApps", () => {
 
     expect(await screen.findByText("Evento")).toBeInTheDocument();
     expect(
-      screen.getByText("身份标识（OpenID） · 基本资料（昵称、姓名、签名等）"),
+      screen.getByText("openid · 身份标识（OpenID） · profile · 基本资料（昵称、姓名、签名等）"),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "查看" })).toBeInTheDocument();
   });

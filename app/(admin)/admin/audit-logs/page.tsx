@@ -32,7 +32,6 @@ export default function AdminAuditLogsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="type-title2">审计日志</h1>
-        <p className="mt-1 text-sm text-tertiary">查看系统操作记录</p>
       </div>
 
       <AuditLogFilters value={filters} onChange={handleFiltersChange} />

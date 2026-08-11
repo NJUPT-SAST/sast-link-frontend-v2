@@ -133,7 +133,6 @@ export default function AdminUsersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="type-title2">用户管理</h1>
-          <p className="mt-1 text-sm text-tertiary">查看、编辑和管理系统用户</p>
         </div>
         {canManage && selectedIds.size > 0 && (
           <Button onClick={() => setBatchOpen(true)} disabled={batchLoading}>

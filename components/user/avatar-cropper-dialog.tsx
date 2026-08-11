@@ -146,9 +146,7 @@ export function AvatarCropperDialog({
         <DialogHeader>
           <DialogTitle>{file ? "裁剪头像" : "更换头像"}</DialogTitle>
           <DialogDescription>
-            {file
-              ? "拖动和缩放以调整头像"
-              : "选择或拖入一张图片，裁剪后作为头像"}
+            {file ? "拖动和缩放以调整头像" : "选择或拖入一张图片"}
           </DialogDescription>
         </DialogHeader>
 
@@ -221,7 +219,6 @@ export function AvatarCropperDialog({
               <Camera size={16} />
               选择图片
             </Button>
-            <p className="text-xs text-tertiary">也可以直接拖一张图片到这里</p>
           </div>
         )}
 

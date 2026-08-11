@@ -38,8 +38,9 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
   // Safety net: whenever the password step is shown, persist the account and
   // stamp the URL marker so a refresh or back-nav keeps the flow in place.
   useEffect(() => {
+    // Keep the account for a mid-flow reload; the step itself is never written
+    // to the URL.
     sessionStorage.setItem(LOGIN_ACCOUNT_KEY, loginEmail);
-    router.replace("/login?step=password");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const form = useForm<LoginPasswordFormValues>({
@@ -67,8 +68,8 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
         avatar: null,
         session,
       });
-      // Drop the stored account so a later /login?step=password never restores
-      // a stale session entry. Mid-flow redirect (e.g. back to an OAuth
+      // Drop the stored account so a later /login never restores a stale
+      // session entry. Mid-flow redirect (e.g. back to an OAuth
       // consent request) lands the user where they were heading; a normal
       // sign-in goes to the homepage.
       sessionStorage.removeItem(LOGIN_ACCOUNT_KEY);

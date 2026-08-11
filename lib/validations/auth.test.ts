@@ -28,16 +28,17 @@ describe("auth validation schemas", () => {
       account: { localPart, domain },
     });
 
-    it("accepts supported domains in the other-email branch", () => {
+    it("accepts any valid email in the other-email branch (other_mail login)", () => {
       expect(loginAccountFormSchema.safeParse(valid("alice@sast.fun", "其他邮箱")).success).toBe(true);
-      expect(loginAccountFormSchema.safeParse(valid("alice@njupt.edu.cn", "其他邮箱")).success).toBe(true);
+      expect(loginAccountFormSchema.safeParse(valid("alice@qq.com", "其他邮箱")).success).toBe(true);
+      expect(loginAccountFormSchema.safeParse(valid("alice@example.com", "其他邮箱")).success).toBe(true);
     });
 
-    it("rejects unsupported emails in the other-email branch", () => {
-      const result = loginAccountFormSchema.safeParse(valid("alice@example.com", "其他邮箱"));
+    it("rejects malformed emails in the other-email branch", () => {
+      const result = loginAccountFormSchema.safeParse(valid("not-an-email", "其他邮箱"));
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0]?.message).toBe("仅支持 @njupt.edu.cn 或 @sast.fun 邮箱");
+        expect(result.error.issues[0]?.message).toBe("请输入完整的邮箱地址");
       }
     });
   });

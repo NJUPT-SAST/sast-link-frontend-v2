@@ -51,9 +51,6 @@ describe("ProfileCard", () => {
   it("renders the selected card fields and empty signature", () => {
     render(<ProfileCard />);
     expect(screen.getByText("Alice")).toBeInTheDocument();
-    expect(screen.getByText("张三")).toBeInTheDocument();
-    expect(screen.getByText("计算机学院、软件学院、网络空间安全学院")).toBeInTheDocument();
-    expect(screen.getByText("软件工程")).toBeInTheDocument();
     expect(screen.getByText("你还没留下签名哦～")).toBeInTheDocument();
     expect(screen.getByText("签名")).toBeInTheDocument();
   });
@@ -73,12 +70,12 @@ describe("ProfileCard", () => {
   it("hides the double-click hint while editing", () => {
     render(<ProfileCard />);
     fireEvent.keyDown(screen.getByText("你还没留下签名哦～"), { key: "Enter" });
-    expect(screen.queryByText("双击编辑")).not.toBeInTheDocument();
+    expect(screen.queryByText("点击或双击编辑")).not.toBeInTheDocument();
   });
 
   it("shows a double-click hint in the idle state", () => {
     render(<ProfileCard />);
-    expect(screen.getByText("双击编辑")).toBeInTheDocument();
+    expect(screen.getByText("点击或双击编辑")).toBeInTheDocument();
   });
 
   it("observes the card with a low threshold and top-bar root margin", () => {

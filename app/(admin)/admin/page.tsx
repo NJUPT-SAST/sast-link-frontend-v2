@@ -143,7 +143,6 @@ export default function AdminOverviewPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="type-title2">概览</h1>
-        <p className="mt-1 text-sm text-tertiary">系统整体情况与关键指标</p>
       </div>
 
       {isLoading && (

@@ -11,6 +11,9 @@ name: Release
 # 2. Creates a draft GitHub release with build artifacts
 # ============================================================================
 
+permissions:
+  contents: read
+
 on:
   push:
     tags:
@@ -30,6 +33,13 @@ jobs:
   test:
     name: Test Suite
     uses: ./.github/workflows/test.yml
+    # test.yml's nested job posts the coverage table to the PR (checks +
+    # pull-requests). The workflow-level permissions cap the token at read, so
+    # grant what that job needs here — the cap still covers every other job.
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
 
   # Create the GitHub release
   create-release:
