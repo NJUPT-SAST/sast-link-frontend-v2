@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSWRConfig } from "swr";
 
 import type {
@@ -36,6 +36,10 @@ export default function AdminOAuthClientsPage() {
   const [editingClient, setEditingClient] = useState<AdminOAuthClient | undefined>(undefined);
   const [toggleConfirm, setToggleConfirm] = useState<AdminOAuthClient | null>(null);
   const [rotateConfirm, setRotateConfirm] = useState<AdminOAuthClient | null>(null);
+  // The confirm dialogs clear their target before awaiting, so a double confirm
+  // in the same frame would fire twice (a second rotate returns a second, now
+  // invalid secret). Ref guard makes repeat confirms no-ops.
+  const mutatingRef = useRef(false);
   const [secretDialog, setSecretDialog] = useState<{
     open: boolean;
     name: string;
@@ -50,7 +54,15 @@ export default function AdminOAuthClientsPage() {
 
   const handleSubmit = async (data: AdminCreateOAuthClientRequest | AdminUpdateOAuthClientRequest) => {
     if (editingClient) {
-      await updateOAuthClient(editingClient.id, data as AdminUpdateOAuthClientRequest);
+      const updateData = data as AdminUpdateOAuthClientRequest;
+      if (Object.keys(updateData).length === 0) {
+        // Nothing actually changed — the backend rejects an empty payload with a
+        // 400, so just close instead of showing a confusing error.
+        setEditingClient(undefined);
+        setFormOpen(false);
+        return;
+      }
+      await updateOAuthClient(editingClient.id, updateData);
       setEditingClient(undefined);
       setFormOpen(false);
     } else {
@@ -73,10 +85,15 @@ export default function AdminOAuthClientsPage() {
   };
 
   const handleToggleConfirm = async () => {
-    if (!toggleConfirm) return;
+    if (!toggleConfirm || mutatingRef.current) return;
+    mutatingRef.current = true;
     const nextActive = !toggleConfirm.is_active;
     setToggleConfirm(null);
-    await updateOAuthClient(toggleConfirm.id, { is_active: nextActive });
+    try {
+      await updateOAuthClient(toggleConfirm.id, { is_active: nextActive });
+    } finally {
+      mutatingRef.current = false;
+    }
   };
 
   const handleRotateSecret = (client: AdminOAuthClient) => {
@@ -84,12 +101,17 @@ export default function AdminOAuthClientsPage() {
   };
 
   const handleRotateConfirm = async () => {
-    if (!rotateConfirm) return;
+    if (!rotateConfirm || mutatingRef.current) return;
+    mutatingRef.current = true;
     const { id, client_name: name } = rotateConfirm;
     setRotateConfirm(null);
-    const secret = await rotateOAuthClientSecret(id);
-    if (secret) {
-      setSecretDialog({ open: true, name, secret, mode: "rotate" });
+    try {
+      const secret = await rotateOAuthClientSecret(id);
+      if (secret) {
+        setSecretDialog({ open: true, name, secret, mode: "rotate" });
+      }
+    } finally {
+      mutatingRef.current = false;
     }
   };
 
