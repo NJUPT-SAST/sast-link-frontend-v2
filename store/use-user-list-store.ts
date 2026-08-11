@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 import type { UserAccount } from "@/lib/api/types";
 
@@ -18,59 +17,45 @@ interface UserListState {
   removeAccount: (identifier: number | string) => void;
 }
 
-export const useUserListStore = create<UserListState>()(
-  persist(
-    (set) => ({
-      accounts: [],
+// In-memory only. The store used to persist `accounts` (each carrying a session
+// with refresh tokens) to localStorage via zustand persist — that put a
+// permanent copy of the token outside the tab-scoped sessionStorage that
+// lib/token.ts is designed around. Nothing reads `accounts` (the account
+// switcher is gone), so keeping it in memory removes the token leak with no
+// user-visible change. If a multi-account picker ever returns, sessions must be
+// stored separately from the picker metadata.
+export const useUserListStore = create<UserListState>((set) => ({
+  accounts: [],
 
-      addAccount: (account) =>
-        set((state) => {
-          const index = state.accounts.findIndex(
-            (item) => item.userId === account.userId,
-          );
-          if (index < 0) return { accounts: [...state.accounts, account] };
+  addAccount: (account) =>
+    set((state) => {
+      const index = state.accounts.findIndex(
+        (item) => item.userId === account.userId,
+      );
+      if (index < 0) return { accounts: [...state.accounts, account] };
 
-          return {
-            accounts: state.accounts.map((item, itemIndex) =>
-              itemIndex === index ? account : item,
-            ),
-          };
-        }),
-
-      updateAccount: (update) =>
-        set((state) => ({
-          accounts: state.accounts.map((account) =>
-            account.userId === update.userId
-              ? { ...account, ...update }
-              : account,
-          ),
-        })),
-
-      removeAccount: (identifier) =>
-        set((state) => ({
-          accounts: state.accounts.filter((account, index) =>
-            typeof identifier === "number"
-              ? index !== identifier
-              : account.loginEmail !== identifier,
-          ),
-        })),
+      return {
+        accounts: state.accounts.map((item, itemIndex) =>
+          itemIndex === index ? account : item,
+        ),
+      };
     }),
-    {
-      name: "user-list-store",
-      version: 2,
-      migrate: () => ({ accounts: [] }),
-      // Drop accounts whose session token is structurally invalid. Expired
-      // access tokens can still be refreshed, so we keep them in the picker.
-      onRehydrateStorage: () => (state) => {
-        if (!state?.accounts) return;
-        state.accounts = state.accounts.filter(
-          (account) =>
-            account.session &&
-            typeof account.session.accessToken === "string" &&
-            typeof account.session.refreshToken === "string" &&
-            typeof account.session.expiresAt === "number",
-        );
-      },
-    },
-  ),
-);
+
+  updateAccount: (update) =>
+    set((state) => ({
+      accounts: state.accounts.map((account) =>
+        account.userId === update.userId
+          ? { ...account, ...update }
+          : account,
+      ),
+    })),
+
+  removeAccount: (identifier) =>
+    set((state) => ({
+      accounts: state.accounts.filter((account, index) =>
+        typeof identifier === "number"
+          ? index !== identifier
+          : account.loginEmail !== identifier,
+      ),
+    })),
+}));
