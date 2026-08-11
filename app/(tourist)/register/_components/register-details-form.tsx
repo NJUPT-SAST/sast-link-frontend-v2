@@ -9,6 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import { completeRegister } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
 import { updateUserProfile } from "@/lib/api/user";
+import { message } from "@/lib/message";
 import { COLLEGES, type RegisterRequest } from "@/lib/api/types";
 import { createSession, setSession } from "@/lib/token";
 import { safeSessionStorage } from "@/lib/safe-session-storage";
@@ -82,6 +83,10 @@ export default function RegisterDetailsForm({
   const addAccount = useUserListStore((state) => state.addAccount);
   const resetProfile = useUserProfileStore((state) => state.resetProfile);
   const [loading, setLoading] = useState(false);
+  // Backend code for a consumed/expired Register-Ticket (errcode 40103). The
+  // recovery button must key off this, not the message text — the backend's copy
+  // could change to another language without the flow breaking.
+  const [ticketInvalid, setTicketInvalid] = useState(false);
 
   const isNjuptEmail = loginEmail.endsWith("@njupt.edu.cn");
   const autoStudentId = useMemo(() => {
@@ -126,11 +131,12 @@ export default function RegisterDetailsForm({
       });
       // Register API doesn't accept nickname; set it right after signup. This is
       // best-effort — a failed nickname write must not strand the user on the
-      // register form holding a valid session (they can edit it later).
+      // register form holding a valid session (they can edit it later). But a
+      // silent loss of the nickname they just typed is worse than a toast.
       try {
         await updateUserProfile({ nickname: values.nickname });
       } catch {
-        /* ignore */
+        message.error("别名保存失败，稍后可在个人资料中修改");
       }
       // A successful signup is a finished flow: clear the stored ticket/email so
       // a later /register starts at the email step instead of resurrecting this
@@ -139,7 +145,9 @@ export default function RegisterDetailsForm({
       safeSessionStorage.removeItem("sast:register-email");
       router.replace("/home");
     } catch (error) {
-      form.setError("root", { message: toApiError(error).message });
+      const apiError = toApiError(error);
+      form.setError("root", { message: apiError.message });
+      setTicketInvalid(apiError.code === 40103);
     } finally {
       setLoading(false);
     }
@@ -349,7 +357,7 @@ export default function RegisterDetailsForm({
 
           <FormError message={form.formState.errors.root?.message} />
 
-          {form.formState.errors.root?.message?.includes("过期") && (
+          {(ticketInvalid || form.formState.errors.root?.message?.includes("过期")) && (
             <button
               type="button"
               onClick={onBack}
