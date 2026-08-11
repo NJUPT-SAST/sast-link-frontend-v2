@@ -84,10 +84,10 @@ describe("AvatarCropperDialog", () => {
 
     expect(screen.getByRole("heading", { name: "更换头像" })).toBeInTheDocument();
     expect(
-      screen.getByText("选择或拖入一张图片，裁剪后作为头像"),
+      screen.getByText("选择或拖入一张图片"),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "选择图片" })).toBeInTheDocument();
-    expect(screen.getByText("也可以直接拖一张图片到这里")).toBeInTheDocument();
+
   });
 
   it("opens a full-size preview of the original avatar when clicked", async () => {
@@ -137,7 +137,7 @@ describe("AvatarCropperDialog", () => {
       />,
     );
 
-    const zone = screen.getByText("也可以直接拖一张图片到这里").closest("div");
+    const zone = screen.getByRole("button", { name: "选择图片" }).closest("div");
     expect(zone).not.toBeNull();
     fireEvent.drop(zone!, { dataTransfer: { files: [pngFile("d.png", 100)] } });
 

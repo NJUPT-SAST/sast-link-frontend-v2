@@ -64,23 +64,28 @@ export function ProfileCard() {
   };
 
   return (
-    <section ref={sectionRef} id="profile-card" className="grid min-h-dvh snap-start scroll-mt-16 place-items-center px-5 py-24 sm:px-8">
+    <section ref={sectionRef} id="profile-card" className="flex min-h-dvh snap-start px-5 py-4 sm:px-8">
       <article
         aria-label="个人名片"
-        className={`grid w-full max-w-[760px] border border-hairline bg-background/78 backdrop-blur-md transition-[opacity,transform] duration-500 ease-out md:grid-cols-[230px_minmax(0,1fr)] ${visible ? "translate-y-0 opacity-100" : "translate-y-[18px] opacity-0"}`}
+        className={`m-auto flex w-full max-w-[760px] flex-col items-center gap-5 border border-hairline bg-background/78 text-center backdrop-blur-md transition-[opacity,transform] duration-500 ease-out md:grid md:grid-cols-[230px_minmax(0,1fr)] md:items-stretch md:gap-0 md:text-left ${visible ? "translate-y-0 opacity-100" : "translate-y-[18px] opacity-0"}`}
       >
-        <div className="flex min-h-[340px] min-w-0 flex-col justify-between border-b border-hairline p-7 md:border-b-0 md:border-r md:p-9">
-          <div data-cursor-target>
-            <Avatar className="size-28 border border-foreground sm:size-[132px]">
-              <AvatarImage src={profile.avatar ?? DEFAULT_AVATAR} alt={profile.nickname} />
-              <AvatarFallback className="text-3xl">{avatarFallbackChar(profile)}</AvatarFallback>
-            </Avatar>
-            <div className="mt-5 text-2xl font-semibold tracking-tight">{profile.nickname}</div>
-          </div>
+        <div className="flex w-full flex-col items-center gap-5 px-7 py-10 md:items-start md:justify-between md:border-r md:border-hairline md:p-9">
+          <Avatar className="size-28 border border-foreground sm:size-[132px]">
+            <AvatarImage src={profile.avatar ?? DEFAULT_AVATAR} alt={profile.nickname} />
+            <AvatarFallback className="text-3xl">{avatarFallbackChar(profile)}</AvatarFallback>
+          </Avatar>
+
+          <div className="text-2xl font-semibold tracking-tight">{profile.nickname}</div>
 
           <div
             data-cursor-target
             tabIndex={0}
+            // Click (and double-click) enters edit: touch devices have no dblclick,
+            // so the single click is the reliable entry across every device. The
+            // keydown path covers keyboard users.
+            onClick={() => {
+              if (!editing) setEditing(true);
+            }}
             onDoubleClick={() => setEditing(true)}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !editing) {
@@ -88,14 +93,14 @@ export function ProfileCard() {
                 setEditing(true);
               }
             }}
-            className="group cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
+            className="group w-full cursor-pointer self-start rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
           >
-            <div className="mb-2 flex items-center gap-1.5">
+            <div className="mb-1 flex items-center justify-start gap-1.5">
               <span className="type-tech text-tertiary">签名</span>
               {!editing && (
                 <span className="flex items-center gap-1 text-[11px] text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
                   <Pencil size={11} />
-                  双击编辑
+                  点击或双击编辑
                 </span>
               )}
             </div>
@@ -111,17 +116,17 @@ export function ProfileCard() {
                   if (event.key === "Enter") void finishEditing(true);
                   if (event.key === "Escape") void finishEditing(false);
                 }}
-                className="w-full border-0 border-b border-foreground bg-transparent pb-1 text-[13px] leading-7 outline-none"
+                className="w-full border-0 border-b border-foreground bg-transparent pb-1 text-left text-[13px] leading-7 outline-none"
               />
             ) : (
-              <p className="break-words text-[13px] leading-7 text-muted-foreground">
+              <p className="break-words text-left text-base leading-7 text-muted-foreground">
                 {signature.trim() || EMPTY_SIGNATURE}
               </p>
             )}
           </div>
         </div>
 
-        <dl className="flex flex-col justify-center px-7 py-4 md:px-10 md:py-9">
+        <dl className="hidden w-full flex-col justify-center px-7 py-4 md:flex md:px-10 md:py-9">
           {[
             ["真实姓名", profile.name],
             ["学院", profile.college],

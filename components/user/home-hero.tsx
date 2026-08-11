@@ -36,6 +36,22 @@ export function HomeHero() {
       <a
         href="#profile-card"
         aria-label="查看个人名片"
+        onClick={(event) => {
+          // Anchor navigation to the same #profile-card hash does not re-scroll,
+          // and scrollIntoView's scroll-padding / scroll-margin math is
+          // unreliable on iOS Safari inside the nested scroll-snap container.
+          // Compute the target scroll position directly so the card centers.
+          event.preventDefault();
+          const card = document.getElementById("profile-card");
+          const container = card?.closest(".snap-y") as HTMLElement | null;
+          if (card && container) {
+            const rect = card.getBoundingClientRect();
+            container.scrollTo({
+              top: container.scrollTop + rect.top - (container.clientHeight - rect.height) / 2,
+              behavior: "smooth",
+            });
+          }
+        }}
         className="guide-bob absolute bottom-8 left-1/2 z-[1] -translate-x-1/2 text-foreground hover:[animation:none] hover:opacity-100"
       >
         <ChevronDown size={24} strokeWidth={1.75} />
