@@ -43,6 +43,13 @@ jobs:
   test:
     name: Test
     uses: ./.github/workflows/test.yml
+    # test.yml's nested job posts the coverage table to the PR (checks +
+    # pull-requests). The workflow-level permissions cap the token at read, so
+    # grant what that job needs here — the cap still covers every other job.
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
 
   # Step 3: Deploy (master push only)
   deploy:
