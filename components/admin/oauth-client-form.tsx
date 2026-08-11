@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
@@ -9,15 +9,25 @@ import type {
   AdminCreateOAuthClientRequest,
   AdminOAuthClient,
   AdminUpdateOAuthClientRequest,
+  Scope,
 } from "@/lib/api/types";
 import {
   adminOAuthClientSchema,
   type AdminOAuthClientFormValues,
 } from "@/lib/validations/admin";
+import { formatScope } from "@/lib/constants/admin";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { FormError } from "@/components/ui/form-error";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormField,
@@ -32,14 +42,38 @@ const GRANT_TYPE_OPTIONS = [
 ] as const;
 
 const SCOPE_OPTIONS = [
-  { value: "openid", label: "OpenID" },
-  { value: "profile", label: "资料" },
-  { value: "email", label: "邮箱" },
-] as const;
+  { value: "openid", description: "身份标识（必选）", type: "both" as const },
+  { value: "profile", description: "资料（昵称、姓名、签名）", type: "both" as const },
+  { value: "email", description: "邮箱地址", type: "both" as const },
+  {
+    value: "admin:read",
+    description: "管理·只读：查看用户目录、客户端、审计（仅 third_party；使用它的用户须为 Link 管理员才生效）",
+    type: "third_party" as const,
+  },
+  {
+    value: "admin:write",
+    description: "管理·写入：改角色、封禁、管理客户端（仅 third_party；使用它的用户须为 Link 管理员才生效）",
+    type: "third_party" as const,
+  },
+  {
+    value: "user:read",
+    description: "自助·只读：读取用户自己的完整资料",
+    type: "both" as const,
+  },
+  {
+    value: "user:write",
+    description: "自助·写入：修改用户自己的资料、身份绑定与密码",
+    type: "both" as const,
+  },
+] as const satisfies ReadonlyArray<{
+  value: Scope;
+  description: string;
+  type: "both" | "third_party";
+}>;
 
 const CLIENT_TYPE_OPTIONS = [
-  { value: "first_party", label: "内部应用" },
-  { value: "third_party", label: "第三方应用" },
+  { value: "first_party", label: "first_party" },
+  { value: "third_party", label: "third_party" },
 ] as const;
 
 const selectClass =
@@ -62,14 +96,27 @@ function toCreateRequest(values: AdminOAuthClientFormValues): AdminCreateOAuthCl
   };
 }
 
-function toUpdateRequest(values: AdminOAuthClientFormValues): AdminUpdateOAuthClientRequest {
+function toUpdateRequest(
+  client: AdminOAuthClient,
+  values: AdminOAuthClientFormValues,
+): AdminUpdateOAuthClientRequest {
+  // Partial update: only fields that actually changed are submitted. The backend
+  // refuses to touch redirect_uris on a capability-scoped client, and refuses to
+  // grant a capability scope in the same request as a redirect_uris rewrite, so
+  // an always-submit-everything request would fail on exactly the flows this form
+  // exists for. client_type is immutable and never appears here.
   const request: AdminUpdateOAuthClientRequest = {};
-  if (values.client_name !== undefined) request.client_name = values.client_name;
-  if (values.redirect_uris !== undefined) request.redirect_uris = values.redirect_uris;
-  if (values.is_active !== undefined) request.is_active = values.is_active;
-  if (values.client_type !== undefined) request.client_type = values.client_type;
-  if (values.grant_types !== undefined) request.grant_types = values.grant_types;
-  if (values.scopes !== undefined) request.scopes = values.scopes;
+  if (values.client_name !== client.client_name) request.client_name = values.client_name;
+  if (values.redirect_uris.join("\u0000") !== client.redirect_uris.join("\u0000")) {
+    request.redirect_uris = values.redirect_uris;
+  }
+  if (values.is_active !== client.is_active) request.is_active = values.is_active;
+  if (values.grant_types.join("\u0000") !== client.grant_types.join("\u0000")) {
+    request.grant_types = values.grant_types;
+  }
+  if (values.scopes.join("\u0000") !== client.scopes.join("\u0000")) {
+    request.scopes = values.scopes;
+  }
   return request;
 }
 
@@ -92,6 +139,48 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAu
     control: form.control,
     name: "redirect_uris",
   });
+
+  const selectedScopes = useWatch({ control: form.control, name: "scopes" }) ?? [];
+  const clientType = useWatch({ control: form.control, name: "client_type" });
+  const [scopeDialogOpen, setScopeDialogOpen] = useState(false);
+  const [scopeDraft, setScopeDraft] = useState<Scope[]>([]);
+
+  const openScopeDialog = () => {
+    // openid is mandatory and cannot be unchecked; make sure the draft always holds it.
+    const seeded: Scope[] = selectedScopes.includes("openid") ? [...selectedScopes] : ["openid", ...selectedScopes];
+    setScopeDraft(seeded);
+    setScopeDialogOpen(true);
+  };
+
+  const toggleScopeDraft = (value: Scope) => {
+    setScopeDraft((draft) =>
+      draft.includes(value) ? draft.filter((s) => s !== value) : [...draft, value],
+    );
+  };
+
+  const confirmScopes = () => {
+    form.setValue("scopes", scopeDraft, { shouldValidate: true });
+    setScopeDialogOpen(false);
+  };
+
+  const renderScopeRow = (opt: (typeof SCOPE_OPTIONS)[number]) => (
+    <label
+      key={opt.value}
+      className="flex cursor-pointer items-start gap-2 rounded-md p-2 text-sm hover:bg-muted/50"
+    >
+      <input
+        type="checkbox"
+        checked={scopeDraft.includes(opt.value)}
+        onChange={() => toggleScopeDraft(opt.value)}
+        disabled={opt.value === "openid"}
+        className="mt-0.5 size-4 rounded border-input disabled:opacity-60"
+      />
+      <span>
+        <span className="block font-medium">{opt.value}</span>
+        <span className="block text-xs text-muted-foreground">{opt.description}</span>
+      </span>
+    </label>
+  );
 
   const addRedirectUri = () => {
     form.setValue("redirect_uris", [...redirectUris, ""], { shouldValidate: true });
@@ -124,8 +213,8 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAu
   const handleValid = async (values: AdminOAuthClientFormValues) => {
     if (isCreate) {
       await onSubmit(toCreateRequest(values));
-    } else {
-      await onSubmit(toUpdateRequest(values));
+    } else if (client) {
+      await onSubmit(toUpdateRequest(client, values));
     }
   };
 
@@ -158,7 +247,10 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAu
               <label htmlFor="client_type" className="mb-2 block text-[13px] text-muted-foreground">
                 客户端类型
               </label>
-              <Select id="client_type" {...field} className={selectClass}>
+              {/* client_type is immutable after registration (it decides the
+                  credential model and admin-scope grantability), so the field is
+                  fixed in edit mode. */}
+              <Select id="client_type" {...field} disabled={!isCreate} className={selectClass}>
                 {CLIENT_TYPE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -245,23 +337,55 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAu
 
         <div>
           <label className="mb-2 block text-[13px] text-muted-foreground">权限范围</label>
-          <div className="flex flex-wrap gap-4">
-            {SCOPE_OPTIONS.map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  value={opt.value}
-                  {...form.register("scopes")}
-                  className="size-4 rounded border-input"
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
+          {selectedScopes.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {selectedScopes.map((s) => (
+                <span
+                  key={s}
+                  className="inline-flex items-center gap-1 rounded-md border border-hairline bg-card px-2 py-1 text-xs text-tertiary"
+                >
+                  {formatScope(s)}
+                </span>
+              ))}
+            </div>
+          )}
+          <Button type="button" variant="outline" size="sm" onClick={openScopeDialog}>
+            选择权限范围
+          </Button>
           <div className="min-h-4 text-xs">
             <FormMessage />
           </div>
         </div>
+
+        <Dialog open={scopeDialogOpen} onOpenChange={setScopeDialogOpen}>
+          <DialogContent className="border-border/60 bg-card/95 sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>选择权限范围</DialogTitle>
+              <DialogDescription>
+                勾选该客户端可请求的 scope。管理 scope（admin:*）仅 third_party 可持有，且使用它的用户须为 Link 管理员才生效；自助 scope（user:*）任何客户端都可用，仅操作用户自己的记录。
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex max-h-72 flex-col gap-1 overflow-y-auto pr-1">
+              {SCOPE_OPTIONS.filter((opt) => opt.type === "both" || opt.type === clientType)
+                .filter((opt) => !opt.value.startsWith("admin:"))
+                .map(renderScopeRow)}
+              {clientType === "third_party" && (
+                <div className="mt-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                  <p className="mb-2 text-xs font-medium text-destructive">
+                    管理权限 — 仅 third_party 可持有；使用它的用户须为 Link 管理员才生效，授予需谨慎
+                  </p>
+                  {SCOPE_OPTIONS.filter((opt) => opt.type === "third_party").map(renderScopeRow)}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setScopeDialogOpen(false)}>
+                取消
+              </Button>
+              <Button onClick={confirmScopes}>确定</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {!isCreate && (
           <FormField

@@ -59,9 +59,9 @@ describe("OAuthConsentContent", () => {
     render(<OAuthConsentContent />);
 
     expect(await screen.findByRole("heading", { name: "Evento" })).toBeInTheDocument();
-    expect(screen.getByText("身份标识（OpenID）")).toBeInTheDocument();
-    expect(screen.getByText("基本资料（昵称、姓名、签名等）")).toBeInTheDocument();
-    expect(screen.getByText("邮箱地址")).toBeInTheDocument();
+    expect(screen.getByText("openid · 身份标识（OpenID）")).toBeInTheDocument();
+    expect(screen.getByText("profile · 基本资料（昵称、姓名、签名等）")).toBeInTheDocument();
+    expect(screen.getByText("email · 邮箱地址")).toBeInTheDocument();
     expect(screen.getByText("此请求将在 10 分钟后过期")).toBeInTheDocument();
     expect(mockGetConsentInfo).toHaveBeenCalledWith("ar_123");
   });

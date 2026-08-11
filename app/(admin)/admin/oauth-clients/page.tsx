@@ -30,15 +30,22 @@ import { DotLoading } from "@/components/ui/dot-loading";
 export default function AdminOAuthClientsPage() {
   const { mutate } = useSWRConfig();
   const { data: clients, isLoading, error } = useAdminOAuthClients();
-  const { createOAuthClient, updateOAuthClient, isLoading: mutationLoading } = useAdminMutations();
+  const { createOAuthClient, updateOAuthClient, rotateOAuthClientSecret, isLoading: mutationLoading } = useAdminMutations();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<AdminOAuthClient | undefined>(undefined);
   const [toggleConfirm, setToggleConfirm] = useState<AdminOAuthClient | null>(null);
-  const [secretDialog, setSecretDialog] = useState<{ open: boolean; name: string; secret: string }>({
+  const [rotateConfirm, setRotateConfirm] = useState<AdminOAuthClient | null>(null);
+  const [secretDialog, setSecretDialog] = useState<{
+    open: boolean;
+    name: string;
+    secret: string;
+    mode: "create" | "rotate";
+  }>({
     open: false,
     name: "",
     secret: "",
+    mode: "create",
   });
 
   const handleSubmit = async (data: AdminCreateOAuthClientRequest | AdminUpdateOAuthClientRequest) => {
@@ -51,7 +58,7 @@ export default function AdminOAuthClientsPage() {
       const secret = await createOAuthClient(createData);
       setFormOpen(false);
       if (secret) {
-        setSecretDialog({ open: true, name: createData.client_name, secret });
+        setSecretDialog({ open: true, name: createData.client_name, secret, mode: "create" });
       }
     }
   };
@@ -72,6 +79,20 @@ export default function AdminOAuthClientsPage() {
     await updateOAuthClient(toggleConfirm.id, { is_active: nextActive });
   };
 
+  const handleRotateSecret = (client: AdminOAuthClient) => {
+    setRotateConfirm(client);
+  };
+
+  const handleRotateConfirm = async () => {
+    if (!rotateConfirm) return;
+    const { id, client_name: name } = rotateConfirm;
+    setRotateConfirm(null);
+    const secret = await rotateOAuthClientSecret(id);
+    if (secret) {
+      setSecretDialog({ open: true, name, secret, mode: "rotate" });
+    }
+  };
+
   const handleOpenChange = (open: boolean) => {
     setFormOpen(open);
     if (!open) {
@@ -86,7 +107,6 @@ export default function AdminOAuthClientsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="type-title2">OAuth 客户端管理</h1>
-          <p className="mt-1 text-sm text-tertiary">管理内部与第三方 OAuth 客户端</p>
         </div>
         <Button onClick={() => setFormOpen(true)}>注册客户端</Button>
       </div>
@@ -105,6 +125,7 @@ export default function AdminOAuthClientsPage() {
           loading={mutationLoading}
           onEdit={handleEdit}
           onToggleActive={handleToggleActive}
+          onRotateSecret={handleRotateSecret}
         />
       )}
 
@@ -144,11 +165,29 @@ export default function AdminOAuthClientsPage() {
         onConfirm={handleToggleConfirm}
       />
 
+      <ConfirmDialog
+        open={rotateConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setRotateConfirm(null);
+        }}
+        title="确认轮换 client_secret"
+        description={
+          rotateConfirm
+            ? `确定要为「${rotateConfirm.client_name}」生成新 client_secret 吗？旧 secret 立即失效，相关应用需用新 secret 认证；存量用户会话不受影响。`
+            : ""
+        }
+        confirmLabel="轮换"
+        confirmVariant="destructive"
+        loading={mutationLoading}
+        onConfirm={handleRotateConfirm}
+      />
+
       <OAuthClientSecretDialog
         open={secretDialog.open}
         onOpenChange={(open) => setSecretDialog((prev) => ({ ...prev, open }))}
         clientName={secretDialog.name}
         clientSecret={secretDialog.secret}
+        mode={secretDialog.mode}
       />
     </div>
   );

@@ -58,14 +58,24 @@ function normalizeString(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+const CLIENT_ID_ALPHABET = "0123456789abcdef";
+const CLIENT_SECRET_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+// Mock credentials are display data, but Math.random is a CodeQL finding. Draw
+// from crypto.getRandomValues so the generated shapes match what the real token
+// endpoint produces without relying on an insecure source.
+function randomMockValue(length: number, alphabet: string): string {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
+}
+
 function generateClientId(): string {
-  const chars = "0123456789abcdef";
-  return Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return randomMockValue(32, CLIENT_ID_ALPHABET);
 }
 
 function generateClientSecret(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  return Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return randomMockValue(32, CLIENT_SECRET_ALPHABET);
 }
 
 function filterUsers(params: AdminUserListParams): UserProfileData[] {
@@ -249,12 +259,12 @@ export const adminHandlers = [
       updated_at: now,
     };
 
-    if (body.client_type === "third_party") {
-      return ok({ client: { ...newClient, client_secret: generateClientSecret() } }, 201);
-    }
-
     adminMockOAuthClients.push(newClient);
-    return ok({ client: newClient }, 201);
+    // The backend answers with a flat DTO (client fields + client_secret for a
+    // confidential client), not wrapped in a `client` key; mirror that so the
+    // secret dialog and list refresh behave like production.
+    const secret = body.client_type === "third_party" ? generateClientSecret() : undefined;
+    return ok({ ...newClient, client_secret: secret }, 201);
   }),
 
   http.put(`${API_BASE_URL}/admin/oauth-clients/:id`, async ({ request, params }) => {
@@ -270,9 +280,7 @@ export const adminHandlers = [
     if (
       rawBody.client_id !== undefined ||
       rawBody.client_type !== undefined ||
-      rawBody.id !== undefined ||
-      rawBody.grant_types !== undefined ||
-      rawBody.scopes !== undefined
+      rawBody.id !== undefined
     ) {
       return fail(400, 40000, "请求包含不可修改字段");
     }
@@ -300,6 +308,14 @@ export const adminHandlers = [
       hasUpdate = true;
       isDeactivation = !body.is_active;
     }
+    if (body.grant_types !== undefined) {
+      client.grant_types = body.grant_types;
+      hasUpdate = true;
+    }
+    if (body.scopes !== undefined) {
+      client.scopes = body.scopes;
+      hasUpdate = true;
+    }
 
     if (!hasUpdate) return fail(400, 40000, "没有任何待更新字段");
     client.updated_at = new Date().toISOString();
@@ -307,7 +323,20 @@ export const adminHandlers = [
     const message = isDeactivation
       ? "客户端信息更新成功，已撤销该客户端的全部 Token"
       : "客户端信息更新成功";
-    return ok({ message, client });
+    return ok({ message });
+  }),
+
+  http.post(`${API_BASE_URL}/admin/oauth-clients/:id/rotate-secret`, ({ request, params }) => {
+    const auth = authenticatedAdmin(request);
+    if (auth.response) return auth.response;
+
+    const id = Number(params.id);
+    const client = adminMockOAuthClients.find((item) => item.id === id);
+    if (!client) return fail(404, 40402, "OAuth 客户端不存在");
+    if (client.client_type === "first_party") {
+      return fail(400, 40000, "该客户端是公开客户端，没有 client_secret 可轮换");
+    }
+    return ok({ id, client_secret: generateClientSecret() });
   }),
 
   http.get(`${API_BASE_URL}/admin/audit-logs`, ({ request }) => {

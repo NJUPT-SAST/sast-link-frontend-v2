@@ -16,6 +16,8 @@ interface OAuthClientSecretDialogProps {
   onOpenChange: (open: boolean) => void;
   clientName: string;
   clientSecret: string;
+  /** Whether the secret was just created (registration) or rotated. */
+  mode?: "create" | "rotate";
 }
 
 export function OAuthClientSecretDialog({
@@ -23,8 +25,10 @@ export function OAuthClientSecretDialog({
   onOpenChange,
   clientName,
   clientSecret,
+  mode = "create",
 }: OAuthClientSecretDialogProps) {
   const [copied, setCopied] = useState(false);
+  const isRotate = mode === "rotate";
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(clientSecret);
@@ -36,9 +40,13 @@ export function OAuthClientSecretDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle className="type-title3">客户端注册成功</DialogTitle>
+          <DialogTitle className="type-title3">
+            {isRotate ? "client_secret 已轮换" : "客户端注册成功"}
+          </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            「{clientName}」已创建。client_secret 仅显示一次，请立即保存。
+            {isRotate
+              ? `「${clientName}」的新 client_secret 仅显示一次，请立即保存。`
+              : `「${clientName}」已创建。client_secret 仅显示一次，请立即保存。`}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-4">

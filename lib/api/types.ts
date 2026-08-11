@@ -176,7 +176,7 @@ export interface HealthData {
 
 export type ClientType = "first_party" | "third_party";
 export type GrantType = "authorization_code" | "refresh_token";
-export type Scope = "openid" | "profile" | "email";
+export type Scope = "openid" | "profile" | "email" | "admin:read" | "admin:write" | "user:read" | "user:write";
 
 export interface AdminUserListParams {
   page?: number;
@@ -235,7 +235,6 @@ export interface AdminUpdateOAuthClientRequest {
   client_name?: string;
   redirect_uris?: string[];
   is_active?: boolean;
-  client_type?: ClientType;
   grant_types?: GrantType[];
   scopes?: Scope[];
 }

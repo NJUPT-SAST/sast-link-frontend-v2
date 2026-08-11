@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import {
   CLIENT_TYPE_LABELS,
   GRANT_TYPE_LABELS,
-  SCOPE_LABELS,
+  formatScope,
 } from "@/lib/constants/admin";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +12,7 @@ interface OAuthClientListProps {
   loading?: boolean;
   onEdit: (client: AdminOAuthClient) => void;
   onToggleActive: (client: AdminOAuthClient) => void;
+  onRotateSecret: (client: AdminOAuthClient) => void;
 }
 
 export function OAuthClientList({
@@ -19,6 +20,7 @@ export function OAuthClientList({
   loading = false,
   onEdit,
   onToggleActive,
+  onRotateSecret,
 }: OAuthClientListProps) {
   if (clients.length === 0) {
     return (
@@ -76,9 +78,9 @@ export function OAuthClientList({
             </div>
             <div
               className="truncate text-tertiary"
-              title={client.scopes.map((s) => SCOPE_LABELS[s]).join("、")}
+              title={client.scopes.map((s) => formatScope(s)).join("、")}
             >
-              {client.scopes.map((s) => SCOPE_LABELS[s]).join("、")}
+              {client.scopes.map((s) => formatScope(s)).join("、")}
             </div>
             <div className="flex items-center justify-end gap-2 whitespace-nowrap">
               <Button
@@ -89,6 +91,17 @@ export function OAuthClientList({
               >
                 编辑
               </Button>
+              {client.client_type === "third_party" && !isInternal && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRotateSecret(client)}
+                  disabled={loading}
+                  title="轮换 client_secret（泄露后恢复凭证）"
+                >
+                  轮换密钥
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
