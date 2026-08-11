@@ -279,7 +279,17 @@ export function UserEditForm({ user, onSubmit, loading = false }: UserEditFormPr
           <Button type="submit" disabled={loading}>
             {loading ? <DotLoading /> : "保存修改"}
           </Button>
-          <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              // Direct visits have no history to go back to; fall back to the list
+              // instead of leaving the site.
+              if (window.history.length > 1) router.back();
+              else router.replace("/admin/users");
+            }}
+            disabled={loading}
+          >
             取消
           </Button>
         </div>

@@ -257,6 +257,11 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAu
                   </option>
                 ))}
               </Select>
+              {!isCreate && (
+                <p className="mt-1 text-xs text-tertiary">
+                  客户端类型注册后不可修改（决定凭证模型与可授予的管理权限）
+                </p>
+              )}
               <div className="min-h-4 text-xs">
                 <FormMessage />
               </div>
