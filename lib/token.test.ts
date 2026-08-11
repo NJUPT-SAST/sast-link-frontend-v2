@@ -1,6 +1,9 @@
 describe("session helpers", () => {
   beforeEach(() => {
-    localStorage.clear();
+    sessionStorage.clear();
+    // The in-memory cache is module state; reset the module so each test starts
+    // with a cold cache and cannot observe a previous test's cached session.
+    jest.resetModules();
   });
 
   it("reads, writes and clears a token pair", async () => {
@@ -28,18 +31,18 @@ describe("session helpers", () => {
     };
     setSession(session);
     expect(getSession()).toEqual(session);
-    expect(localStorage.getItem("Token")).not.toBeNull();
+    expect(sessionStorage.getItem("Token")).not.toBeNull();
   });
 
   it("removes legacy and malformed token payloads", async () => {
     const { getSession } = await import("./token");
 
-    localStorage.setItem("Token", JSON.stringify("legacy-token"));
+    sessionStorage.setItem("Token", JSON.stringify("legacy-token"));
     expect(getSession()).toBeNull();
-    expect(localStorage.getItem("Token")).toBeNull();
+    expect(sessionStorage.getItem("Token")).toBeNull();
 
-    localStorage.setItem("Token", "not-json");
+    sessionStorage.setItem("Token", "not-json");
     expect(getSession()).toBeNull();
-    expect(localStorage.getItem("Token")).toBeNull();
+    expect(sessionStorage.getItem("Token")).toBeNull();
   });
 });

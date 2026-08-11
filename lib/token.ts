@@ -29,27 +29,53 @@ export function createSession(
   };
 }
 
+// The session lives in memory for hot paths and in sessionStorage to survive a
+// page refresh within the same tab. sessionStorage is cleared when the tab closes —
+// narrower persistence than the old localStorage, so a stolen token's shelf life
+// ends with the tab rather than lingering across the whole browser session. A
+// token is still readable by script on the page (the accepted trade-off short of
+// httpOnly cookies), but it no longer sits in a cross-tab store.
+let cachedSession: TokenPair | null = null;
+
 export function getSession(): TokenPair | null {
+  if (cachedSession) return cachedSession;
   if (typeof window === "undefined") return null;
 
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
+    const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return null;
 
     const session: unknown = JSON.parse(raw);
-    if (isTokenPair(session)) return session;
+    if (isTokenPair(session)) {
+      cachedSession = session;
+      return session;
+    }
   } catch {
-    // Invalid and v1 payloads are removed below.
+    // Corrupt payloads fall through to a clear.
   }
 
-  localStorage.removeItem(SESSION_KEY);
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // Storage can be unavailable in private modes; the in-memory copy still works.
+  }
   return null;
 }
 
 export function setSession(session: TokenPair): void {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  cachedSession = session;
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {
+    // Only refresh persistence is lost; the in-memory copy still serves this tab.
+  }
 }
 
 export function clearSession(): void {
-  localStorage.removeItem(SESSION_KEY);
+  cachedSession = null;
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // Ignore: storage may be unavailable.
+  }
 }

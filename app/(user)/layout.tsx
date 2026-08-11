@@ -26,9 +26,10 @@ export default function UserLayout({
       }
     };
     check();
-    // Cross-tab: another tab logged out and cleared the token.
-    window.addEventListener("storage", check);
-    return () => window.removeEventListener("storage", check);
+    // The session now lives in sessionStorage, which is per-tab and never fires
+    // the cross-tab storage event, so there is no cross-tab listener to install —
+    // a logout in another tab intentionally no longer affects this one.
+    return () => {};
   }, [router]);
 
   return <>{children}</>;
