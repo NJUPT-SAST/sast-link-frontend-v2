@@ -50,7 +50,10 @@ export function getSession(): TokenPair | null {
     const session: unknown = JSON.parse(raw);
     if (isTokenPair(session)) {
       cachedSession = session;
-      return session;
+      // Cold path (page refresh): this is the first read after the module
+      // cache was cleared, so `session` is also the cache entry. Return a copy
+      // so a caller mutating the read cannot poison the just-seeded cache.
+      return { ...session };
     }
   } catch {
     // Corrupt payloads fall through to a clear.

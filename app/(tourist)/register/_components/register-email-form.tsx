@@ -31,6 +31,9 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [countdownActive, setCountdownActive] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Guard against a same-frame double Enter double-sending the code; `sending`
+  // state cannot commit fast enough to stop it.
+  const sendingRef = useRef(false);
 
   // Prefill the domain capsule from the carried email (e.g. back from the
   // details step with an @sast.fun account should keep showing @sast.fun).
@@ -73,9 +76,11 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
   })();
 
   const handleSendCode = async () => {
+    if (sendingRef.current) return;
     const accountValid = await form.trigger("account");
     if (!accountValid) return;
 
+    sendingRef.current = true;
     setSending(true);
     try {
       await registerSendCode(loginEmail);
@@ -86,6 +91,7 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
       form.setError("account", { message: toApiError(error).message });
     } finally {
       setSending(false);
+      sendingRef.current = false;
     }
   };
 
@@ -124,6 +130,12 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
                     onChange={field.onChange}
                     label="邮箱"
                     error={errorMessage}
+                    // Registration only accepts njupt/sast prefixes, so a typed
+                    // `@` must stay visible in the prefix (surfaced as a localPart
+                    // error) instead of silently flipping the field to the
+                    // other-email mode, where the domain enum error is invisible
+                    // and the send-code button no-ops.
+                    disableAtDetection
                     allowedDomains={["@njupt.edu.cn", "@sast.fun"]}
                     onEnter={() => {
                       if (!sent) void handleSendCode();

@@ -1,3 +1,5 @@
+import { safeSessionStorage } from "@/lib/safe-session-storage";
+
 const NEXT_KEY = "sast:auth-next";
 
 /** Returns true when the value is a same-site absolute path, guarding against
@@ -12,13 +14,13 @@ function safeNext(next: string | null): string | null {
 export function stashAuthNext(url: string): void {
   if (typeof window === "undefined") return;
   const safe = safeNext(url);
-  if (safe) sessionStorage.setItem(NEXT_KEY, safe);
+  if (safe) safeSessionStorage.setItem(NEXT_KEY, safe);
 }
 
 /** Read and clear the pending post-login destination. */
 export function consumeAuthNext(fallback: string): string {
   if (typeof window === "undefined") return fallback;
-  const next = safeNext(sessionStorage.getItem(NEXT_KEY));
-  sessionStorage.removeItem(NEXT_KEY);
+  const next = safeNext(safeSessionStorage.getItem(NEXT_KEY));
+  safeSessionStorage.removeItem(NEXT_KEY);
   return next ?? fallback;
 }

@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 
 import type { AdminUserListParams } from "@/lib/api/types";
 import { adminUserFiltersSchema, type AdminUserFiltersFormValues } from "@/lib/validations/admin";
+import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { AuthFormField } from "@/components/auth/auth-form-field";
@@ -33,8 +34,7 @@ const STATE_OPTIONS = [
 
 const DEPARTMENT_OPTIONS = [
   { value: "", label: "全部部门" },
-  { value: "software", label: "软件研发部" },
-  { value: "media", label: "多媒体部" },
+  ...Object.entries(DEPARTMENT_LABELS).map(([value, label]) => ({ value, label })),
 ];
 
 const selectClass =

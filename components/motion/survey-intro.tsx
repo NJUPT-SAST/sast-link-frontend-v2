@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useHideCursor } from "@/hooks/use-hide-cursor";
+import { safeSessionStorage } from "@/lib/safe-session-storage";
 import { generateStars, type Star } from "@/lib/visual/starfield";
 
 const SEEN_KEY = "sast-survey-seen";
@@ -38,7 +39,7 @@ export function SurveyIntro() {
   // see it too. Skippable, never under reduced-motion.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (sessionStorage.getItem(SEEN_KEY)) return setPhase("done");
+    if (safeSessionStorage.getItem(SEEN_KEY)) return setPhase("done");
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return setPhase("done");
 
     setPhase("play");
@@ -46,13 +47,13 @@ export function SurveyIntro() {
       setTimeout(() => setPhase("out"), OUT_MS),
       setTimeout(() => {
         setPhase("done");
-        sessionStorage.setItem(SEEN_KEY, "1");
+        safeSessionStorage.setItem(SEEN_KEY, "1");
       }, DONE_MS),
     ];
     const skip = () => {
       timers.forEach(clearTimeout);
       setPhase("done");
-      sessionStorage.setItem(SEEN_KEY, "1");
+      safeSessionStorage.setItem(SEEN_KEY, "1");
     };
     window.addEventListener("pointerdown", skip);
     window.addEventListener("keydown", skip);

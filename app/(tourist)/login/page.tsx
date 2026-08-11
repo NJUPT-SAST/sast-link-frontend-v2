@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { getSession } from "@/lib/token";
+import { safeSessionStorage } from "@/lib/safe-session-storage";
 import { AuthShell } from "@/components/auth/auth-shell";
 import LoginAccountForm from "./_components/login-account-form";
 import LoginPasswordForm from "./_components/login-password-form";
@@ -28,17 +29,17 @@ function LoginFlow() {
 
   const [accountEmail, setAccountEmail] = useState<string | null>(() =>
     typeof window !== "undefined"
-      ? sessionStorage.getItem(LOGIN_ACCOUNT_KEY)
+      ? safeSessionStorage.getItem(LOGIN_ACCOUNT_KEY)
       : null,
   );
 
   const handleNext = (loginEmail: string) => {
-    sessionStorage.setItem(LOGIN_ACCOUNT_KEY, loginEmail);
+    safeSessionStorage.setItem(LOGIN_ACCOUNT_KEY, loginEmail);
     setAccountEmail(loginEmail);
   };
 
   const handleBack = () => {
-    sessionStorage.removeItem(LOGIN_ACCOUNT_KEY);
+    safeSessionStorage.removeItem(LOGIN_ACCOUNT_KEY);
     setAccountEmail(null);
   };
 

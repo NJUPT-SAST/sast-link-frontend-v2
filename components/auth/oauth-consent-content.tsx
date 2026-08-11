@@ -139,7 +139,7 @@ export function OAuthConsentContent() {
         <span className="type-title3">{clientName.slice(0, 1).toUpperCase()}</span>
       </div>
       <div>
-        <h1 className="type-title3">{clientName}</h1>
+        <h1 className="type-title3 break-words">{clientName}</h1>
         <p className="mt-1.5 text-[15px] text-muted-foreground">
           想要使用你的 SAST Link 账号进行登录
         </p>

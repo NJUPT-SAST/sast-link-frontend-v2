@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import Link from "next/link";
 import { passwordLogin } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
 import { createSession, setSession } from "@/lib/token";
+import { safeSessionStorage } from "@/lib/safe-session-storage";
 import { consumeAuthNext } from "@/lib/auth-next";
 import { useUserListStore } from "@/store/use-user-list-store";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
@@ -40,7 +41,7 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
   useEffect(() => {
     // Keep the account for a mid-flow reload; the step itself is never written
     // to the URL.
-    sessionStorage.setItem(LOGIN_ACCOUNT_KEY, loginEmail);
+    safeSessionStorage.setItem(LOGIN_ACCOUNT_KEY, loginEmail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const form = useForm<LoginPasswordFormValues>({
@@ -48,7 +49,12 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
     defaultValues: { password: "" },
   });
 
-  const handleSubmit = form.handleSubmit(async ({ password }) => {
+  // `disabled={loading}` cannot stop a same-frame double click (the state has
+  // not committed yet); a ref guard makes a repeat submit a no-op.
+  const submittingRef = useRef(false);
+  const onValidSubmit = async ({ password }: LoginPasswordFormValues) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     try {
       const response = await passwordLogin(loginEmail, password);
@@ -72,14 +78,19 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
       // session entry. Mid-flow redirect (e.g. back to an OAuth
       // consent request) lands the user where they were heading; a normal
       // sign-in goes to the homepage.
-      sessionStorage.removeItem(LOGIN_ACCOUNT_KEY);
+      safeSessionStorage.removeItem(LOGIN_ACCOUNT_KEY);
       router.replace(consumeAuthNext("/home"));
     } catch (error) {
       form.setError("password", { message: toApiError(error).message });
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
-  });
+  };
+  // The guard only runs in a submit handler, never during render; the rule
+  // cannot see through react-hook-form's handleSubmit wrapper.
+  // eslint-disable-next-line react-hooks/refs
+  const handleSubmit = form.handleSubmit(onValidSubmit);
 
   return (
     <PageTransition className="flex w-full flex-col">

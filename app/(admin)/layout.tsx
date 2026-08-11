@@ -7,6 +7,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { getSession } from "@/lib/token";
+import { ADMIN_NAV_ITEMS } from "@/lib/constants/admin";
 import { useFetchProfile } from "@/hooks/use-fetch-profile";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 
@@ -20,17 +21,24 @@ export default function AdminLayout({
   const role = useUserProfileStore((state) => state.profile.role);
   const hasSession = getSession() !== null;
   const { isLoading, error } = useFetchProfile();
-  const canAccess = role === "admin" || role === "lecturer";
+  // Mirrors AdminNav's visibility rule: a role may only open routes its nav
+  // entries allow. lecturer can reach /admin/users (read-only) but a direct URL
+  // to /admin/oauth-clients must not render a page that will 403.
+  const canAccessPath = ADMIN_NAV_ITEMS.some(
+    (item) =>
+      item.roles.includes(role) &&
+      (pathname === item.href || pathname.startsWith(`${item.href}/`)),
+  );
 
   useEffect(() => {
     if (!hasSession) {
       router.replace("/login");
       return;
     }
-    if (!isLoading && (!canAccess || error)) {
+    if (!isLoading && (!canAccessPath || error)) {
       router.replace("/home");
     }
-  }, [router, hasSession, isLoading, canAccess, error]);
+  }, [router, hasSession, isLoading, canAccessPath, error]);
 
   if (!hasSession || isLoading) {
     return (
@@ -40,7 +48,7 @@ export default function AdminLayout({
     );
   }
 
-  if (!canAccess || error) {
+  if (!canAccessPath || error) {
     return null;
   }
 

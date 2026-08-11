@@ -49,10 +49,10 @@ export function OAuthClientList({
             key={client.id}
             className="grid grid-cols-1 gap-2 border-b border-hairline py-4 text-sm lg:grid-cols-[60px_1fr_100px_80px_1fr_120px_120px_120px] lg:items-center lg:gap-4"
           >
-            <div className="text-tertiary">#{client.id}</div>
-            <div className="font-medium">{client.client_name}</div>
-            <div className="text-tertiary">{CLIENT_TYPE_LABELS[client.client_type]}</div>
-            <div>
+            <div className="admin-cell-label-lg text-tertiary" data-label="ID">#{client.id}</div>
+            <div className="admin-cell-label-lg font-medium" data-label="名称">{client.client_name}</div>
+            <div className="admin-cell-label-lg text-tertiary" data-label="类型">{CLIENT_TYPE_LABELS[client.client_type]}</div>
+            <div className="admin-cell-label-lg" data-label="状态">
               <span
                 className={cn(
                   "inline-flex items-center rounded px-2 py-0.5 text-xs",
@@ -65,19 +65,22 @@ export function OAuthClientList({
               </span>
             </div>
             <div
-              className="truncate text-tertiary"
+              className="admin-cell-label-lg truncate text-tertiary"
+              data-label="回调地址"
               title={client.redirect_uris.join("、")}
             >
               {client.redirect_uris.join("、")}
             </div>
             <div
-              className="truncate text-tertiary"
+              className="admin-cell-label-lg truncate text-tertiary"
+              data-label="授权类型"
               title={client.grant_types.map((g) => GRANT_TYPE_LABELS[g]).join("、")}
             >
               {client.grant_types.map((g) => GRANT_TYPE_LABELS[g]).join("、")}
             </div>
             <div
-              className="truncate text-tertiary"
+              className="admin-cell-label-lg truncate text-tertiary"
+              data-label="Scope"
               title={client.scopes.map((s) => formatScope(s)).join("、")}
             >
               {client.scopes.map((s) => formatScope(s)).join("、")}

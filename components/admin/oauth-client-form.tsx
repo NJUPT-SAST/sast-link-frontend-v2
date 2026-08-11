@@ -147,7 +147,12 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAu
 
   const openScopeDialog = () => {
     // openid is mandatory and cannot be unchecked; make sure the draft always holds it.
-    const seeded: Scope[] = selectedScopes.includes("openid") ? [...selectedScopes] : ["openid", ...selectedScopes];
+    // A first_party client can never hold admin:* (they cannot be ticked in the
+    // dialog either), so keep such stale scopes out of the draft.
+    const base = clientType === "first_party"
+      ? selectedScopes.filter((s) => !s.startsWith("admin:"))
+      : selectedScopes;
+    const seeded: Scope[] = base.includes("openid") ? [...base] : ["openid", ...base];
     setScopeDraft(seeded);
     setScopeDialogOpen(true);
   };
@@ -250,13 +255,38 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAu
               {/* client_type is immutable after registration (it decides the
                   credential model and admin-scope grantability), so the field is
                   fixed in edit mode. */}
-              <Select id="client_type" {...field} disabled={!isCreate} className={selectClass}>
+              <Select
+                id="client_type"
+                {...field}
+                disabled={!isCreate}
+                className={selectClass}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  field.onChange(event);
+                  // admin:* is only grantable to third_party clients. Dropping it
+                  // the moment the type flips to first_party prevents a deadlock
+                  // where the checkbox vanishes from the dialog and the schema
+                  // rejects with an invisible error.
+                  if (next === "first_party") {
+                    const current = form.getValues("scopes");
+                    const filtered = current.filter((s) => !s.startsWith("admin:"));
+                    if (filtered.length !== current.length) {
+                      form.setValue("scopes", filtered, { shouldValidate: true });
+                    }
+                  }
+                }}
+              >
                 {CLIENT_TYPE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
                 ))}
               </Select>
+              {!isCreate && (
+                <p className="mt-1 text-xs text-tertiary">
+                  客户端类型注册后不可修改（决定凭证模型与可授予的管理权限）
+                </p>
+              )}
               <div className="min-h-4 text-xs">
                 <FormMessage />
               </div>
@@ -352,6 +382,11 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAu
           <Button type="button" variant="outline" size="sm" onClick={openScopeDialog}>
             选择权限范围
           </Button>
+          {form.formState.errors.scopes?.message && (
+            <p className="mt-1 text-xs text-destructive">
+              {form.formState.errors.scopes.message}
+            </p>
+          )}
           <div className="min-h-4 text-xs">
             <FormMessage />
           </div>
