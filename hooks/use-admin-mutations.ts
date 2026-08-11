@@ -37,14 +37,23 @@ export function useAdminMutations(): UseAdminMutationsResult {
   const { mutate } = useSWRConfig();
   const [isLoading, setIsLoading] = useState(false);
 
+  // Revalidation is best-effort after a successful write: a background refresh
+  // failure (network blip, transient 5xx) must not turn a real success into an
+  // error toast, a stuck form, or a duplicate submit. The stale list stays until
+  // the next revalidate.
+  const revalidate = useCallback(
+    (key: string) => mutate(key).catch(() => {}),
+    [mutate],
+  );
+
   const updateUser = useCallback(
     async (id: number, data: AdminUpdateUserRequest, options?: { listParams?: Parameters<typeof buildAdminUsersKey>[0] }) => {
       setIsLoading(true);
       try {
         await updateAdminUser(id, data);
         message.success("用户信息更新成功");
-        await mutate(buildAdminUserKey(id));
-        await mutate(buildAdminUsersKey(options?.listParams));
+        await revalidate(buildAdminUserKey(id));
+        await revalidate(buildAdminUsersKey(options?.listParams));
       } catch (error) {
         message.error(toApiError(error).message);
         throw error;
@@ -52,7 +61,7 @@ export function useAdminMutations(): UseAdminMutationsResult {
         setIsLoading(false);
       }
     },
-    [mutate],
+    [revalidate],
   );
 
   const deleteUser = useCallback(
@@ -61,8 +70,8 @@ export function useAdminMutations(): UseAdminMutationsResult {
       try {
         await deleteAdminUser(id);
         message.success("用户已注销");
-        await mutate(buildAdminUserKey(id));
-        await mutate(buildAdminUsersKey(listParams));
+        await revalidate(buildAdminUserKey(id));
+        await revalidate(buildAdminUsersKey(listParams));
       } catch (error) {
         message.error(toApiError(error).message);
         throw error;
@@ -70,7 +79,7 @@ export function useAdminMutations(): UseAdminMutationsResult {
         setIsLoading(false);
       }
     },
-    [mutate],
+    [revalidate],
   );
 
   const restoreUser = useCallback(
@@ -79,8 +88,8 @@ export function useAdminMutations(): UseAdminMutationsResult {
       try {
         await restoreAdminUser(id);
         message.success("用户已恢复");
-        await mutate(buildAdminUserKey(id));
-        await mutate(buildAdminUsersKey(listParams));
+        await revalidate(buildAdminUserKey(id));
+        await revalidate(buildAdminUsersKey(listParams));
       } catch (error) {
         message.error(toApiError(error).message);
         throw error;
@@ -88,7 +97,7 @@ export function useAdminMutations(): UseAdminMutationsResult {
         setIsLoading(false);
       }
     },
-    [mutate],
+    [revalidate],
   );
 
   const createOAuthClient = useCallback(
@@ -96,9 +105,16 @@ export function useAdminMutations(): UseAdminMutationsResult {
       setIsLoading(true);
       try {
         const response = await createAdminOAuthClient(data);
+        const secret = response.data.data.client_secret ?? null;
+        await revalidate(ADMIN_OAUTH_CLIENTS_KEY);
+        // A confidential client's secret is shown exactly once. If the backend
+        // omitted it, treat registration as failed rather than congratulating
+        // the admin for a credential they will never see.
+        if (data.client_type === "third_party" && !secret) {
+          throw new Error("客户端已创建，但未返回 client_secret，请重新注册或联系管理员");
+        }
         message.success("OAuth 客户端注册成功");
-        await mutate(ADMIN_OAUTH_CLIENTS_KEY);
-        return response.data.data.client_secret ?? null;
+        return secret;
       } catch (error) {
         message.error(toApiError(error).message);
         throw error;
@@ -106,7 +122,7 @@ export function useAdminMutations(): UseAdminMutationsResult {
         setIsLoading(false);
       }
     },
-    [mutate],
+    [revalidate],
   );
 
   const updateOAuthClient = useCallback(
@@ -118,7 +134,7 @@ export function useAdminMutations(): UseAdminMutationsResult {
         // rather than always claiming a plain "updated". `||` (not `??`) so an
         // empty-string message falls back instead of showing a blank toast.
         message.success(response.data.data.message || "客户端信息更新成功");
-        await mutate(ADMIN_OAUTH_CLIENTS_KEY);
+        await revalidate(ADMIN_OAUTH_CLIENTS_KEY);
       } catch (error) {
         message.error(toApiError(error).message);
         throw error;
@@ -126,7 +142,7 @@ export function useAdminMutations(): UseAdminMutationsResult {
         setIsLoading(false);
       }
     },
-    [mutate],
+    [revalidate],
   );
 
   const rotateOAuthClientSecret = useCallback(
@@ -134,9 +150,15 @@ export function useAdminMutations(): UseAdminMutationsResult {
       setIsLoading(true);
       try {
         const response = await rotateAdminOAuthClientSecret(id);
+        const secret = response.data.data.client_secret ?? null;
+        await revalidate(ADMIN_OAUTH_CLIENTS_KEY);
+        // Rotation runs only on confidential clients; a missing secret means the
+        // old one is already invalid and the new one never reached the admin.
+        if (!secret) {
+          throw new Error("client_secret 轮换未返回新密钥，请重试轮换");
+        }
         message.success("client_secret 已轮换");
-        await mutate(ADMIN_OAUTH_CLIENTS_KEY);
-        return response.data.data.client_secret ?? null;
+        return secret;
       } catch (error) {
         message.error(toApiError(error).message);
         throw error;
@@ -144,7 +166,7 @@ export function useAdminMutations(): UseAdminMutationsResult {
         setIsLoading(false);
       }
     },
-    [mutate],
+    [revalidate],
   );
 
   return {

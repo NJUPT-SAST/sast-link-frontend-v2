@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AuthFormField } from "@/components/auth/auth-form-field";
+import { message } from "@/lib/message";
 
 interface OAuthClientSecretDialogProps {
   open: boolean;
@@ -31,9 +32,16 @@ export function OAuthClientSecretDialog({
   const isRotate = mode === "rotate";
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(clientSecret);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // clipboard.writeText rejects on non-secure origins and denied permissions;
+    // the secret is shown once, so a silent failure here means the admin leaves
+    // believing they saved it. Surface it instead.
+    try {
+      await navigator.clipboard.writeText(clientSecret);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      message.error("复制失败，请手动选择复制");
+    }
   };
 
   return (
