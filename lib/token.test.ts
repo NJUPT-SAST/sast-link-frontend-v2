@@ -50,6 +50,25 @@ describe("session helpers", () => {
     expect(getSession()?.accessToken).toBe("access-token");
   });
 
+  it("returns a copy on the cold path too (fresh module, seeded storage)", async () => {
+    // Page refresh clears the module cache while sessionStorage survives, so the
+    // first getSession() after reload hydrates the cache. That hydration must
+    // not hand out the cached reference.
+    const session = {
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+      expiresAt: Date.now() + 3600_000,
+    };
+    sessionStorage.setItem("Token", JSON.stringify(session));
+
+    const { getSession } = await import("./token");
+    const first = getSession();
+    expect(first).toEqual(session);
+    if (first) first.accessToken = "mutated";
+
+    expect(getSession()?.accessToken).toBe("access-token");
+  });
+
   it("removes legacy and malformed token payloads", async () => {
     const { getSession } = await import("./token");
 
