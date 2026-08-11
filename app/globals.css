@@ -117,6 +117,41 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Admin list rows collapse to one stacked value per line below the header
+   breakpoint; prefix each cell with a label so a bare `first_party` /
+   `openid · OpenID` is understandable. `-sm` for lists switching at sm,
+   `-lg` for those switching at lg. */
+@utility admin-cell-label-lg {
+  &::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-tertiary);
+  }
+  @media (min-width: 64rem) {
+    &::before {
+      content: none;
+    }
+  }
+}
+@utility admin-cell-label-sm {
+  &::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-tertiary);
+  }
+  @media (min-width: 40rem) {
+    &::before {
+      content: none;
+    }
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

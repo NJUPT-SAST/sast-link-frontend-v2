@@ -92,14 +92,15 @@ export function UserList({
             )}
             <Link
               href={`/admin/users/${user.id}`}
-              className="text-tertiary transition-colors hover:text-link hover:underline"
+              className="admin-cell-label-sm text-tertiary transition-colors hover:text-link hover:underline"
+              data-label="ID"
             >
               #{user.id}
             </Link>
-            <div className="font-medium">{user.name}</div>
-            <div className="text-tertiary">{user.student_id}</div>
-            <div className="truncate text-tertiary">{user.login_email}</div>
-            <div>
+            <div className="admin-cell-label-sm font-medium" data-label="姓名">{user.name}</div>
+            <div className="admin-cell-label-sm text-tertiary" data-label="学号">{user.student_id}</div>
+            <div className="admin-cell-label-sm truncate text-tertiary" data-label="邮箱">{user.login_email}</div>
+            <div className="admin-cell-label-sm" data-label="角色">
               <span
                 className={cn(
                   "inline-flex w-fit items-center rounded px-2 py-0.5 text-xs",
@@ -109,10 +110,10 @@ export function UserList({
                 {ROLE_LABELS[user.role] ?? user.role}
               </span>
             </div>
-            <div className="text-tertiary">
+            <div className="admin-cell-label-sm text-tertiary" data-label="部门">
               {user.profile?.department ? DEPARTMENT_LABELS[user.profile.department] ?? user.profile.department : "-"}
             </div>
-            <div className="text-tertiary">
+            <div className="admin-cell-label-sm text-tertiary" data-label="状态">
               {STATE_LABELS[user.state] ?? user.state}
             </div>
             <div className="flex items-center justify-end gap-2">

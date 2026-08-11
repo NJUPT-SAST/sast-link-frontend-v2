@@ -86,13 +86,13 @@ export function AuditLogList({ logs }: AuditLogListProps) {
           key={log.id}
           className="grid grid-cols-1 gap-2 border-b border-hairline py-4 text-sm lg:grid-cols-[150px_90px_120px_110px_70px_1fr_60px] lg:items-center lg:gap-4"
         >
-          <div className="text-tertiary">{formatAdminDate(log.created_at)}</div>
-          <div className="text-tertiary">
+          <div className="admin-cell-label-lg text-tertiary" data-label="时间">{formatAdminDate(log.created_at)}</div>
+          <div className="admin-cell-label-lg text-tertiary" data-label="用户 ID">
             {log.user_name ? `${log.user_name} (${log.user_id})` : log.user_id ?? "-"}
           </div>
-          <div>{AUDIT_ACTION_LABELS[log.action] ?? log.action}</div>
-          <div className="text-tertiary">{AUDIT_RESOURCE_LABELS[log.resource] ?? log.resource}</div>
-          <div>
+          <div className="admin-cell-label-lg" data-label="操作">{AUDIT_ACTION_LABELS[log.action] ?? log.action}</div>
+          <div className="admin-cell-label-lg text-tertiary" data-label="资源">{AUDIT_RESOURCE_LABELS[log.resource] ?? log.resource}</div>
+          <div className="admin-cell-label-lg" data-label="结果">
             <span
               className={cn(
                 "inline-flex items-center rounded px-2 py-0.5 text-xs",
@@ -102,7 +102,7 @@ export function AuditLogList({ logs }: AuditLogListProps) {
               {log.success ? "成功" : "失败"}
             </span>
           </div>
-          <div className="truncate text-tertiary">{summarizeDetail(log.detail)}</div>
+          <div className="admin-cell-label-lg truncate text-tertiary" data-label="信息">{summarizeDetail(log.detail)}</div>
           <div>
             <button
               type="button"
