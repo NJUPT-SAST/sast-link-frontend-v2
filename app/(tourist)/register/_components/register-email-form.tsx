@@ -124,6 +124,12 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
                     onChange={field.onChange}
                     label="邮箱"
                     error={errorMessage}
+                    // Registration only accepts njupt/sast prefixes, so a typed
+                    // `@` must stay visible in the prefix (surfaced as a localPart
+                    // error) instead of silently flipping the field to the
+                    // other-email mode, where the domain enum error is invisible
+                    // and the send-code button no-ops.
+                    disableAtDetection
                     allowedDomains={["@njupt.edu.cn", "@sast.fun"]}
                     onEnter={() => {
                       if (!sent) void handleSendCode();

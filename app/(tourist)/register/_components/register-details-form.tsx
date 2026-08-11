@@ -131,6 +131,11 @@ export default function RegisterDetailsForm({
       } catch {
         /* ignore */
       }
+      // A successful signup is a finished flow: clear the stored ticket/email so
+      // a later /register starts at the email step instead of resurrecting this
+      // one-time ticket (login clears its step key for the same reason).
+      sessionStorage.removeItem("sast:register-ticket");
+      sessionStorage.removeItem("sast:register-email");
       router.replace("/home");
     } catch (error) {
       form.setError("root", { message: toApiError(error).message });
