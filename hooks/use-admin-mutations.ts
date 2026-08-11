@@ -115,8 +115,9 @@ export function useAdminMutations(): UseAdminMutationsResult {
       try {
         const response = await updateAdminOAuthClient(id, data);
         // The backend says so when a deactivation revoked every token; surface it
-        // rather than always claiming a plain "updated".
-        message.success(response.data.data.message ?? "客户端信息更新成功");
+        // rather than always claiming a plain "updated". `||` (not `??`) so an
+        // empty-string message falls back instead of showing a blank toast.
+        message.success(response.data.data.message || "客户端信息更新成功");
         await mutate(ADMIN_OAUTH_CLIENTS_KEY);
       } catch (error) {
         message.error(toApiError(error).message);
