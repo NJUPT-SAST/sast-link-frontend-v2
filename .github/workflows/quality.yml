@@ -7,6 +7,9 @@ name: Code Quality
 # This workflow works OUT-OF-THE-BOX without requiring any secrets.
 # ============================================================================
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
   workflow_dispatch:

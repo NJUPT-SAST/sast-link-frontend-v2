@@ -27,6 +27,9 @@ name: Docker Deploy
 #   mkdir -p /data/sast-link-frontend-v2
 # ============================================================================
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
   workflow_dispatch:

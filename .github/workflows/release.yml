@@ -11,6 +11,9 @@ name: Release
 # 2. Creates a draft GitHub release with build artifacts
 # ============================================================================
 
+permissions:
+  contents: read
+
 on:
   push:
     tags:

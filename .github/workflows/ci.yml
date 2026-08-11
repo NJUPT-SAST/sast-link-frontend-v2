@@ -16,6 +16,9 @@ name: CI/CD Pipeline
 # but only on push to master. See CI_CD.md for setup instructions.
 # ============================================================================
 
+permissions:
+  contents: read
+
 on:
   push:
     branches:
