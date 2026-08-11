@@ -35,7 +35,13 @@ function parseEmail(email: string): AccountValue {
   }
   const localPart = trimmed.slice(0, atIndex);
   const suffix = `@${trimmed.slice(atIndex + 1)}`;
-  const domain: Domain = ALLOWED_DOMAINS.find((d) => d === suffix) ?? "@njupt.edu.cn";
+  const domain: Domain = ALLOWED_DOMAINS.find((d) => d === suffix) ?? "其他邮箱";
+  if (domain === "其他邮箱") {
+    // Keep the whole address (login's other-mail mode does the same) instead of
+    // silently rewriting e.g. alice@qq.com to alice@njupt.edu.cn; validation
+    // then explains reset only supports primary @njupt.edu.cn / @sast.fun.
+    return { localPart: trimmed, domain };
+  }
   return { localPart, domain };
 }
 
@@ -113,8 +119,7 @@ function ResetFlow() {
                 onChange={setAccount}
                 label="邮箱"
                 error={accountError}
-                disableAtDetection
-                allowedDomains={ALLOWED_DOMAINS}
+                allowedDomains={[...ALLOWED_DOMAINS, "其他邮箱"]}
                 context="reset"
               />
               <Button type="submit" disabled={sending} className="w-full">
