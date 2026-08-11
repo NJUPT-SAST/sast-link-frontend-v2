@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import LoginPage from "./page";
+import { clearSession } from "@/lib/token";
 
 const LOGIN_ACCOUNT_KEY = "sast:login-account";
 
@@ -16,7 +17,12 @@ jest.mock("next/navigation", () => ({
 function setup(params = "") {
   mockSearchParams = new URLSearchParams(params);
   mockReplace.mockClear();
+  sessionStorage.clear();
   sessionStorage.removeItem(LOGIN_ACCOUNT_KEY);
+  // The token module caches the session in memory on first read; a test that
+  // renders the page with a stored Token leaves that cache set, so a later test
+  // sees a phantom session even after sessionStorage.clear(). Reset it here.
+  clearSession();
 }
 
 describe("LoginPage", () => {
@@ -59,6 +65,22 @@ describe("LoginPage", () => {
 
     expect(mockReplace).not.toHaveBeenCalled();
     expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
+  });
+
+  it("sends an already-signed-in user to /home instead of showing the form", () => {
+    setup();
+    sessionStorage.setItem(
+      "Token",
+      JSON.stringify({
+        accessToken: "at",
+        refreshToken: "rt",
+        expiresAt: Date.now() + 3600_000,
+      }),
+    );
+
+    render(<LoginPage />);
+
+    expect(mockReplace).toHaveBeenCalledWith("/home");
   });
 
   it("returns to the account step via the back button", async () => {
