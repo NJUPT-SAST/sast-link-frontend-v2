@@ -1,4 +1,5 @@
 import * as publicConfig from "@/lib/config/public";
+import { safeSessionStorage } from "@/lib/safe-session-storage";
 import type { ApiEnvelope, AuthResultData } from "./types";
 import { apiClient } from "./client";
 
@@ -93,7 +94,7 @@ export function buildBindOAuthUrl(provider: OAuthProvider): string | null {
   if (!clientId || !redirectUri) return null;
 
   const state = crypto.getRandomValues(new Uint8Array(16)).join("");
-  sessionStorage.setItem(`${BIND_STATE_KEY}:${provider}`, state);
+  safeSessionStorage.setItem(`${BIND_STATE_KEY}:${provider}`, state);
 
   const encodedRedirect = encodeURIComponent(redirectUri);
   if (provider === "lark") {
@@ -109,7 +110,7 @@ export function buildBindOAuthUrl(provider: OAuthProvider): string | null {
  */
 export function consumeBindState(provider: OAuthProvider, state: string | null): boolean {
   const key = `${BIND_STATE_KEY}:${provider}`;
-  const stored = sessionStorage.getItem(key);
-  sessionStorage.removeItem(key);
+  const stored = safeSessionStorage.getItem(key);
+  safeSessionStorage.removeItem(key);
   return Boolean(state) && stored === state;
 }

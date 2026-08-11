@@ -11,6 +11,7 @@ import { toApiError } from "@/lib/api/errors";
 import { updateUserProfile } from "@/lib/api/user";
 import { COLLEGES, type RegisterRequest } from "@/lib/api/types";
 import { createSession, setSession } from "@/lib/token";
+import { safeSessionStorage } from "@/lib/safe-session-storage";
 import { useUserListStore } from "@/store/use-user-list-store";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import {
@@ -134,8 +135,8 @@ export default function RegisterDetailsForm({
       // A successful signup is a finished flow: clear the stored ticket/email so
       // a later /register starts at the email step instead of resurrecting this
       // one-time ticket (login clears its step key for the same reason).
-      sessionStorage.removeItem("sast:register-ticket");
-      sessionStorage.removeItem("sast:register-email");
+      safeSessionStorage.removeItem("sast:register-ticket");
+      safeSessionStorage.removeItem("sast:register-email");
       router.replace("/home");
     } catch (error) {
       form.setError("root", { message: toApiError(error).message });
