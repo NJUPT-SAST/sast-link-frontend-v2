@@ -10,6 +10,7 @@ import type {
 } from "@/lib/api/types";
 import {
   createAdminOAuthClient,
+  deleteAdminOAuthClient,
   deleteAdminUser,
   restoreAdminUser,
   rotateAdminOAuthClientSecret,
@@ -30,6 +31,7 @@ interface UseAdminMutationsResult {
   restoreUser: (id: number, listParams?: Parameters<typeof buildAdminUsersKey>[0]) => Promise<void>;
   createOAuthClient: (data: AdminCreateOAuthClientRequest) => Promise<string | null>;
   updateOAuthClient: (id: number, data: AdminUpdateOAuthClientRequest) => Promise<void>;
+  deleteOAuthClient: (id: number) => Promise<void>;
   rotateOAuthClientSecret: (id: number) => Promise<string | null>;
 }
 
@@ -145,6 +147,26 @@ export function useAdminMutations(): UseAdminMutationsResult {
     [revalidate],
   );
 
+  const deleteOAuthClient = useCallback(
+    async (id: number) => {
+      setIsLoading(true);
+      try {
+        const response = await deleteAdminOAuthClient(id);
+        // The backend says so when a deletion revoked every token; surface it
+        // rather than always claiming a plain "deleted". `||` (not `??`) so an
+        // empty-string message falls back instead of showing a blank toast.
+        message.success(response.data.data.message || "客户端已删除");
+        await revalidate(ADMIN_OAUTH_CLIENTS_KEY);
+      } catch (error) {
+        message.error(toApiError(error).message);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [revalidate],
+  );
+
   const rotateOAuthClientSecret = useCallback(
     async (id: number): Promise<string | null> => {
       setIsLoading(true);
@@ -176,6 +198,7 @@ export function useAdminMutations(): UseAdminMutationsResult {
     restoreUser,
     createOAuthClient,
     updateOAuthClient,
+    deleteOAuthClient,
     rotateOAuthClientSecret,
   };
 }

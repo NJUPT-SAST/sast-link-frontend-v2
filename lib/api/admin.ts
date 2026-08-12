@@ -68,6 +68,10 @@ export function updateAdminOAuthClient(id: number, data: AdminUpdateOAuthClientR
   return apiClient.put<ApiEnvelope<{ message: string }>>(`/admin/oauth-clients/${id}`, data);
 }
 
+export function deleteAdminOAuthClient(id: number) {
+  return apiClient.delete<ApiEnvelope<{ message: string }>>(`/admin/oauth-clients/${id}`);
+}
+
 export function rotateAdminOAuthClientSecret(id: number) {
   return apiClient.post<ApiEnvelope<{ id: number; client_secret: string }>>(
     `/admin/oauth-clients/${id}/rotate-secret`,
