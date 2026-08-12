@@ -12,6 +12,12 @@ jest.mock(
 );
 
 describe("LoginAccountForm", () => {
+  // The remembered-account store is shared across the file's jsdom environment:
+  // one test's submit persists it, so every later test would start pre-filled.
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it("submits a lowercased student id with the default njupt domain", async () => {
     const onNext = jest.fn();
     render(<LoginAccountForm onNext={onNext} />);
@@ -75,5 +81,26 @@ describe("LoginAccountForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "继续" }));
     expect(screen.getByText("请输入完整的邮箱地址")).toBeInTheDocument();
     expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it("remembers the submitted account with its domain type", async () => {
+    const onNext = jest.fn();
+    render(<LoginAccountForm onNext={onNext} />);
+    await userEvent.click(screen.getByRole("button", { name: "选择邮箱域名" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "@sast.fun" }));
+    await userEvent.type(screen.getByLabelText("账户"), "foo");
+    await userEvent.click(screen.getByRole("button", { name: "继续" }));
+    expect(onNext).toHaveBeenCalledWith("foo@sast.fun");
+    const stored = JSON.parse(localStorage.getItem("sast:last-login-account") || "{}");
+    expect(stored).toEqual({ localPart: "foo", domain: "@sast.fun" });
+  });
+
+  it("pre-fills the account field from the remembered entry", () => {
+    localStorage.setItem(
+      "sast:last-login-account",
+      JSON.stringify({ localPart: "alice", domain: "@sast.fun" }),
+    );
+    render(<LoginAccountForm onNext={jest.fn()} />);
+    expect(screen.getByLabelText("账户")).toHaveValue("alice");
   });
 });

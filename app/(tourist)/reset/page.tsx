@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -13,6 +13,7 @@ import {
   resetPasswordFormSchema,
   type ResetPasswordFormValues,
 } from "@/lib/validations/auth";
+import { safeSessionStorage } from "@/lib/safe-session-storage";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { PageTransition } from "@/components/animation/page-transition";
 import { LoginAccountField } from "@/app/(tourist)/login/_components/login-account-field";
@@ -26,6 +27,11 @@ import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
 const ALLOWED_DOMAINS = ["@njupt.edu.cn", "@sast.fun"] as const;
 type Domain = "@njupt.edu.cn" | "@sast.fun" | "其他邮箱";
 type AccountValue = { localPart: string; domain: Domain };
+
+// The login page drops the account here (not in a URL — query strings leak into
+// history, Referer headers and server logs) so a user who typed it once does
+// not have to retype it after clicking "忘记密码" / the migration notice.
+const RESET_ACCOUNT_KEY = "sast:reset-account";
 
 function parseEmail(email: string): AccountValue {
   const trimmed = email.trim().toLowerCase();
@@ -57,6 +63,20 @@ function ResetFlow() {
   const [account, setAccount] = useState<AccountValue>(
     () => parseEmail(searchParams.get("email") ?? ""),
   );
+  // The login page hands the account over in sessionStorage (never a URL);
+  // prefer it over any legacy `?email=` value and consume it so a later bare
+  // /reset does not resurrect a stale account. One-shot client initialisation —
+  // the store does not exist server-side — so the empty dependency array does
+  // not re-run or cascade.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const remembered = safeSessionStorage.getItem(RESET_ACCOUNT_KEY);
+    if (remembered) {
+      setAccount(parseEmail(remembered));
+      safeSessionStorage.removeItem(RESET_ACCOUNT_KEY);
+    }
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
   const loginEmail = buildEmail(account);
 
   const [sent, setSent] = useState(false);

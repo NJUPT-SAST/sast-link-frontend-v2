@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import Link from "next/link";
@@ -10,12 +10,49 @@ import {
   type LoginAccountFormValues,
   loginAccountFormSchema,
 } from "@/lib/validations/auth";
+import { safeLocalStorage } from "@/lib/safe-local-storage";
+import { safeSessionStorage } from "@/lib/safe-session-storage";
 import { LoginAccountField } from "./login-account-field";
 import { Button } from "@/components/ui/button";
 import { Form, FormItem } from "@/components/ui/form";
 import { OtherLoginList } from "@/components/auth/other-login-list";
 import { GithubIcon, LarkIcon } from "@/components/icons/brand-icons";
 import { PageTransition } from "@/components/animation/page-transition";
+
+// The last account an operator logged in with, remembered locally so the next
+// visit starts pre-filled. The domain is the "type" — njupt vs sast.fun vs a
+// foreign address — so both halves of the segmented field are restored. Never
+// written into a URL: localStorage only.
+const LAST_LOGIN_ACCOUNT_KEY = "sast:last-login-account";
+// Same hand-off key as the password step: /reset pre-fills whatever the user
+// already typed, without the email ever riding in a URL.
+const RESET_ACCOUNT_KEY = "sast:reset-account";
+const ALLOWED_DOMAINS = ["@njupt.edu.cn", "@sast.fun", "其他邮箱"] as const;
+
+function readRememberedAccount(): {
+  localPart: string;
+  domain: LoginAccountFormValues["account"]["domain"];
+} | null {
+  const raw = safeLocalStorage.getItem(LAST_LOGIN_ACCOUNT_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { localPart?: unknown; domain?: unknown };
+    if (
+      typeof parsed.localPart === "string" &&
+      parsed.localPart.trim() &&
+      typeof parsed.domain === "string" &&
+      (ALLOWED_DOMAINS as readonly string[]).includes(parsed.domain)
+    ) {
+      return {
+        localPart: parsed.localPart,
+        domain: parsed.domain as LoginAccountFormValues["account"]["domain"],
+      };
+    }
+  } catch {
+    // Corrupt entry — start blank.
+  }
+  return null;
+}
 
 interface LoginAccountFormProps {
   onNext: (loginEmail: string) => void;
@@ -31,6 +68,16 @@ export default function LoginAccountForm({ onNext, resetNotice }: LoginAccountFo
       account: { localPart: "", domain: "@njupt.edu.cn" },
     },
   });
+
+  // Restore the remembered account on mount, not in defaultValues: reading
+  // localStorage during render would desync the server HTML from the client
+  // (the store does not exist server-side), which hydrates as a mismatch.
+  useEffect(() => {
+    const remembered = readRememberedAccount();
+    if (remembered) {
+      form.reset({ account: remembered });
+    }
+  }, [form]);
   const oauthList = useMemo(
     () => [
       {
@@ -54,6 +101,12 @@ export default function LoginAccountForm({ onNext, resetNotice }: LoginAccountFo
       const loginEmail = account.domain.startsWith("@")
         ? `${localPart}${account.domain}`
         : localPart;
+      // Remember the account (local part + domain type) for the next visit.
+      // Stored locally only, never sent in a URL.
+      safeLocalStorage.setItem(
+        LAST_LOGIN_ACCOUNT_KEY,
+        JSON.stringify({ localPart, domain: account.domain }),
+      );
       onNext(loginEmail);
     } finally {
       setLoading(false);
@@ -90,13 +143,14 @@ export default function LoginAccountForm({ onNext, resetNotice }: LoginAccountFo
                   />
                   <div className="mt-1.5 flex justify-end">
                     <Link
-                      href={(() => {
+                      href="/reset"
+                      onClick={() => {
                         const localPart = field.value.localPart.trim().toLowerCase();
                         const email = field.value.domain.startsWith("@")
                           ? `${localPart}${field.value.domain}`
                           : localPart;
-                        return email ? `/reset?email=${encodeURIComponent(email)}` : "/reset";
-                      })()}
+                        safeSessionStorage.setItem(RESET_ACCOUNT_KEY, email);
+                      }}
                       className="text-sm text-link hover:underline"
                     >
                       忘记密码
