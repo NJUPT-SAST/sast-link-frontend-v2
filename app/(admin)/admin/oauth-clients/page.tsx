@@ -30,12 +30,13 @@ import { DotLoading } from "@/components/ui/dot-loading";
 export default function AdminOAuthClientsPage() {
   const { mutate } = useSWRConfig();
   const { data: clients, isLoading, error } = useAdminOAuthClients();
-  const { createOAuthClient, updateOAuthClient, rotateOAuthClientSecret, isLoading: mutationLoading } = useAdminMutations();
+  const { createOAuthClient, updateOAuthClient, deleteOAuthClient, rotateOAuthClientSecret, isLoading: mutationLoading } = useAdminMutations();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<AdminOAuthClient | undefined>(undefined);
   const [toggleConfirm, setToggleConfirm] = useState<AdminOAuthClient | null>(null);
   const [rotateConfirm, setRotateConfirm] = useState<AdminOAuthClient | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<AdminOAuthClient | null>(null);
   // The confirm dialogs clear their target before awaiting, so a double confirm
   // in the same frame would fire twice (a second rotate returns a second, now
   // invalid secret). Ref guard makes repeat confirms no-ops.
@@ -115,6 +116,22 @@ export default function AdminOAuthClientsPage() {
     }
   };
 
+  const handleDelete = (client: AdminOAuthClient) => {
+    setDeleteConfirm(client);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm || mutatingRef.current) return;
+    mutatingRef.current = true;
+    const { id } = deleteConfirm;
+    setDeleteConfirm(null);
+    try {
+      await deleteOAuthClient(id);
+    } finally {
+      mutatingRef.current = false;
+    }
+  };
+
   const handleOpenChange = (open: boolean) => {
     setFormOpen(open);
     if (!open) {
@@ -147,12 +164,12 @@ export default function AdminOAuthClientsPage() {
           loading={mutationLoading}
           onEdit={handleEdit}
           onToggleActive={handleToggleActive}
-          onRotateSecret={handleRotateSecret}
+          onDelete={handleDelete}
         />
       )}
 
       <Dialog open={formOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-[560px]">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle className="type-title3">
               {editingClient ? "编辑客户端" : "注册客户端"}
@@ -164,6 +181,7 @@ export default function AdminOAuthClientsPage() {
             client={editingClient}
             onSubmit={handleSubmit}
             loading={mutationLoading}
+            onRotateSecret={handleRotateSecret}
           />
         </DialogContent>
       </Dialog>
@@ -202,6 +220,23 @@ export default function AdminOAuthClientsPage() {
         confirmVariant="destructive"
         loading={mutationLoading}
         onConfirm={handleRotateConfirm}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirm !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteConfirm(null);
+        }}
+        title="确认删除客户端"
+        description={
+          deleteConfirm
+            ? `确定要删除「${deleteConfirm.client_name}」吗？该操作不可恢复，客户端已签发的全部 Token 将立即失效，相关应用的登录授权全部断开。`
+            : ""
+        }
+        confirmLabel="删除"
+        confirmVariant="destructive"
+        loading={mutationLoading}
+        onConfirm={handleDeleteConfirm}
       />
 
       <OAuthClientSecretDialog

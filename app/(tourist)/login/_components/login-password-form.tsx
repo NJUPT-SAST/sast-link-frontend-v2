@@ -29,6 +29,10 @@ interface LoginPasswordFormProps {
 }
 
 const LOGIN_ACCOUNT_KEY = "sast:login-account";
+// Handed to /reset via sessionStorage (never a URL) so the account typed here
+// pre-fills the reset form — the migration notice sends users there precisely
+// because their old password no longer works, so they should not retype it.
+const RESET_ACCOUNT_KEY = "sast:reset-account";
 
 export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordFormProps) {
   const router = useRouter();
@@ -92,6 +96,10 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
   // eslint-disable-next-line react-hooks/refs
   const handleSubmit = form.handleSubmit(onValidSubmit);
 
+  // Hand the typed account to /reset via sessionStorage so the reset form
+  // pre-fills it — the email never rides in the URL.
+  const goReset = () => safeSessionStorage.setItem(RESET_ACCOUNT_KEY, loginEmail);
+
   return (
     <PageTransition className="flex w-full flex-col">
       <div className="mb-8 flex flex-col gap-2.5">
@@ -116,7 +124,8 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
                 />
                 <div className="mt-1.5 flex justify-end">
                   <Link
-                    href={`/reset?email=${encodeURIComponent(loginEmail)}`}
+                    href="/reset"
+                    onClick={goReset}
                     className="text-sm text-link hover:underline"
                   >
                     忘记密码
@@ -133,6 +142,13 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
             <Button type="button" variant="outline" onClick={onBack} className="w-full">
               返回上一步
             </Button>
+          </div>
+          <div className="mt-4 rounded-lg border border-hairline bg-muted/50 px-3.5 py-2.5 text-[13px] leading-relaxed text-muted-foreground">
+            由于信息迁移，如果原来注册过 sast link，请先{" "}
+            <Link href="/reset" onClick={goReset} className="text-link hover:underline">
+              重置密码
+            </Link>
+            {" "}后再登录，谢谢喵
           </div>
         </form>
       </Form>
