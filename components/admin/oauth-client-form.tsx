@@ -84,6 +84,9 @@ interface OAuthClientFormProps {
   client?: AdminOAuthClient;
   onSubmit: (data: AdminCreateOAuthClientRequest | AdminUpdateOAuthClientRequest) => Promise<void>;
   loading?: boolean;
+  /** Renders the secret-rotation strip inside the form for a confidential
+   *  third-party client being edited. */
+  onRotateSecret?: (client: AdminOAuthClient) => void;
 }
 
 function toCreateRequest(values: AdminOAuthClientFormValues): AdminCreateOAuthClientRequest {
@@ -120,7 +123,7 @@ function toUpdateRequest(
   return request;
 }
 
-export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAuthClientFormProps) {
+export function OAuthClientForm({ mode, client, onSubmit, loading = false, onRotateSecret }: OAuthClientFormProps) {
   const isCreate = mode === "create";
 
   const form = useForm<AdminOAuthClientFormValues>({
@@ -227,7 +230,7 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAu
 
   return (
     <Form {...form}>
-      <form onSubmit={submit} className="flex max-w-[640px] flex-col gap-6">
+      <form onSubmit={submit} className="flex max-w-[640px] flex-col gap-4">
         <FormField
           control={form.control}
           name="client_name"
@@ -442,6 +445,31 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false }: OAu
             )}
           />
         )}
+
+        {/* Secret rotation is its own strip inside the form, not a row under the
+            save button: it is a destructive credential action, so it gets a
+            bordered card of its own above the submit row. Confidential
+            third-party clients only. */}
+        {!isCreate &&
+          client?.client_type === "third_party" &&
+          client.client_id !== "sast-link-web" &&
+          onRotateSecret && (
+            <div className="rounded-lg border border-hairline p-3">
+              <div className="mb-1 text-[13px] font-medium">客户端密钥</div>
+              <p className="mb-2 text-xs text-tertiary">
+                client_secret 仅存 hash，无法查看；泄露后通过轮换重新签发。轮换后旧密钥立即失效，存量用户会话不受影响。
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onRotateSecret(client)}
+                disabled={loading}
+              >
+                轮换密钥
+              </Button>
+            </div>
+          )}
 
         <FormError message={form.formState.errors.root?.message} />
 
