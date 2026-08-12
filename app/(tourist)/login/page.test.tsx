@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import LoginPage from "./page";
@@ -26,11 +26,11 @@ function setup(params = "") {
 }
 
 describe("LoginPage", () => {
-  it("renders the auth shell with login guidance and the primary entry fields", () => {
+  it("renders the auth shell with login guidance and the primary entry fields", async () => {
     setup();
     render(<LoginPage />);
 
-    expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "登录" })).toBeInTheDocument();
     expect(screen.getByLabelText("账户")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "继续" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "注册" })).toBeInTheDocument();
@@ -40,6 +40,7 @@ describe("LoginPage", () => {
     setup();
     render(<LoginPage />);
 
+    await screen.findByRole("heading", { name: "登录" });
     await userEvent.type(screen.getByLabelText("账户"), "bob");
     await userEvent.click(screen.getByRole("button", { name: "继续" }));
 
@@ -48,27 +49,29 @@ describe("LoginPage", () => {
     expect(screen.getByRole("heading", { name: "输入密码" })).toBeInTheDocument();
   });
 
-  it("restores the password step from a stored account", () => {
+  it("restores the password step from a stored account", async () => {
     setup();
     sessionStorage.setItem(LOGIN_ACCOUNT_KEY, "alice@njupt.edu.cn");
 
     render(<LoginPage />);
 
-    expect(screen.getByRole("heading", { name: "输入密码" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "输入密码" })).toBeInTheDocument();
     expect(screen.getByText(/正在登录 alice@njupt\.edu\.cn/)).toBeInTheDocument();
   });
 
-  it("shows the account step when no account is stored", () => {
+  it("shows the account step when no account is stored", async () => {
     setup();
 
     render(<LoginPage />);
 
     expect(mockReplace).not.toHaveBeenCalled();
-    expect(screen.getByRole("heading", { name: "登录" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "登录" })).toBeInTheDocument();
   });
 
-  it("sends an already-signed-in user to /home instead of showing the form", () => {
+  it("sends an already-signed-in user to /home instead of showing the form", async () => {
     setup();
+    // Legacy-format session (with refreshToken): getSession() should still
+    // recognise it as a valid session and take the fast path.
     sessionStorage.setItem(
       "Token",
       JSON.stringify({
@@ -80,7 +83,8 @@ describe("LoginPage", () => {
 
     render(<LoginPage />);
 
-    expect(mockReplace).toHaveBeenCalledWith("/home");
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/home"));
+    expect(screen.queryByRole("heading", { name: "登录" })).not.toBeInTheDocument();
   });
 
   it("returns to the account step via the back button", async () => {
@@ -88,6 +92,7 @@ describe("LoginPage", () => {
     sessionStorage.setItem(LOGIN_ACCOUNT_KEY, "alice@njupt.edu.cn");
 
     render(<LoginPage />);
+    await screen.findByRole("heading", { name: "输入密码" });
     await userEvent.click(screen.getByRole("button", { name: "返回上一步" }));
 
     expect(sessionStorage.getItem(LOGIN_ACCOUNT_KEY)).toBeNull();

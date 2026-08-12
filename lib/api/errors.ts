@@ -1,10 +1,25 @@
-import type { AxiosError } from "axios";
+import axios, { type AxiosError } from "axios";
 
 import type { ApiFailure } from "./types";
 
 interface OAuthErrorBody {
   error: string;
   error_description?: string;
+}
+
+/** Backend code for a benign concurrent refresh within the 30s grace window:
+ *  a sibling tab already rotated the cookie's refresh token and the family was
+ *  preserved. Not a dead session — the caller should retry once with the now
+ *  rotated cookie. */
+const CONCURRENT_REFRESH_CODE = 40108;
+
+/** True when a refresh request lost a multi-tab cold-start race (40108). A plain
+ *  401 (no cookie, or a definitively dead one) is NOT this — that ends the
+ *  session immediately. */
+export function isConcurrentRefresh(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false;
+  const body = error.response?.data as ApiFailure | undefined;
+  return error.response?.status === 401 && body?.code === CONCURRENT_REFRESH_CODE;
 }
 
 function parseRetryAfter(value: unknown): number | undefined {

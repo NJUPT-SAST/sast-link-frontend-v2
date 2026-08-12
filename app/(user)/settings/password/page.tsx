@@ -9,6 +9,7 @@ import { toApiError } from "@/lib/api/errors";
 import { passwordSchema } from "@/lib/validations/auth";
 import { message } from "@/lib/message";
 import { clearSession } from "@/lib/token";
+import { markAuthInvalidated } from "@/lib/auth-cross-tab";
 import { useUserListStore } from "@/store/use-user-list-store";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { AuthFormField } from "@/components/auth/auth-form-field";
@@ -47,6 +48,9 @@ export default function SettingsPasswordPage() {
     setLoading(true);
     try {
       await changePassword(values.oldPassword, values.newPassword);
+      // Change-password revokes every session; let the other open tabs drop
+      // their local copy too instead of keeping a revoked session.
+      markAuthInvalidated();
       clearSession();
       useUserListStore.getState().removeAccount(profile.loginEmail);
       resetProfile();

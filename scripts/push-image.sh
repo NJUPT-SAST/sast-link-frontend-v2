@@ -13,7 +13,7 @@
 set -euo pipefail
 
 REGISTRY="ccr.ccs.tencentyun.com"
-IMAGE="${REGISTRY}/sast/sast-link-next"
+IMAGE="${REGISTRY}/sast/sast-link-frontend-v2"
 
 API_BASE_URL="https://link.sast.fun/v2"
 FEISHU_CLIENT_ID="cli_aae6d1a7a1b99cc7"
@@ -113,18 +113,18 @@ fi
 # falling through to the index. Sizes differ per page, so index-sized bodies on
 # a subroute mean the fallthrough bug is back.
 echo "  route check:"
-docker rm -f sast-link-next-verify >/dev/null 2>&1 || true
-docker run -d --name sast-link-next-verify "${IMAGE}:${SHA}" >/dev/null
+docker rm -f sast-link-frontend-v2-verify >/dev/null 2>&1 || true
+docker run -d --name sast-link-frontend-v2-verify "${IMAGE}:${SHA}" >/dev/null
 sleep 3
 
-index_size=$(docker exec sast-link-next-verify \
+index_size=$(docker exec sast-link-frontend-v2-verify \
   sh -c 'wget -qO- http://127.0.0.1:80/ 2>/dev/null | wc -c')
 
 for route in /login /register /reset /home /profile /profile/edit \
              /settings /settings/password /settings/apps \
              /admin /admin/users /admin/audit-logs /admin/oauth-clients \
              /oauth/callback /oauth/consent /oauth/bind/lark /oauth/bind/github; do
-  size=$(docker exec sast-link-next-verify \
+  size=$(docker exec sast-link-frontend-v2-verify \
     sh -c "wget -qO- http://127.0.0.1:80${route} 2>/dev/null | wc -c")
   if [ "$size" = "0" ]; then
     printf "    %-22s EMPTY\n" "$route"; fail=1
@@ -135,7 +135,7 @@ for route in /login /register /reset /home /profile /profile/edit \
   fi
 done
 
-docker rm -f sast-link-next-verify >/dev/null 2>&1 || true
+docker rm -f sast-link-frontend-v2-verify >/dev/null 2>&1 || true
 
 if [ "$fail" != 0 ]; then
   echo

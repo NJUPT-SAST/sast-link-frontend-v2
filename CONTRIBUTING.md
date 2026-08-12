@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is the active SAST Link Next implementation, not a blank starter. When contributing, please keep changes aligned with the existing product flows, route structure, and CI expectations instead of treating the project like a fresh template.
+This repository is the active SAST Link Frontend V2 implementation, not a blank starter. When contributing, please keep changes aligned with the existing product flows, route structure, and CI expectations instead of treating the project like a fresh template.
 
 ## Before You Start
 

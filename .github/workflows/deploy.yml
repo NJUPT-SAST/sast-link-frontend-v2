@@ -39,9 +39,9 @@ concurrency:
   cancel-in-progress: false # a half-finished deploy is worse than a queued one
 
 env:
-  SERVICE_NAME: sast-link-next
+  SERVICE_NAME: sast-link-frontend-v2
   REGISTRY: ccr.ccs.tencentyun.com
-  IMAGE: ccr.ccs.tencentyun.com/sast/sast-link-next
+  IMAGE: ccr.ccs.tencentyun.com/sast/sast-link-frontend-v2
   SERVICE_DIR: /data/sast-link-frontend-v2
   SHARED_NETWORK: sast-link-v2
   HOST_PORT: 3002

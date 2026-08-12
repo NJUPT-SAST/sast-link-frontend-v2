@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { logout } from "@/lib/api/auth";
-import { getSession, clearSession } from "@/lib/token";
+import { clearSession } from "@/lib/token";
+import { markAuthInvalidated } from "@/lib/auth-cross-tab";
+import { message } from "@/lib/message";
 import { avatarFallbackChar, DEFAULT_AVATAR } from "@/lib/constants/profile";
 import { useUserListStore } from "@/store/use-user-list-store";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
@@ -24,10 +26,20 @@ export default function SettingsPage() {
   const handleLogout = async () => {
     setLogoutLoading(true);
     try {
-      const session = getSession();
-      if (session) await logout(session.refreshToken);
+      // The httpOnly session cookie carries the refresh credential; this call
+      // revokes the session family server-side and clears the cookie.
+      await logout();
+      // Tell the other open tabs their session is gone too (they clear their
+      // local copy and re-resolve instead of showing a dead session).
+      markAuthInvalidated();
     } catch {
-      /* fire and forget — local cleanup always runs */
+      // A failed server revoke leaves the cookie session alive — clearing the
+      // local session would bounce the user to /login and straight back via the
+      // cookie bootstrap, reading as "logged out, then instantly logged in".
+      // Surface the failure instead of faking a successful logout.
+      message.error("网络异常，退出失败，请稍后重试");
+      setLogoutLoading(false);
+      return;
     }
     clearSession();
     if (profile.loginEmail) useUserListStore.getState().removeAccount(profile.loginEmail);

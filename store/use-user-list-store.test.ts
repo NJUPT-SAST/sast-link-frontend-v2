@@ -7,7 +7,6 @@ const alice = {
   avatar: null,
   session: {
     accessToken: "access-1",
-    refreshToken: "refresh-1",
     expiresAt: 1000,
   },
 };
@@ -19,7 +18,6 @@ const bob = {
   avatar: "/bob.png",
   session: {
     accessToken: "access-2",
-    refreshToken: "refresh-2",
     expiresAt: 2000,
   },
 };

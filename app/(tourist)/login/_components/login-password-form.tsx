@@ -63,11 +63,7 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
     try {
       const response = await passwordLogin(loginEmail, password);
       const data = response.data.data;
-      const session = createSession(
-        data.access_token,
-        data.refresh_token,
-        data.expires_in,
-      );
+      const session = createSession(data.access_token, data.expires_in);
       setSession(session);
       // Clear any previous account's profile so the new session starts clean.
       resetProfile();

@@ -11,6 +11,7 @@ import {
   forgotPasswordSendCode,
   logout,
   passwordLogin,
+  refreshFromCookie,
   registerSendCode,
   registerVerifyCode,
   resetPassword,
@@ -38,7 +39,8 @@ describe("lib/api/auth v2", () => {
     forgotPasswordSendCode("student@njupt.edu.cn");
     resetPassword("student@njupt.edu.cn", "123456", "NewPassword123");
     changePassword("OldPassword123", "NewPassword123");
-    logout("refresh-token");
+    logout();
+    refreshFromCookie();
 
     expect(apiClient.post).toHaveBeenNthCalledWith(1, "/auth/register/send-code", {
       login_email: "student@njupt.edu.cn",
@@ -64,8 +66,12 @@ describe("lib/api/auth v2", () => {
       old_password: "OldPassword123",
       new_password: "NewPassword123",
     });
-    expect(apiClient.post).toHaveBeenNthCalledWith(8, "/auth/logout", {
-      refresh_token: "refresh-token",
-    });
+    expect(apiClient.post).toHaveBeenNthCalledWith(8, "/auth/logout", {});
+    expect(apiClient.post).toHaveBeenNthCalledWith(
+      9,
+      "/auth/refresh",
+      {},
+      { timeout: 5_000 },
+    );
   });
 });

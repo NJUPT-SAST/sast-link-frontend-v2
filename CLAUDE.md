@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
 
-This repository is the current SAST Link Next implementation, not a generic starter template. It combines:
+This repository is the current SAST Link Frontend V2 implementation, not a generic starter template. It combines:
 
 - Next.js 16 App Router
 - React 19

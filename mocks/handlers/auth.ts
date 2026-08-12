@@ -5,8 +5,32 @@ import type { RegisterRequest } from "@/lib/api/types";
 import { codes, emailForTicket, loginCodes, sendCode, verifyCode } from "../data/tickets";
 import { createMockUser, findUserByEmail, issueTokens, mockUsers } from "../data/users";
 
+/** Read one cookie out of a Cookie request header (jsdom tests set the mock
+ *  session cookie via document.cookie so the /auth/refresh handler can
+ *  simulate the httpOnly-cookie bootstrap path). */
+function cookieValue(cookieHeader: string, name: string): string | null {
+  const match = new RegExp(`(?:^|;\\s*)${name}=([^;]+)`).exec(cookieHeader);
+  return match ? match[1] : null;
+}
+
 function ok<T>(data: T, status = 200) {
   return HttpResponse.json({ code: 0, message: "ok", data }, { status });
+}
+/** Like ok, but also sets the httpOnly `sl_session` cookie (value = the refresh
+ *  token), mirroring the real backend. The Set-Cookie header is applied by the
+ *  browser in dev (mocks/browser.ts); under MSW's node server (jest) jsdom does
+ *  not apply it, so tests that drive the cookie path set document.cookie
+ *  themselves. */
+function cookieOk<T>(data: T, refreshToken: string, status = 200) {
+  return HttpResponse.json(
+    { code: 0, message: "ok", data },
+    {
+      status,
+      headers: {
+        "Set-Cookie": `sl_session=${refreshToken}; Path=/v2; HttpOnly; SameSite=Lax`,
+      },
+    },
+  );
 }
 function fail(status: number, code: number, message: string) {
   return HttpResponse.json({ code, message, data: null }, { status });
@@ -34,23 +58,39 @@ export const authHandlers = [
     if (!email) return fail(401, 40100, "Register-Ticket 无效");
     if (body.password.length < 8) return fail(422, 42201, "密码长度不足（最短 8 位）");
     const user = createMockUser({ loginEmail: email, password: body.password, name: body.name, phoneNumber: body.phone_number, qqNumber: body.qq_number, college: body.college, major: body.major, studentId: body.student_id });
-    return ok({ ...issueTokens(user), user: authUser(user) }, 201);
+    const pair = issueTokens(user);
+    return cookieOk({ ...pair, user: authUser(user) }, pair.refresh_token, 201);
   }),
   http.post(`${API_BASE_URL}/user/login`, async ({ request }) => {
     const { login_email, password } = await request.json() as { login_email: string; password: string };
     const user = findUserByEmail(login_email);
     if (!user) return fail(401, 40106, "登录邮箱不存在");
     if (password !== user.password) return fail(401, 40105, "密码错误");
-    return ok({ ...issueTokens(user), user: authUser(user) });
+    const pair = issueTokens(user);
+    return cookieOk({ ...pair, user: authUser(user) }, pair.refresh_token);
   }),
   http.post(`${API_BASE_URL}/auth/refresh`, async ({ request }) => {
-    const { refresh_token } = await request.json() as { refresh_token: string };
-    const user = mockUsers.find((item) => item.refreshToken === refresh_token);
-    return user ? ok(issueTokens(user)) : fail(401, 40100, "Refresh Token 无效");
+    // The real endpoint accepts the refresh token from the JSON body (the
+    // sessionStorage-based refresh) or, when the body is empty, from the
+    // httpOnly session cookie — the latter is the new-tab bootstrap path. In
+    // tests the cookie is a mock `sl_session` value set via document.cookie.
+    const body = await request.json().catch(() => ({})) as { refresh_token?: string };
+    const refreshToken =
+      body.refresh_token ?? cookieValue(request.headers.get("Cookie") ?? "", "sl_session");
+    if (!refreshToken) return fail(401, 40100, "Refresh Token 无效");
+    const user = mockUsers.find((item) => item.refreshToken === refreshToken);
+    if (!user) return fail(401, 40100, "Refresh Token 无效");
+    const pair = issueTokens(user);
+    return cookieOk(pair, pair.refresh_token);
   }),
   http.post(`${API_BASE_URL}/auth/logout`, async ({ request }) => {
-    const { refresh_token } = await request.json() as { refresh_token: string };
-    const user = mockUsers.find((item) => item.refreshToken === refresh_token);
+    // The frontend sends an empty body now — the refresh credential is the
+    // httpOnly `sl_session` cookie (or a legacy body token from older callers).
+    const body = await request.json().catch(() => ({})) as { refresh_token?: string };
+    const refreshToken =
+      body.refresh_token ?? cookieValue(request.headers.get("Cookie") ?? "", "sl_session");
+    if (!refreshToken) return fail(400, 40000, "缺少 refresh token");
+    const user = mockUsers.find((item) => item.refreshToken === refreshToken);
     if (user) user.refreshToken = "";
     return ok({ message: "登出成功" });
   }),
@@ -81,6 +121,7 @@ export const authHandlers = [
     const user = mockUsers.find((item) => item.id === loginCodes.get(code));
     if (!user) return fail(401, 40100, "登录码无效或已过期");
     loginCodes.delete(code);
-    return ok({ ...issueTokens(user), user: authUser(user) });
+    const pair = issueTokens(user);
+    return cookieOk({ ...pair, user: authUser(user) }, pair.refresh_token);
   }),
 ];
