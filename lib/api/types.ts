@@ -54,7 +54,10 @@ interface AuthUser {
 
 export interface TokenData {
   access_token: string;
-  refresh_token: string;
+  // The refresh token is optional: the frontend no longer stores it (it lives
+  // in the backend's httpOnly cookie), so the backend may stop echoing it in
+  // refresh responses. Login/register/exchange-code still return it today.
+  refresh_token?: string;
   token_type: "Bearer";
   expires_in: number;
 }
@@ -159,7 +162,7 @@ export interface UserAccount {
   loginEmail: string;
   name: string;
   avatar: string | null;
-  session: import("@/lib/token").TokenPair;
+  session: import("@/lib/token").Session;
 }
 
 /**

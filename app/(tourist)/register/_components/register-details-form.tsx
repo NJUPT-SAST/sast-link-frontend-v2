@@ -119,7 +119,7 @@ export default function RegisterDetailsForm({
         toRegisterRequest(values, registerTicket, registrationState, oauthState),
       );
       const data = response.data.data;
-      const session = createSession(data.access_token, data.refresh_token, data.expires_in);
+      const session = createSession(data.access_token, data.expires_in);
       setSession(session);
       resetProfile();
       addAccount({

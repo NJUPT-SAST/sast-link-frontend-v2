@@ -10,7 +10,6 @@ describe("session helpers", () => {
     const { clearSession, getSession, setSession } = await import("./token");
     const session = {
       accessToken: "access-token",
-      refreshToken: "refresh-token",
       expiresAt: Date.now() + 3600_000,
     };
 
@@ -26,7 +25,6 @@ describe("session helpers", () => {
     const { getSession, setSession } = await import("./token");
     const session = {
       accessToken: "access-token",
-      refreshToken: "refresh-token",
       expiresAt: Date.now() - 1000,
     };
     setSession(session);
@@ -38,7 +36,6 @@ describe("session helpers", () => {
     const { getSession, setSession } = await import("./token");
     const session = {
       accessToken: "access-token",
-      refreshToken: "refresh-token",
       expiresAt: Date.now() + 3600_000,
     };
     setSession(session);
@@ -56,7 +53,6 @@ describe("session helpers", () => {
     // not hand out the cached reference.
     const session = {
       accessToken: "access-token",
-      refreshToken: "refresh-token",
       expiresAt: Date.now() + 3600_000,
     };
     sessionStorage.setItem("Token", JSON.stringify(session));
@@ -87,7 +83,6 @@ describe("session helpers", () => {
     const { getSession, setSession } = await import("./token");
     const session = {
       accessToken: "access-token",
-      refreshToken: "refresh-token",
       expiresAt: Date.now() + 3600_000,
     };
     const spy = jest
@@ -121,7 +116,6 @@ describe("session helpers", () => {
     const { clearSession, setSession } = await import("./token");
     setSession({
       accessToken: "access-token",
-      refreshToken: "refresh-token",
       expiresAt: Date.now() + 3600_000,
     });
     const spy = jest
