@@ -1,8 +1,8 @@
-# Copilot Instructions for SAST Link Next
+# Copilot Instructions for SAST Link Frontend V2
 
 ## Project Architecture
 
-This is the active SAST Link Next application, implemented as a Next.js 16 web project.
+This is the active SAST Link Frontend V2 application, implemented as a Next.js 16 web project.
 
 Core stack:
 
@@ -101,5 +101,5 @@ import { Button } from "@/components/ui/button";
 ## Configuration Notes
 
 - TypeScript is strict and uses `@/*` alias mapping from repo root.
-- The package name in `package.json` still says `react-quick-starter`, but UI/product semantics are SAST Link.
+- The package name in `package.json` is `sast-link-frontend-v2`; the UI/product is branded SAST Link.
 - `NEXT_PUBLIC_API_BASE_URL` configures the backend base URL — local dev points straight at the backend (e.g. `http://localhost:8080`).

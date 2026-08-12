@@ -1,15 +1,19 @@
 services:
-  sast-link-next:
-    image: ccr.ccs.tencentyun.com/sast/sast-link-next:current
+  sast-link-frontend-v2:
+    image: ccr.ccs.tencentyun.com/sast/sast-link-frontend-v2:current
     build:
       context: .
       args:
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+        # /v2 keeps the container on the same-origin mode the cookie session
+        # requires (the host Caddy proxies /v2/* to the backend). An absolute
+        # cross-origin URL like http://localhost:8080 would break the cookie
+        # bootstrap — see .env.example for the two modes.
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/v2}
         NEXT_PUBLIC_FEISHU_CLIENT_ID: ${NEXT_PUBLIC_FEISHU_CLIENT_ID:-}
         NEXT_PUBLIC_FEISHU_BIND_REDIRECT_URI: ${NEXT_PUBLIC_FEISHU_BIND_REDIRECT_URI:-}
         NEXT_PUBLIC_GITHUB_CLIENT_ID: ${NEXT_PUBLIC_GITHUB_CLIENT_ID:-}
         NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI: ${NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI:-}
-    container_name: sast-link-next
+    container_name: sast-link-frontend-v2
     ports:
       # Caddy runs on the host and reaches this container through this published
       # port, so the mapping is required. Bound to loopback rather than

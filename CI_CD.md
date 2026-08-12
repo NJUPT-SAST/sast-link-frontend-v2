@@ -1,6 +1,6 @@
 # CI/CD Guide
 
-This document summarizes the current GitHub Actions setup for `sast-link-next`.
+This document summarizes the current GitHub Actions setup for `sast-link-frontend-v2`.
 
 ## Workflow Files
 
