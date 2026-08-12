@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { getSession } from "@/lib/token";
 import { Button } from "@/components/ui/button";
+import { PageTransition } from "@/components/animation/page-transition";
 
 /** `/` — the product's entry: a slow-moving starfield (rendered globally in
  *  Providers) with the SAST Link title tilting subtly toward the cursor, and a
@@ -66,8 +67,16 @@ export default function Home() {
   // see an unbroken dark opening instead of a white flash.
   if (!showLanding) return <div aria-hidden="true" className="fixed inset-0 bg-black" />;
 
+  // Fade, not the default slide: this page's transition container is the
+  // full-viewport landing itself, and slide's translate on a min-h-screen
+  // element pushes it past the viewport edge mid-animation, flashing a
+  // scrollbar that only disappears once the transform settles. Fade has no
+  // transform, so no scrollbar.
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center">
+    <PageTransition
+      variant="fade"
+      className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center"
+    >
       <h1
         ref={titleRef}
         data-cursor-target
@@ -89,6 +98,6 @@ export default function Home() {
           <Link href="/login">登录</Link>
         </Button>
       </div>
-    </main>
+    </PageTransition>
   );
 }
