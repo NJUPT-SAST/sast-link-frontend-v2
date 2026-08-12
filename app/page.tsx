@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { getSession } from "@/lib/token";
+import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/animation/page-transition";
 
@@ -19,17 +19,18 @@ import { PageTransition } from "@/components/animation/page-transition";
  *  once the session check resolves. */
 export default function Home() {
   const router = useRouter();
+  const status = useAuthSession();
   const [showLanding, setShowLanding] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    if (getSession() !== null) {
+    if (status === "authenticated") {
       router.replace("/home");
-    } else {
+    } else if (status === "unauthenticated") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowLanding(true);
     }
-  }, [router]);
+  }, [router, status]);
 
   // Restrained parallax: the title tilts a few degrees toward the cursor.
   // Runs once the landing is actually shown.
