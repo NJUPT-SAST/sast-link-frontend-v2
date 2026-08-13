@@ -5,6 +5,22 @@
 		level INFO
 	}
 
+	# Security headers for the static frontend. The backend API already sends
+	# its own via internal/web/middleware/security.go. HSTS is handled by the
+	# HTTPS layer (the same-origin API carries includeSubDomains).
+	header {
+		X-Content-Type-Options "nosniff"
+		# Stops /oauth/consent being framed (clickjacking).
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# 'unsafe-inline' for script/style is required by the Next.js static
+		# export: every page embeds __next_f (RSC) inline scripts that a static
+		# host cannot hash/nonce. The value is in the other directives:
+		# frame-ancestors, object-src 'none', base-uri, connect-src. img-src
+		# allows the COS bucket hosting avatars (bucket host, not a custom CDN).
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.cos.ap-shanghai.myqcloud.com; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+	}
+
 	handle {
 		root * /var/www
 		file_server {
