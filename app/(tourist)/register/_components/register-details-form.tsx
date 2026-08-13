@@ -11,6 +11,7 @@ import { toApiError } from "@/lib/api/errors";
 import { updateUserProfile } from "@/lib/api/user";
 import { message } from "@/lib/message";
 import { COLLEGES, type RegisterRequest } from "@/lib/api/types";
+import { consumeAuthNext } from "@/lib/auth-next";
 import { createSession, setSession } from "@/lib/token";
 import { safeSessionStorage } from "@/lib/safe-session-storage";
 import { useUserListStore } from "@/store/use-user-list-store";
@@ -143,7 +144,11 @@ export default function RegisterDetailsForm({
       // one-time ticket (login clears its step key for the same reason).
       safeSessionStorage.removeItem("sast:register-ticket");
       safeSessionStorage.removeItem("sast:register-email");
-      router.replace("/home");
+      // A successful signup is a finished flow, but where the user lands depends
+      // on where they came from: a signup reached through an OAuth consent flow
+      // (consent → login → register) goes back to the pending consent request to
+      // finish the authorization; a direct signup falls through to /home.
+      router.replace(consumeAuthNext("/home"));
     } catch (error) {
       const apiError = toApiError(error);
       form.setError("root", { message: apiError.message });
