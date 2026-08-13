@@ -4,14 +4,21 @@ import { useCallback, useState } from "react";
 import { useSWRConfig } from "swr";
 
 import type {
-  AdminUserListParams,
+  AdminBatchRoleUpdateResult,
   AdminUpdateUserRequest,
+  AdminUserListParams,
   Department,
   UserProfileData,
   UserRole,
   UserState,
 } from "@/lib/api/types";
-import { updateAdminUser } from "@/lib/api/admin";
+import {
+  computeRoleFailedIds,
+  summarizeBatchEdit,
+  updateAdminUser,
+  updateAdminUsersRole,
+} from "@/lib/api/admin";
+import { toApiError } from "@/lib/api/errors";
 import { message } from "@/lib/message";
 import { useAdminUsers, buildAdminUsersKey } from "@/hooks/use-admin-users";
 import { useAdminMutations } from "@/hooks/use-admin-mutations";
@@ -71,28 +78,64 @@ export default function AdminUsersPage() {
   );
 
   const handleBatchConfirm = async (fields: BatchEditFields) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0 || (!fields.role && !fields.state && !fields.department)) {
+      setBatchOpen(false);
+      return;
+    }
     setBatchOpen(false);
     setBatchLoading(true);
     try {
-      const request: AdminUpdateUserRequest = {
-        ...(fields.role ? { role: fields.role as UserRole } : {}),
-        ...(fields.state ? { state: fields.state as UserState } : {}),
-        ...(fields.department ? { department: fields.department as Department } : {}),
-      };
-      const ids = Array.from(selectedIds);
-      let successCount = 0;
-      const failedIds: number[] = [];
-      for (const id of ids) {
+      // Phase 1 — role changes go through the batch endpoint (one request).
+      let roleResults: AdminBatchRoleUpdateResult[] | null = null;
+      if (fields.role) {
         try {
-          await updateAdminUser(id, request);
-          successCount++;
-        } catch {
-          failedIds.push(id);
+          const res = await updateAdminUsersRole({ ids, role: fields.role as UserRole });
+          roleResults = res.data.data.results;
+        } catch (error) {
+          // Request-level failure: no per-item results. Treat every id as failed
+          // with the surfaced reason and skip the per-user phase, since claiming
+          // any user "modified" would misrepresent the role outcome.
+          const reason = toApiError(error).message;
+          roleResults = ids.map((id) => ({ id, success: false, reason }));
         }
       }
+
+      // Phase 2 — state/department stay one-by-one. Skip ids whose role change
+      // already failed (or was not reported).
+      const singleUpdateFailures = new Map<number, string>();
+      if (fields.state || fields.department) {
+        const roleFailed = computeRoleFailedIds(ids, roleResults);
+        const request: AdminUpdateUserRequest = {
+          ...(fields.state ? { state: fields.state as UserState } : {}),
+          ...(fields.department ? { department: fields.department as Department } : {}),
+        };
+        for (const id of ids) {
+          if (roleFailed.has(id)) continue;
+          try {
+            await updateAdminUser(id, request);
+          } catch (error) {
+            singleUpdateFailures.set(id, toApiError(error).message);
+          }
+        }
+      }
+
+      const { successCount, failedIds, reasons } = summarizeBatchEdit({
+        ids,
+        roleResults,
+        singleUpdateFailures,
+      });
+
       if (failedIds.length > 0) {
         // Keep only the failed ids selected so the admin can retry them.
-        message.error(`成功 ${successCount} 个，失败 ${failedIds.length} 个，已保留失败项`);
+        const detail = reasons
+          .slice(0, 3)
+          .map((r) => `「${r}」`)
+          .join("；");
+        message.error(
+          `成功 ${successCount} 个，失败 ${failedIds.length} 个，已保留失败项${detail ? `（${detail}）` : ""}`,
+          detail ? 5000 : undefined,
+        );
         setSelectedIds(new Set(failedIds));
       } else {
         message.success(`已批量修改 ${successCount} 个用户`);
@@ -100,6 +143,7 @@ export default function AdminUsersPage() {
       }
       await mutate(buildAdminUsersKey(filters));
     } catch {
+      // Truly unexpected (setup / mutate): keep existing behavior.
       setSelectedIds(new Set());
     } finally {
       setBatchLoading(false);

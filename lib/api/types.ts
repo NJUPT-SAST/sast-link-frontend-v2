@@ -212,6 +212,26 @@ export interface AdminUpdateUserRequest {
   department?: Department;
 }
 
+export interface AdminBatchRoleUpdateRequest {
+  ids: number[];
+  role: UserRole;
+}
+
+export interface AdminBatchRoleUpdateResult {
+  id: number;
+  success: boolean;
+  role?: UserRole;
+  reason?: string;
+}
+
+export interface AdminBatchRoleUpdateData {
+  results: AdminBatchRoleUpdateResult[];
+}
+
+export interface AdminBatchUsersData {
+  users: UserProfileData[];
+}
+
 export interface AdminOAuthClient {
   id: number;
   client_id: string;
