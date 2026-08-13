@@ -81,7 +81,9 @@ function toUpdateRequest(values: ProfileEditFormValues): UpdateProfileRequest {
   return {
     nickname: values.nickname,
     name: values.name,
-    intro: values.intro,
+    // Signature is single-line by design; mobile keyboards/pasted text can
+    // slip \n in, which the backend rejects as a control character.
+    intro: values.intro.replace(/[\r\n]+/g, ""),
     phone_number: values.phoneNumber,
     qq_number: values.qqNumber,
     // leave college untouched when the user hasn't chosen one
@@ -250,24 +252,21 @@ export default function EditPage() {
                 />
               ))}
 
-              {/* Signature — multi-line */}
+              {/* Signature — single-line by product design (a multi-line textarea
+                  let mobile keyboards/pasted text slip \n into the value, which the
+                  backend rejects as a control character with a generic 参数错误) */}
               <FormField
                 control={form.control}
                 name="intro"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem>
-                    <label
-                      htmlFor="intro"
-                      className="mb-2 block text-[13px] text-muted-foreground"
-                    >
-                      签名
-                    </label>
-                    <textarea
-                      id="intro"
+                    <AuthFormField
                       {...field}
-                      rows={4}
+                      ref={field.ref}
+                      label="签名"
                       placeholder="泥真的没有想说的咩.."
-                      className="min-h-[120px] w-full resize-none rounded-lg border bg-card px-3.5 py-3 text-[15px] transition-colors placeholder:text-tertiary focus-visible:outline-none invalid:border-destructive valid:border-input focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+                      invalid={fieldState.invalid}
+                      error={fieldState.error?.message}
                     />
                     <div className="min-h-4 text-xs [&_p]:text-destructive">
                       <FormMessage />

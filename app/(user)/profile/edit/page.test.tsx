@@ -153,6 +153,27 @@ describe("EditPage", () => {
     expect(payload.department).toBeUndefined();
   });
 
+  it("strips line breaks from the signature before submitting", async () => {
+    mockUpdateUserProfile.mockResolvedValueOnce({
+      data: { data: { user: profile } },
+    });
+
+    render(<EditPage />);
+
+    const signatureInput = screen.getByLabelText("签名") as HTMLInputElement;
+    fireEvent.change(signatureInput, {
+      target: { value: "第一行\n第二行\r\n第三行" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+
+    await waitFor(() => {
+      expect(mockUpdateUserProfile).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = mockUpdateUserProfile.mock.calls[0][0];
+    expect(payload.intro).toBe("第一行第二行第三行");
+  });
+
   it("shows validation error when nickname is cleared", async () => {
     render(<EditPage />);
 

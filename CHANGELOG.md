@@ -23,6 +23,8 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Changed
 
+- Profile signature editing uses a single-line input; line breaks are stripped before submit (the backend rejects control characters, which surfaced as a generic 参数错误 when a mobile keyboard or pasted text introduced a newline)
+- The profile-card signature edit affordance is now an always-visible pencil icon instead of a hover-only text hint, so touch devices can find the entry point
 - Documentation has been rewritten to match the current repository implementation rather than the original generic starter-template description
 
 ### Documentation

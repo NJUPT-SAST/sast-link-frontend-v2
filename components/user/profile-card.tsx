@@ -53,7 +53,9 @@ export function ProfileCard() {
     }
     savingRef.current = true;
     try {
-      const response = await updateUserProfile({ intro: signature });
+      const response = await updateUserProfile({
+        intro: signature.replace(/[\r\n]+/g, ""),
+      });
       useUserProfileStore.getState().setProfile(mapProfile(response.data.data.user));
     } catch (error) {
       setSignature(profile.intro ?? "");
@@ -98,9 +100,14 @@ export function ProfileCard() {
             <div className="mb-1 flex items-center justify-start gap-1.5">
               <span className="type-tech text-tertiary">签名</span>
               {!editing && (
-                <span className="flex items-center gap-1 text-[11px] text-tertiary opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-                  <Pencil size={11} />
-                  点击或双击编辑
+                <span
+                  aria-label="点击编辑签名"
+                  // Always-visible pencil affordance — touch devices have no
+                  // hover, so the old text hint (opacity-0 until hover) was
+                  // invisible on mobile and the edit entry was easy to miss.
+                  className="flex items-center text-tertiary opacity-60 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                >
+                  <Pencil size={12} />
                 </span>
               )}
             </div>
