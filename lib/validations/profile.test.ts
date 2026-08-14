@@ -73,6 +73,12 @@ describe("profileEditSchema", () => {
     }
   });
 
+  it("accepts Chinese real names only", () => {
+    expect(profileEditSchema.safeParse({ ...valid, name: "张三" }).success).toBe(true);
+    expect(profileEditSchema.safeParse({ ...valid, name: "Alice" }).success).toBe(false);
+    expect(profileEditSchema.safeParse({ ...valid, name: "张 三" }).success).toBe(false);
+  });
+
   it("rejects invalid phone number", () => {
     const r = profileEditSchema.safeParse({ ...valid, phoneNumber: "123" });
     expect(r.success).toBe(false);

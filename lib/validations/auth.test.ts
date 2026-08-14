@@ -60,6 +60,12 @@ describe("auth validation schemas", () => {
       expect(registerDetailsSchema.safeParse({ ...valid, phoneNumber: "", qqNumber: "" }).success).toBe(true);
     });
 
+    it("accepts Chinese real names only", () => {
+      expect(registerDetailsSchema.safeParse({ ...valid, name: "张三" }).success).toBe(true);
+      expect(registerDetailsSchema.safeParse({ ...valid, name: "Alice" }).success).toBe(false);
+      expect(registerDetailsSchema.safeParse({ ...valid, name: "张 三" }).success).toBe(false);
+    });
+
     it("still rejects malformed phone and qq", () => {
       const phone = registerDetailsSchema.safeParse({ ...valid, phoneNumber: "123" });
       expect(phone.success).toBe(false);
