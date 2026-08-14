@@ -1,23 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import { useAdminUser } from "@/hooks/use-admin-users";
-import { useAdminMutations } from "@/hooks/use-admin-mutations";
-import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { canManageUsers } from "@/components/admin/permissions";
-import { UserDetailCard } from "@/components/admin/user-detail-card";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { UserDetailCard } from "@/components/admin/user-detail-card";
 import { BackButton } from "@/components/navigation/back-button";
 import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
+import { useAdminMutations } from "@/hooks/use-admin-mutations";
+import { useAdminUser } from "@/hooks/use-admin-users";
+import { adminUserEditHref, parseAdminUserId } from "@/lib/admin-user-route";
+import { useUserProfileStore } from "@/store/use-user-profile-store";
 
 export function AdminUserDetailContent() {
-  const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const id = Number(params.id);
+  const id = parseAdminUserId(searchParams);
   const { data: user, isLoading, error } = useAdminUser(id);
   const { deleteUser, restoreUser, isLoading: mutationLoading } = useAdminMutations();
   const canManage = canManageUsers(useUserProfileStore((state) => state.profile.role));
@@ -36,18 +37,20 @@ export function AdminUserDetailContent() {
     setConfirmOpen(false);
   };
 
-  if (isLoading) {
-    return <div className="flex h-64 items-center justify-center"><DotLoading /></div>;
-  }
-
-  if (error || !user) {
+  if (id === null || error || !user && !isLoading) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
-        <p className="text-tertiary">用户不存在或加载失败</p>
+        <p className="text-tertiary">用户不存在或链接无效</p>
         <Button variant="outline" asChild><Link href="/admin/users">返回用户列表</Link></Button>
       </div>
     );
   }
+
+  if (isLoading) {
+    return <div className="flex h-64 items-center justify-center"><DotLoading /></div>;
+  }
+
+  if (!user) return null;
 
   const isDeleted = user.state === "is_deleted";
 
@@ -61,7 +64,7 @@ export function AdminUserDetailContent() {
         </div>
         {canManage && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" asChild><Link href={`/admin/users/${user.id}/edit`}>编辑</Link></Button>
+            <Button variant="outline" asChild><Link href={adminUserEditHref(user.id)}>编辑</Link></Button>
             <Button
               variant={isDeleted ? "default" : "destructive"}
               onClick={() => setConfirmOpen(true)}

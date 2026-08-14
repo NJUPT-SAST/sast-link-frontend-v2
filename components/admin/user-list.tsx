@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
 import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
 import { Button } from "@/components/ui/button";
+import { adminUserDetailHref, adminUserEditHref } from "@/lib/admin-user-route";
+
 
 interface UserListProps {
   users: UserProfileData[];
@@ -91,7 +93,7 @@ export function UserList({
               />
             )}
             <Link
-              href={`/admin/users/${user.id}`}
+              href={adminUserDetailHref(user.id)}
               className="admin-cell-label-sm text-tertiary transition-colors hover:text-link hover:underline"
               data-label="ID"
             >
@@ -118,12 +120,12 @@ export function UserList({
             </div>
             <div className="flex items-center justify-end gap-2">
               <Button variant="ghost" size="sm" asChild>
-                <Link href={`/admin/users/${user.id}`}>查看</Link>
+                <Link href={adminUserDetailHref(user.id)}>查看</Link>
               </Button>
               {canManage && (
                 <>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link href={`/admin/users/${user.id}/edit`}>编辑</Link>
+                    <Link href={adminUserEditHref(user.id)}>编辑</Link>
                   </Button>
                   {user.state === "is_deleted" && (
                     <Button
