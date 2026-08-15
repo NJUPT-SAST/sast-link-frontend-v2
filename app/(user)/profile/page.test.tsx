@@ -34,10 +34,6 @@ jest.mock("@/hooks/use-avatar-upload", () => ({
   useAvatarUpload: () => jest.fn(),
 }));
 
-jest.mock("@/components/user/identity-list", () => ({
-  IdentityList: () => <div data-testid="identity-list" />,
-}));
-
 describe("ProfilePage", () => {
   it("renders the complete profile grouped into sections", () => {
     render(<ProfilePage />);
@@ -55,13 +51,6 @@ describe("ProfilePage", () => {
     expect(screen.getByText("正在四处游荡中...")).toBeInTheDocument();
     expect(screen.getByText("注册邮箱")).toBeInTheDocument();
     expect(screen.getByText("GitHub 链接")).toBeInTheDocument();
-  });
-
-  it("renders a read-only linked-accounts section", () => {
-    render(<ProfilePage />);
-
-    expect(screen.getByRole("heading", { name: "已关联账号" })).toBeInTheDocument();
-    expect(screen.getByTestId("identity-list")).toBeInTheDocument();
   });
 
   it("shows the empty signature placeholder when intro is missing", () => {

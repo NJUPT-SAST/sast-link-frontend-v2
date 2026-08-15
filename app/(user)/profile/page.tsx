@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import { useAvatarUpload } from "@/hooks/use-avatar-upload";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarCropperDialog } from "@/components/user/avatar-cropper-dialog";
-import { IdentityList } from "@/components/user/identity-list";
 import { Button } from "@/components/ui/button";
 
 const DEPARTMENT_LABELS: Record<string, string> = {
@@ -98,13 +97,6 @@ export default function ProfilePage() {
         <Field label="QQ" value={profile.qqNumber} />
         <Field label="博客" value={profile.blogUrl} />
         <Field label="GitHub 链接" value={profile.githubUrl} />
-      </section>
-
-      <section aria-label="已关联账号">
-        <h2 className="type-tech mb-3 text-tertiary">已关联账号</h2>
-        <div className="border-t border-hairline">
-          <IdentityList />
-        </div>
       </section>
 
       <AvatarCropperDialog
