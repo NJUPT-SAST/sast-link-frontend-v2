@@ -81,6 +81,15 @@ describe("profileEditSchema", () => {
     }
   });
 
+  it("accepts Chinese and ethnic minority real names", () => {
+    expect(profileEditSchema.safeParse({ ...valid, name: "张三" }).success).toBe(true);
+    expect(profileEditSchema.safeParse({ ...valid, name: "迪丽热巴·买买提" }).success).toBe(true);
+  });
+
+  it("rejects foreign real names", () => {
+    expect(profileEditSchema.safeParse({ ...valid, name: "O'Brien" }).success).toBe(false);
+  });
+
   it("rejects invalid phone number", () => {
     const r = profileEditSchema.safeParse({ ...valid, phoneNumber: "123" });
     expect(r.success).toBe(false);

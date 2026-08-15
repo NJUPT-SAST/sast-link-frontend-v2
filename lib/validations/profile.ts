@@ -1,6 +1,8 @@
 import { z } from "zod/v3";
 import type { RegisterOptions } from "react-hook-form";
 
+import { realNameSchema } from "@/lib/validations/name";
+
 import { COLLEGES } from "@/lib/api/types";
 
 // Protocol is optional here because the edit form renders the scheme as a
@@ -51,7 +53,7 @@ export const profileEditSchema = z.object({
     .trim()
     .min(1, "别名不能为空")
     .max(255, "别名最多 255 个字符"),
-  name: z.string().trim().min(1, "姓名不能为空").max(255),
+  name: realNameSchema,
   intro: z.string().trim().max(255, "签名最多 255 个字符"),
   phoneNumber: z
     .string()
