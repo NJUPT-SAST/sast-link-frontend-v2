@@ -32,7 +32,7 @@ function Field({
   empty?: string;
 }) {
   return (
-    <div data-cursor-target className="grid grid-cols-[88px_minmax(0,1fr)] gap-5 border-b border-hairline py-4 first:border-t">
+    <div data-cursor-target className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-5 border-b border-hairline py-4 first:border-t">
       <div className="type-tech text-tertiary">{label}</div>
       <div className={cn("truncate text-sm leading-6", !value && "text-muted-foreground")}>
         {value || empty}
