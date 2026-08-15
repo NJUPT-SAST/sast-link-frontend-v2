@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Camera } from "lucide-react";
+import { Camera, Pencil } from "lucide-react";
 
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { avatarFallbackChar, DEFAULT_AVATAR, ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
@@ -11,6 +11,7 @@ import { useAvatarUpload } from "@/hooks/use-avatar-upload";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarCropperDialog } from "@/components/user/avatar-cropper-dialog";
 import { IdentityList } from "@/components/user/identity-list";
+import { Button } from "@/components/ui/button";
 
 const DEPARTMENT_LABELS: Record<string, string> = {
   software: "软件研发部",
@@ -68,12 +69,12 @@ export default function ProfilePage() {
             {ROLE_LABELS[profile.role] || profile.role} · {STATE_LABELS[profile.state] || profile.state}
           </div>
         </div>
-        <Link
-          href="/profile/edit"
-          className="ml-auto shrink-0 type-tech text-tertiary transition-colors hover:text-foreground"
-        >
-          编辑
-        </Link>
+        <Button asChild variant="outline" size="sm" className="ml-auto shrink-0">
+          <Link href="/profile/edit">
+            <Pencil />
+            编辑
+          </Link>
+        </Button>
       </section>
 
       <section aria-label="个人信息">
