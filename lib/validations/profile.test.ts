@@ -73,10 +73,15 @@ describe("profileEditSchema", () => {
     }
   });
 
-  it("accepts Chinese real names only", () => {
+  it("accepts Chinese and ethnic minority real names", () => {
     expect(profileEditSchema.safeParse({ ...valid, name: "张三" }).success).toBe(true);
+    expect(profileEditSchema.safeParse({ ...valid, name: "迪丽热巴·买买提" }).success).toBe(true);
+  });
+
+  it("rejects foreign, spaced and non-name characters", () => {
     expect(profileEditSchema.safeParse({ ...valid, name: "Alice" }).success).toBe(false);
     expect(profileEditSchema.safeParse({ ...valid, name: "张 三" }).success).toBe(false);
+    expect(profileEditSchema.safeParse({ ...valid, name: "O'Brien" }).success).toBe(false);
   });
 
   it("rejects invalid phone number", () => {
