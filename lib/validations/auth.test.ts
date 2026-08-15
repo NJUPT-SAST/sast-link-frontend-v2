@@ -60,6 +60,23 @@ describe("auth validation schemas", () => {
       expect(registerDetailsSchema.safeParse({ ...valid, phoneNumber: "", qqNumber: "" }).success).toBe(true);
     });
 
+    it("accepts Chinese and ethnic minority real names", () => {
+      expect(registerDetailsSchema.safeParse({ ...valid, name: "张三" }).success).toBe(true);
+      expect(registerDetailsSchema.safeParse({ ...valid, name: "迪丽热巴·买买提" }).success).toBe(true);
+      expect(registerDetailsSchema.safeParse({ ...valid, name: "𠮷野" }).success).toBe(true);
+    });
+
+    it("rejects foreign, spaced and non-name characters", () => {
+      expect(registerDetailsSchema.safeParse({ ...valid, name: "Alice" }).success).toBe(false);
+      expect(registerDetailsSchema.safeParse({ ...valid, name: "张 三" }).success).toBe(false);
+      expect(registerDetailsSchema.safeParse({ ...valid, name: "José María García" }).success).toBe(false);
+      expect(registerDetailsSchema.safeParse({ ...valid, name: "张三1" }).success).toBe(false);
+      const r = registerDetailsSchema.safeParse({ ...valid, name: "张三1" });
+      if (!r.success) {
+        expect(r.error.issues.some((i) => i.path.includes("name"))).toBe(true);
+      }
+    });
+
     it("still rejects malformed phone and qq", () => {
       const phone = registerDetailsSchema.safeParse({ ...valid, phoneNumber: "123" });
       expect(phone.success).toBe(false);

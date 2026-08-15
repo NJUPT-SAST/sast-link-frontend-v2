@@ -1,5 +1,7 @@
 import { z } from "zod/v3";
 
+import { realNameSchema } from "@/lib/validations/name";
+
 import { COLLEGES } from "@/lib/api/types";
 
 const studentIdPattern = /^[A-Za-z]\d{8}$/;
@@ -66,7 +68,7 @@ export const registerDetailsSchema = z
     nickname: z.string().trim().min(1, "别名不可为空").max(255, "别名最多 255 个字符"),
     password: passwordSchema,
     confirmPassword: z.string().min(1, "请确认密码"),
-    name: z.string().trim().min(1, "姓名不可为空").max(255),
+    name: realNameSchema,
     phoneNumber: z
       .string()
       .trim()
