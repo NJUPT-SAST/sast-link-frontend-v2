@@ -6,10 +6,12 @@ import { Eye, EyeOff } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-interface AuthFormFieldProps extends Omit<ComponentPropsWithoutRef<"input">, "size"> {
+interface AuthFormFieldProps extends Omit<ComponentPropsWithoutRef<"input">, "size" | "prefix"> {
   label: string;
   description?: ReactNode;
   suffix?: ReactNode;
+  /** fixed adornment shown inside the left edge of the input (e.g. "https://") */
+  prefix?: ReactNode;
   invalid?: boolean;
   error?: string;
   containerClassName?: string;
@@ -23,6 +25,7 @@ export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
       label,
       description,
       suffix,
+      prefix,
       invalid = false,
       error,
       className,
@@ -63,9 +66,15 @@ export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
                 ? "border-destructive focus-visible:border-destructive focus-visible:ring-2 focus-visible:ring-destructive/25"
                 : "border-input focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25",
               isPassword ? "pr-11" : suffix ? "pr-28" : undefined,
+              prefix ? "pl-24" : undefined,
               className,
             )}
           />
+          {prefix ? (
+            <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 select-none text-sm font-medium text-tertiary">
+              {prefix}
+            </div>
+          ) : null}
           {isPassword ? (
             <button
               type="button"

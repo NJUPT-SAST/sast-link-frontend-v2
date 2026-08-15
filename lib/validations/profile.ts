@@ -3,7 +3,12 @@ import type { RegisterOptions } from "react-hook-form";
 
 import { COLLEGES } from "@/lib/api/types";
 
-const urlPattern = /^$|^https?:\/\/[^\/\s]+/;
+// Protocol is optional here because the edit form renders the scheme as a
+// fixed "https://" prefix and submits a normalized value (see withHttpsScheme
+// in the edit page) — the backend still requires an explicit http(s) scheme.
+// The host must contain at least one dot and no whitespace, so "abc" or
+// "not-a-url" fail, and "https://" alone also fails.
+const urlPattern = /^$|^(https?:\/\/)?[^\/\s]+\.[^\s]*/;
 
 export interface ProfileFormValues {
   nickname: string;

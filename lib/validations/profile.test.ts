@@ -15,14 +15,17 @@ describe("profileRules", () => {
     });
   });
 
-  it("accepts empty or http links and rejects invalid links", () => {
+  it("accepts empty, protocol-less or http links and rejects invalid links", () => {
     for (const rule of [profileRules.blogUrl, profileRules.githubUrl]) {
       const regex = pattern(rule.pattern).value;
       expect(regex.test("")).toBe(true);
       expect(regex.test("https://example.com")).toBe(true);
       expect(regex.test("https://example.com/path")).toBe(true);
-      expect(regex.test("example.com")).toBe(false);
+      expect(regex.test("example.com")).toBe(true);
+      expect(regex.test("github.com/alice")).toBe(true);
       expect(regex.test("https://")).toBe(false);
+      expect(regex.test("not-a-url")).toBe(false);
+      expect(regex.test("abc")).toBe(false);
     }
   });
 });
@@ -43,6 +46,11 @@ describe("profileEditSchema", () => {
 
   it("accepts a fully populated profile", () => {
     expect(profileEditSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts protocol-less urls (the https:// prefix is re-added on submit)", () => {
+    const data = { ...valid, blogUrl: "blog.example.com", githubUrl: "github.com/alice" };
+    expect(profileEditSchema.safeParse(data).success).toBe(true);
   });
 
   it("accepts empty optional fields", () => {

@@ -77,6 +77,21 @@ function useDirtyGuard(isDirty: boolean) {
   };
 }
 
+/**
+ * Strips an explicit http(s) scheme for display under the fixed "https://"
+ * prefix, so an existing "https://github.com/alice" shows as "github.com/alice"
+ * instead of duplicating the scheme.
+ */
+const stripUrlScheme = (value: string) => value.replace(/^https?:\/\//i, "");
+
+/**
+ * Re-attaches a scheme before submit: keeps an explicit http(s):// the user
+ * typed or pasted, otherwise defaults to https:// to match the visible prefix.
+ * Empty stays empty so a cleared field clears the backend value.
+ */
+const withHttpsScheme = (value: string) =>
+  value === "" || /^https?:\/\//i.test(value) ? value : `https://${value}`;
+
 function toUpdateRequest(values: ProfileEditFormValues): UpdateProfileRequest {
   return {
     nickname: values.nickname,
@@ -91,8 +106,9 @@ function toUpdateRequest(values: ProfileEditFormValues): UpdateProfileRequest {
     major: values.major,
     // student_id is set during registration — not editable;
     // department is managed by admin / recruitment — not editable
-    blog_url: values.blogUrl,
-    github_url: values.githubUrl,
+    // the https:// prefix is a UI affordance, not part of the stored value
+    blog_url: withHttpsScheme(values.blogUrl),
+    github_url: withHttpsScheme(values.githubUrl),
   };
 }
 
@@ -116,8 +132,8 @@ export default function EditPage() {
       college: profile.college ?? "",
       major: profile.major ?? "",
       department: profile.department ?? "",
-      blogUrl: profile.blogUrl ?? "",
-      githubUrl: profile.githubUrl ?? "",
+      blogUrl: stripUrlScheme(profile.blogUrl ?? ""),
+      githubUrl: stripUrlScheme(profile.githubUrl ?? ""),
     },
   });
   const guard = useDirtyGuard(form.formState.isDirty);
@@ -138,8 +154,8 @@ export default function EditPage() {
         college: profile.college ?? "",
         major: profile.major ?? "",
         department: profile.department ?? "",
-        blogUrl: profile.blogUrl ?? "",
-        githubUrl: profile.githubUrl ?? "",
+        blogUrl: stripUrlScheme(profile.blogUrl ?? ""),
+        githubUrl: stripUrlScheme(profile.githubUrl ?? ""),
       },
       { keepDirtyValues: true },
     );
@@ -382,6 +398,7 @@ export default function EditPage() {
                         ref={field.ref}
                         label={label}
                         type={type}
+                        prefix="https://"
                         invalid={fieldState.invalid}
                         error={fieldState.error?.message}
                       />
