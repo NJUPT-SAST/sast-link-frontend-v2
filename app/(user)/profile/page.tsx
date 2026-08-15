@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Camera } from "lucide-react";
+import { Camera, Pencil } from "lucide-react";
 
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { avatarFallbackChar, DEFAULT_AVATAR, ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { useAvatarUpload } from "@/hooks/use-avatar-upload";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarCropperDialog } from "@/components/user/avatar-cropper-dialog";
-import { IdentityList } from "@/components/user/identity-list";
+import { Button } from "@/components/ui/button";
 
 const DEPARTMENT_LABELS: Record<string, string> = {
   software: "软件研发部",
@@ -31,7 +31,7 @@ function Field({
   empty?: string;
 }) {
   return (
-    <div data-cursor-target className="grid grid-cols-[88px_minmax(0,1fr)] gap-5 border-b border-hairline py-4 first:border-t">
+    <div data-cursor-target className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-5 border-b border-hairline py-4 first:border-t">
       <div className="type-tech text-tertiary">{label}</div>
       <div className={cn("truncate text-sm leading-6", !value && "text-muted-foreground")}>
         {value || empty}
@@ -68,12 +68,12 @@ export default function ProfilePage() {
             {ROLE_LABELS[profile.role] || profile.role} · {STATE_LABELS[profile.state] || profile.state}
           </div>
         </div>
-        <Link
-          href="/profile/edit"
-          className="ml-auto shrink-0 type-tech text-tertiary transition-colors hover:text-foreground"
-        >
-          编辑
-        </Link>
+        <Button asChild variant="outline" size="sm" className="ml-auto shrink-0">
+          <Link href="/profile/edit">
+            <Pencil />
+            编辑
+          </Link>
+        </Button>
       </section>
 
       <section aria-label="个人信息">
@@ -97,13 +97,6 @@ export default function ProfilePage() {
         <Field label="QQ" value={profile.qqNumber} />
         <Field label="博客" value={profile.blogUrl} />
         <Field label="GitHub 链接" value={profile.githubUrl} />
-      </section>
-
-      <section aria-label="已关联账号">
-        <h2 className="type-tech mb-3 text-tertiary">已关联账号</h2>
-        <div className="border-t border-hairline">
-          <IdentityList />
-        </div>
       </section>
 
       <AvatarCropperDialog

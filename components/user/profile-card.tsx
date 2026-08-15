@@ -142,7 +142,7 @@ export function ProfileCard() {
             <div
               key={label}
               data-cursor-target
-              className={`grid grid-cols-[88px_minmax(0,1fr)] gap-5 border-b border-hairline py-4 ${index === 0 ? "border-t" : ""}`}
+              className={`grid grid-cols-[88px_minmax(0,1fr)] items-center gap-5 border-b border-hairline py-4 ${index === 0 ? "border-t" : ""}`}
             >
               <dt className="type-tech text-tertiary">{label}</dt>
               <dd className="text-sm leading-6">{value}</dd>
