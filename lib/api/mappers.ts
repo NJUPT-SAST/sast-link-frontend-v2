@@ -22,5 +22,9 @@ export function mapProfile(data: UserProfileData): UserProfileType {
     blogUrl: data.profile?.blog_url ?? null,
     githubUrl: data.profile?.github_url ?? null,
     identities: data.identities ?? [],
+    // Backend guarantees an array (never null); the ?? [] is defensive for
+    // responses from a backend that predates V010.
+    profileNeedsCompletion: data.profile_needs_completion ?? false,
+    incompleteFields: data.incomplete_fields ?? [],
   };
 }

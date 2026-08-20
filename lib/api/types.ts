@@ -42,6 +42,12 @@ export interface ApiEnvelope<T> {
 
 export type ApiFailure = ApiEnvelope<null>;
 
+export type IncompleteProfileField =
+  | "name"
+  | "phone_number"
+  | "qq_number"
+  | "major";
+
 interface AuthUser {
   id: number;
   login_email: string;
@@ -50,6 +56,16 @@ interface AuthUser {
   state: UserState;
   email_type: EmailType;
   created_at: string;
+  /**
+   * Flag from backend V010: the account still carries required profile fields
+   * left blank by the legacy import, or a name equal to its student_id. A pure
+   * display hint — no request is ever refused on account of it. The client
+   * decides whether to route the user to the completion page.
+   */
+  profile_needs_completion: boolean;
+  /** Field names still to be completed (PUT /user/profile keys). Empty array,
+   * never null. */
+  incomplete_fields: IncompleteProfileField[];
 }
 
 export interface TokenData {
@@ -102,6 +118,10 @@ export interface UserProfileData {
   major: string;
   profile: ProfileData | null;
   identities: Identity[];
+  /** Same semantics as AuthUser.profile_needs_completion, present on profile
+   *  reads and the admin user list/detail. */
+  profile_needs_completion: boolean;
+  incomplete_fields: IncompleteProfileField[];
   created_at: string;
   updated_at: string;
 }
@@ -155,6 +175,10 @@ export interface UserProfileType {
   blogUrl: string | null;
   githubUrl: string | null;
   identities: Identity[];
+  /** Whether the account still carries incomplete required profile fields
+   *  (backend V010 flag). Drives the completion-page routing. */
+  profileNeedsCompletion: boolean;
+  incompleteFields: IncompleteProfileField[];
 }
 
 export interface UserAccount {
@@ -189,6 +213,9 @@ export interface AdminUserListParams {
   department?: Department;
   student_id?: string;
   keyword?: string;
+  /** Backend tri-state filter: absent = no filter; true = only accounts still
+   *  needing completion; false = only complete accounts. */
+  needs_completion?: boolean;
 }
 
 export interface AdminUserListData {

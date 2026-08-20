@@ -36,8 +36,8 @@ function fail(status: number, code: number, message: string) {
   return HttpResponse.json({ code, message, data: null }, { status });
 }
 function authUser(user: (typeof mockUsers)[number]) {
-  const { id, login_email, name, role, state, email_type, created_at } = user.profile;
-  return { id, login_email, name, role, state, email_type, created_at };
+  const { id, login_email, name, role, state, email_type, created_at, profile_needs_completion, incomplete_fields } = user.profile;
+  return { id, login_email, name, role, state, email_type, created_at, profile_needs_completion, incomplete_fields };
 }
 
 export const authHandlers = [

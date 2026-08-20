@@ -43,6 +43,8 @@ export const mockUsers: MockUser[] = [
         github_url: "https://github.com/alice",
       },
       identities: [identity(1, "github", "alice")],
+      profile_needs_completion: false,
+      incomplete_fields: [],
       created_at: createdAt,
       updated_at: createdAt,
     },
@@ -74,6 +76,8 @@ export const mockUsers: MockUser[] = [
         github_url: null,
       },
       identities: [],
+      profile_needs_completion: false,
+      incomplete_fields: [],
       created_at: createdAt,
       updated_at: createdAt,
     },
@@ -105,6 +109,8 @@ export const mockUsers: MockUser[] = [
         github_url: null,
       },
       identities: [],
+      profile_needs_completion: false,
+      incomplete_fields: [],
       created_at: createdAt,
       updated_at: createdAt,
     },
@@ -136,6 +142,8 @@ export const mockUsers: MockUser[] = [
         github_url: "https://github.com/bob",
       },
       identities: [identity(4, "github", "bob")],
+      profile_needs_completion: false,
+      incomplete_fields: [],
       created_at: createdAt,
       updated_at: createdAt,
     },
@@ -164,7 +172,7 @@ export function createMockUser(input: { loginEmail: string; password: string; na
   const id = Math.max(0, ...mockUsers.map((user) => user.id)) + 1;
   const user: MockUser = {
     id, loginEmail: input.loginEmail, password: input.password, refreshToken: "",
-    profile: { id, name: input.name, login_email: input.loginEmail, role: "freshman", state: "njupter", email_type: input.loginEmail.endsWith("@sast.fun") ? "sast_email" : "njupt_email", phone_number: input.phoneNumber, qq_number: input.qqNumber, student_id: input.studentId, college: input.college, major: input.major, profile: { nickname: input.name, department: null, intro: null, email: input.loginEmail, avatar: null, blog_url: null, github_url: null }, identities: [], created_at: createdAt, updated_at: createdAt },
+    profile: { id, name: input.name, login_email: input.loginEmail, role: "freshman", state: "njupter", email_type: input.loginEmail.endsWith("@sast.fun") ? "sast_email" : "njupt_email", phone_number: input.phoneNumber, qq_number: input.qqNumber, student_id: input.studentId, college: input.college, major: input.major, profile: { nickname: input.name, department: null, intro: null, email: input.loginEmail, avatar: null, blog_url: null, github_url: null }, identities: [], profile_needs_completion: false, incomplete_fields: [], created_at: createdAt, updated_at: createdAt },
   };
   mockUsers.push(user);
   return user;

@@ -10,7 +10,7 @@ import { passwordLogin } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
 import { createSession, setSession } from "@/lib/token";
 import { safeSessionStorage } from "@/lib/safe-session-storage";
-import { consumeAuthNext } from "@/lib/auth-next";
+import { postAuthDestination } from "@/lib/auth-destination";
 import { useUserListStore } from "@/store/use-user-list-store";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import {
@@ -79,7 +79,7 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
       // consent request) lands the user where they were heading; a normal
       // sign-in goes to the homepage.
       safeSessionStorage.removeItem(LOGIN_ACCOUNT_KEY);
-      router.replace(consumeAuthNext("/home"));
+      router.replace(postAuthDestination(data, "/home"));
     } catch (error) {
       form.setError("password", { message: toApiError(error).message });
     } finally {

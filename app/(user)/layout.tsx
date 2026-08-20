@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { stashAuthNext } from "@/lib/auth-next";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { useCompletionRedirect, useUserLayoutProfile } from "@/hooks/use-completion-redirect";
 
 export default function UserLayout({
   children,
@@ -14,6 +15,10 @@ export default function UserLayout({
 }) {
   const router = useRouter();
   const status = useAuthSession();
+  // Hydrate the profile at layout scope so the cold-start completion check
+  // (below) has data as soon as the session resolves.
+  useUserLayoutProfile();
+  useCompletionRedirect();
 
   useEffect(() => {
     if (status === "unauthenticated") {
