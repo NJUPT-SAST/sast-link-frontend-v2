@@ -17,6 +17,8 @@ export function buildAdminUsersKey(params?: AdminUserListParams) {
   if (params?.department) search.set("department", params.department);
   if (params?.student_id) search.set("student_id", params.student_id);
   if (params?.keyword) search.set("keyword", params.keyword);
+  if (params?.needs_completion !== undefined)
+    search.set("needs_completion", String(params.needs_completion));
   return `${ADMIN_USERS_KEY}?${search.toString()}`;
 }
 
