@@ -67,15 +67,22 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   forgot_password_send_code: "发送找回密码验证码",
   reset_password: "重置密码",
   change_password: "修改密码",
+  refresh: "会话续期",
+  // 设备会话
+  logout_device: "登出设备",
+  evict_device: "吊销设备",
   // 资料与第三方身份
   update_profile: "更新资料",
   upload_avatar: "上传头像",
   oauth_bind: "绑定第三方账号",
   oauth_unbind: "解绑第三方账号",
+  oauth_login: "第三方登录",
+  oauth_login_exchange: "第三方登录码交换",
   // OAuth 授权流程
   oauth_authorize: "发起授权",
   oauth_token: "兑换令牌",
   oauth_revoke: "撤销令牌",
+  oauth_grant_revoke: "撤销授权",
   // 管理操作（后端以具体动作写入，不使用聚合值）
   admin_oauth_client_create: "创建 OAuth 客户端",
   admin_oauth_client_update: "更新 OAuth 客户端",
