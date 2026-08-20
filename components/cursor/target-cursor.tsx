@@ -296,7 +296,7 @@ export function TargetCursor() {
     "pointer-events-none absolute left-0 top-0 size-0 will-change-transform";
   const cornerClass = "tc-corner absolute left-0 top-0 size-3 border-current";
   return (
-    <div ref={rootRef} aria-hidden="true" data-testid="target-cursor" data-state="idle" className="pointer-events-none fixed left-0 top-0 z-[9999] size-0 mix-blend-difference text-white will-change-transform">
+    <div ref={rootRef} aria-hidden="true" data-testid="target-cursor" data-state="idle" className="pointer-events-none fixed left-0 top-0 z-[9999] size-0 text-foreground will-change-transform">
       <div ref={dotRef} className="pointer-events-none absolute left-0 top-0 size-1 rounded-full bg-current will-change-transform" />
       <div ref={tlRef} className={armClass}>
         <div className={`${cornerClass} tc-corner-tl border-l-[3px] border-t-[3px]`} />
