@@ -1,5 +1,6 @@
 # Stage 1: Build
-FROM node:20-alpine AS builder
+# Node 20 reached EOL 2026-04-30; 22 is the current LTS line.
+FROM node:22-alpine AS builder
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"

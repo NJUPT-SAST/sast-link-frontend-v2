@@ -39,10 +39,11 @@ jobs:
         with:
           version: 10
 
-      - name: Setup Node.js 20.x
+      # Node 20 reached EOL 2026-04-30; 22 is the current LTS line.
+      - name: Setup Node.js 22.x
         uses: actions/setup-node@v7
         with:
-          node-version: 20.x
+          node-version: 22.x
           cache: "pnpm"
 
       - name: Install dependencies
@@ -104,9 +105,3 @@ jobs:
           path: out/
           retention-days: 7
 
-      - name: Store build size
-        if: github.ref == 'refs/heads/master'
-        run: |
-          mkdir -p .github/size-snapshot
-          du -sb out/ | cut -f1 > .github/size-snapshot/build-size.txt
-        continue-on-error: true

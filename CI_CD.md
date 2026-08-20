@@ -9,8 +9,8 @@ This document summarizes the current GitHub Actions setup for `sast-link-fronten
 | `.github/workflows/ci.yml` | Main orchestrator for push / PR CI and deploy |
 | `.github/workflows/quality.yml` | Lint, type-check, audit, dependency freshness |
 | `.github/workflows/test.yml` | Jest coverage run, test/coverage artifact upload, Next.js build |
-| `.github/workflows/deploy.yml` | Docker build, SCP transfer, and server deployment |
-| `.github/workflows/release.yml` | Tag-triggered release pipeline that drafts a GitHub Release |
+| `.github/workflows/deploy.yml` | Docker build + registry push + server deploy (health-check + rollback) |
+| `.github/workflows/release.yml` | Tag-triggered release pipeline that drafts a GitHub Release (notes only) |
 
 ## Triggers
 
@@ -40,7 +40,7 @@ Checks:
 
 1. `pnpm lint` (blocking)
 2. `pnpm exec tsc --noEmit` (blocking)
-3. `pnpm audit --audit-level=moderate` (blocking)
+3. `pnpm audit --audit-level=critical` (blocking)
 4. `pnpm outdated` (non-blocking)
 
 ### `test.yml`
@@ -79,9 +79,7 @@ Pipeline:
 
 1. run `quality.yml`
 2. run `test.yml`
-3. download artifacts
-4. create draft GitHub Release
-5. attach `nextjs-build` artifacts
+3. create draft GitHub Release (changelog via `generate_release_notes`; no build artifacts attached)
 
 ## Build Relationship
 
@@ -101,17 +99,21 @@ Current workflows use:
 
 ## Coverage
 
-- Jest coverage thresholds are enforced in `jest.config.ts` (branches: 60%, functions: 60%, lines: 70%, statements: 70%)
+- Jest coverage thresholds are enforced in `jest.config.ts` (branches: 75%, functions: 60%, lines: 50%, statements: 50%)
 - Results are published as a step summary using `coverage-summary.json`
 - JUnit XML via `jest-junit` reporter for PR test result integration
 
-## Required Secrets
+## Required Secrets & Variables
 
 | Secret | Used By |
 | --- | --- |
 | `SERVER_HOST` | `deploy.yml` |
 | `SERVER_USER` | `deploy.yml` |
 | `SSH_PRIVATE_KEY` | `deploy.yml` |
+| `TCR_USERNAME` | `deploy.yml` (registry login, build & runtime) |
+| `TCR_PASSWORD` | `deploy.yml` (registry login, build & runtime) |
+
+Repository **variables** (public by design — they end up in the browser bundle, so they live in Settings > Variables, not Secrets): `API_BASE_URL`, `FEISHU_CLIENT_ID`, `GH_CLIENT_ID`, `FEISHU_BIND_REDIRECT_URI`, `GH_BIND_REDIRECT_URI`. `deploy.yml` fails loudly on master if any of them is missing, because `next.config.ts` uses `output: "export"` and inlines `NEXT_PUBLIC_*` at build time — there is no runtime patching.
 
 ## Maintenance Checklist
 
