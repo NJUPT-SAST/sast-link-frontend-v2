@@ -5,8 +5,11 @@ import { PhotoGlyphs } from "@/components/visual/photo-glyphs";
  *  through between the dots. */
 export function PhotoGlyphsSection() {
   return (
-    <section aria-hidden="true" className="relative">
-      <div className="mx-auto flex min-h-[70vh] w-full max-w-3xl items-center justify-center px-6 py-16">
+    <section
+      aria-hidden="true"
+      className="relative flex min-h-screen items-center justify-center"
+    >
+      <div className="mx-auto flex w-full max-w-3xl items-center justify-center px-6 py-16">
         <PhotoGlyphs className="block w-full" />
       </div>
     </section>

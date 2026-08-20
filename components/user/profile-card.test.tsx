@@ -67,17 +67,6 @@ describe("ProfileCard", () => {
     expect(screen.getByRole("textbox", { name: "签名" })).toBeInTheDocument();
   });
 
-  it("hides the edit affordance while editing", () => {
-    render(<ProfileCard />);
-    fireEvent.keyDown(screen.getByText("你还没留下签名哦～"), { key: "Enter" });
-    expect(screen.queryByLabelText("点击编辑签名")).not.toBeInTheDocument();
-  });
-
-  it("shows the edit affordance in the idle state", () => {
-    render(<ProfileCard />);
-    expect(screen.getByLabelText("点击编辑签名")).toBeInTheDocument();
-  });
-
   it("observes the card with a low threshold and top-bar root margin", () => {
     render(<ProfileCard />);
     expect(lastObserverOptions?.threshold).toBe(0.25);

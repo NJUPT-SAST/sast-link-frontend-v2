@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pencil } from "lucide-react";
 
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { updateUserProfile } from "@/lib/api/user";
@@ -97,19 +96,8 @@ export function ProfileCard() {
             }}
             className="group w-full cursor-pointer self-start rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
           >
-            <div className="mb-1 flex items-center justify-start gap-1.5">
+            <div className="mb-1 flex items-center justify-start">
               <span className="type-tech text-tertiary">签名</span>
-              {!editing && (
-                <span
-                  aria-label="点击编辑签名"
-                  // Always-visible pencil affordance — touch devices have no
-                  // hover, so the old text hint (opacity-0 until hover) was
-                  // invisible on mobile and the edit entry was easy to miss.
-                  className="flex items-center text-tertiary opacity-60 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-                >
-                  <Pencil size={12} />
-                </span>
-              )}
             </div>
             {editing ? (
               <input
