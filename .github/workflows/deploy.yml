@@ -130,8 +130,11 @@ jobs:
           echo "--- build args baked into the bundle ---"
           for value in "$API_BASE_URL" "$FEISHU_CLIENT_ID" "$GH_CLIENT_ID" \
                        "$FEISHU_BIND_REDIRECT_URI" "$GH_BIND_REDIRECT_URI"; do
+            # -F: these are literal URLs/client ids — a dot in a URL would act
+            # as a regex wildcard otherwise. Values are our own deployment
+            # config, so plain quoting keeps the shell command intact.
             if docker run --rm "$IMAGE_REF" \
-                 sh -c "grep -rq '$value' /var/www/_next/static/chunks/ 2>/dev/null"; then
+                 sh -c "grep -rFq -- \"$value\" /var/www/_next/static/chunks/ 2>/dev/null"; then
               echo "  ok       $value"
             else
               echo "::error::not baked into bundle: $value"; fail=1
@@ -147,10 +150,13 @@ jobs:
             sh -c 'wget -qO- http://127.0.0.1:80/ 2>/dev/null | wc -c')
           echo "  /                      $index_size bytes (index)"
 
-          # Derived from app/**/page.tsx — update when routes are added.
-          for route in /login /register /reset /home /profile /profile/edit \
+          # Derived from app/**/page.tsx (19 pages + index) — update when routes
+          # are added or removed.
+          for route in /login /register /reset /home \
+                       /profile /profile/edit \
                        /settings /settings/password /settings/apps \
-                       /admin /admin/users /admin/audit-logs /admin/oauth-clients \
+                       /admin /admin/users /admin/users/detail /admin/users/edit \
+                       /admin/audit-logs /admin/oauth-clients \
                        /oauth/callback /oauth/consent \
                        /oauth/bind/lark /oauth/bind/github; do
             size=$(docker exec verify \
