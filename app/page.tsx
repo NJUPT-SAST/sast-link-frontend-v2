@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/animation/page-transition";
-import { PhotoGlyphsSection } from "@/components/visual/photo-glyphs-section";
+import { PhotoGlyphs } from "@/components/visual/photo-glyphs";
 
 /** `/` — the product's entry: a slow-moving starfield (rendered globally in
  *  Providers) with the SAST Link title tilting subtly toward the cursor, and a
@@ -75,35 +75,37 @@ export default function Home() {
   // scrollbar that only disappears once the transform settles. Fade has no
   // transform, so no scrollbar.
   return (
-    <>
-      <PageTransition
-        variant="fade"
-        className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center"
+    <PageTransition
+      variant="fade"
+      className="relative flex min-h-screen flex-col items-center justify-center px-6 py-12 text-center"
+    >
+      <h1
+        ref={titleRef}
+        data-cursor-target
+        className="type-title1 text-5xl font-bold tracking-tight transition-[transform] will-change-transform sm:text-7xl"
       >
-        <h1
-          ref={titleRef}
-          data-cursor-target
-          className="type-title1 text-5xl font-bold tracking-tight transition-[transform] will-change-transform sm:text-7xl"
-        >
-          SAST Link
-        </h1>
-        <div className="mt-6 flex max-w-md flex-col items-center gap-2">
-          <p className="type-tech text-xs text-tertiary">WHAT IS SAST LINK ?</p>
-          <p className="type-tech text-xs text-tertiary/70">
-            SAST&apos;s OAuth &amp; profile provider.
-          </p>
-        </div>
-        <div className="mt-10 flex items-center gap-4">
-          <Button asChild variant="outline" size="lg">
-            <Link href="/register">注册</Link>
-          </Button>
-          <Button asChild size="lg">
-            <Link href="/login">登录</Link>
-          </Button>
-        </div>
-      </PageTransition>
-      {/* Second screen: full-viewport monochrome character-photo background. */}
-      <PhotoGlyphsSection />
-    </>
+        SAST Link
+      </h1>
+      <div className="mt-4 flex max-w-md flex-col items-center gap-2">
+        <p className="type-tech text-xs text-tertiary">WHAT IS SAST LINK ?</p>
+        <p className="type-tech text-xs text-tertiary/70">
+          SAST&apos;s OAuth &amp; profile provider.
+        </p>
+      </div>
+      <div className="mt-8 flex items-center gap-4">
+        <Button asChild variant="outline" size="lg">
+          <Link href="/register">注册</Link>
+        </Button>
+        <Button asChild size="lg">
+          <Link href="/login">登录</Link>
+        </Button>
+      </div>
+      {/* Character-photo of the brand mark, tucked under the CTAs in the same
+       *  hero so the whole composition (text + art) sits vertically centred on
+       *  one screen instead of a second half-height screen far down the page. */}
+      <div aria-hidden="true" className="mt-10 w-full max-w-2xl">
+        <PhotoGlyphs className="block w-full" />
+      </div>
+    </PageTransition>
   );
 }

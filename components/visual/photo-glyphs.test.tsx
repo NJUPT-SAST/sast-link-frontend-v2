@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 
 import { PhotoGlyphs } from "./photo-glyphs";
-import { PhotoGlyphsSection } from "./photo-glyphs-section";
+
 
 describe("PhotoGlyphs", () => {
   afterEach(() => {
@@ -17,14 +17,5 @@ describe("PhotoGlyphs", () => {
 
   it("does not crash when the 2d context is unavailable (jsdom)", () => {
     expect(() => render(<PhotoGlyphs />)).not.toThrow();
-  });
-});
-
-describe("PhotoGlyphsSection", () => {
-  it("renders a canvas inside a relative section", () => {
-    const { container } = render(<PhotoGlyphsSection />);
-    const section = container.querySelector("section");
-    expect(section?.className).toContain("relative");
-    expect(section?.querySelector("canvas")).toBeInTheDocument();
   });
 });
