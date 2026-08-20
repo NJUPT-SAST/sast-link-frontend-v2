@@ -48,23 +48,54 @@ export const DEPARTMENT_LABELS: Record<Department, string> = {
   outreach: "外联部",
 };
 
+/**
+ * 审计日志 action 值 → 中文标签。
+ *
+ * 键必须与后端写入 audit_logs.action 的字符串一致；列表展示用
+ * `AUDIT_ACTION_LABELS[log.action] ?? log.action` 回退原始值，
+ * 筛选下拉用 Object.entries(...) 生成选项，因此新增后端动作时必须同步补这里。
+ * 已按 sast-link-backend-v2 各服务审计写入点（internal/service/... audit 调用）核对。
+ */
 export const AUDIT_ACTION_LABELS: Record<string, string> = {
-  register: "注册",
+  // 会话/账号
   login: "登录",
   logout: "登出",
-  change_password: "修改密码",
+  register: "注册",
+  register_send_code: "发送注册验证码",
+  register_verify_code: "校验注册验证码",
+  bind_email_send_code: "发送绑定邮箱验证码",
+  forgot_password_send_code: "发送找回密码验证码",
   reset_password: "重置密码",
-  oauth_bind: "绑定第三方账号",
-  oauth_unbind: "解绑第三方账号",
+  change_password: "修改密码",
+  // 资料与第三方身份
   update_profile: "更新资料",
   upload_avatar: "上传头像",
-  admin_action: "管理操作",
+  oauth_bind: "绑定第三方账号",
+  oauth_unbind: "解绑第三方账号",
+  // OAuth 授权流程
+  oauth_authorize: "发起授权",
+  oauth_token: "兑换令牌",
+  oauth_revoke: "撤销令牌",
+  // 管理操作（后端以具体动作写入，不使用聚合值）
+  admin_oauth_client_create: "创建 OAuth 客户端",
+  admin_oauth_client_update: "更新 OAuth 客户端",
+  admin_oauth_client_rotate_secret: "轮换客户端密钥",
+  admin_oauth_client_delete: "删除 OAuth 客户端",
+  admin_user_update: "更新用户（管理）",
+  admin_user_delete: "删除用户（管理）",
+  admin_user_restore: "恢复用户（管理）",
 };
 
+/**
+ * 审计日志 resource 值 → 中文标签。键需与后端写入 audit_logs.resource 一致。
+ */
 export const AUDIT_RESOURCE_LABELS: Record<string, string> = {
   user: "用户",
   oauth_client: "OAuth 客户端",
   identity: "第三方身份",
+  session: "会话",
+  verification_code: "验证码",
+  oauth: "OAuth",
 };
 
 export function formatAdminDate(iso: string | null): string {
