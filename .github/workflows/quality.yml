@@ -35,7 +35,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 20.x
+          # Node 20 reached EOL 2026-04-30; 22 is the current LTS line.
+          node-version: 22.x
           cache: "pnpm"
 
       - name: Install dependencies
@@ -50,6 +51,8 @@ jobs:
       - name: Security audit
         run: pnpm audit --audit-level=critical
 
+      # Informational only — updates land via Dependabot. `|| true` keeps it
+      # green in every case so it never surfaces a misleading exit-1 annotation
+      # on an otherwise passing job.
       - name: Check for outdated dependencies
-        run: pnpm outdated
-        continue-on-error: true
+        run: pnpm outdated || true
