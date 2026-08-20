@@ -16,7 +16,7 @@ describe("DatePickerField", () => {
       <DatePickerField
         id="t"
         label="开始日期"
-        value="2026-06-15T00:00"
+        value="2026-06-15T00:00:00+08:00"
         onChange={jest.fn()}
       />,
     );
@@ -30,7 +30,7 @@ describe("DatePickerField", () => {
     expect(document.querySelector('[data-slot="calendar"]')).not.toBeNull();
   });
 
-  it("picks a day and reports the local-midnight value", () => {
+  it("picks a day and reports an RFC3339 local-midnight value", () => {
     const onChange = jest.fn();
     render(
       <DatePickerField
@@ -45,7 +45,7 @@ describe("DatePickerField", () => {
     fireEvent.click(screen.getByRole("button", { name: /june 15/i }));
 
     const reported = onChange.mock.calls[0][0] as string;
-    expect(reported).toBe("2026-06-15T00:00");
+    expect(reported).toMatch(/^2026-06-15T00:00:00[+-]\d{2}:\d{2}$/);
   });
 
   it("endOfDay reports the next-day boundary but displays the picked day", () => {
@@ -56,7 +56,7 @@ describe("DatePickerField", () => {
         label="结束日期"
         endOfDay
         defaultMonth={JUNE_2026}
-        value="2026-06-16T00:00"
+        value="2026-06-16T00:00:00+08:00"
         onChange={onChange}
       />,
     );
@@ -66,7 +66,7 @@ describe("DatePickerField", () => {
     fireEvent.click(screen.getByRole("button", { name: "结束日期" }));
     fireEvent.click(screen.getByRole("button", { name: /june 17/i }));
 
-    expect(onChange.mock.calls[0][0]).toBe("2026-06-18T00:00");
+    expect(onChange.mock.calls[0][0]).toMatch(/^2026-06-18T00:00:00[+-]\d{2}:\d{2}$/);
   });
 
   it("clears via the trailing icon", () => {
@@ -75,7 +75,7 @@ describe("DatePickerField", () => {
       <DatePickerField
         id="t"
         label="结束日期"
-        value="2026-06-15T00:00"
+        value="2026-06-15T00:00:00+08:00"
         onChange={jest.fn()}
         onClear={onClear}
       />,

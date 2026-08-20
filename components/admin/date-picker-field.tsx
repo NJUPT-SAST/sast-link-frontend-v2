@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 import {
   addDays,
   toDateInputValue,
-  toLocalInputValue,
   toLocalVisibleDay,
+  toRfc3339Local,
 } from "@/lib/admin/date-time";
 import {
   Calendar,
@@ -110,7 +110,7 @@ export function DatePickerField({
                   );
                   setLastPicked(picked);
                   const boundary = endOfDay ? addDays(picked, 1) : picked;
-                  onChange(toLocalInputValue(boundary));
+                  onChange(toRfc3339Local(boundary));
                 }
               }}
               disabled={(date) =>
