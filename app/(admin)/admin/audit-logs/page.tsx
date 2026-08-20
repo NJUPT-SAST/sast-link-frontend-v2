@@ -2,18 +2,29 @@
 
 import { useState, useCallback } from "react";
 import { useSWRConfig } from "swr";
+import { DownloadIcon, Loader2Icon } from "lucide-react";
 
 import type { AdminAuditLogListParams } from "@/lib/api/types";
 import { useAdminAuditLogs, buildAdminAuditLogsKey } from "@/hooks/use-admin-audit-logs";
+import { message } from "@/lib/message";
+import {
+  AUDIT_EXPORT_MAX_ROWS,
+  buildAuditExportFilename,
+  downloadAuditLogsJson,
+  fetchAllAuditLogs,
+  formatAuditLogsJson,
+} from "@/lib/admin/audit-export";
 import { AuditLogFilters } from "@/components/admin/audit-log-filters";
 import { AuditLogList } from "@/components/admin/audit-log-list";
 import { Pagination } from "@/components/admin/pagination";
 import { AdminErrorState } from "@/components/admin/error-state";
 import { DotLoading } from "@/components/ui/dot-loading";
+import { Button } from "@/components/ui/button";
 
 export default function AdminAuditLogsPage() {
   const { mutate } = useSWRConfig();
   const [filters, setFilters] = useState<AdminAuditLogListParams>({ page: 1, page_size: 20 });
+  const [exporting, setExporting] = useState(false);
   const { data, isLoading, error } = useAdminAuditLogs(filters);
 
   const handlePageChange = useCallback((page: number) => {
@@ -28,10 +39,47 @@ export default function AdminAuditLogsPage() {
     setFilters(next);
   }, []);
 
+  const handleExport = useCallback(async () => {
+    if (exporting) return;
+    const total = data?.total ?? 0;
+    if (total > AUDIT_EXPORT_MAX_ROWS) {
+      message.warning(`当前筛选结果共 ${total} 条，超过导出上限 ${AUDIT_EXPORT_MAX_ROWS} 条，请缩小筛选范围`);
+      return;
+    }
+    setExporting(true);
+    try {
+      const logs = await fetchAllAuditLogs(filters);
+      if (logs.length === 0) {
+        message.warning("当前筛选条件下没有可导出的日志");
+        return;
+      }
+      const json = formatAuditLogsJson(logs);
+      downloadAuditLogsJson(json, buildAuditExportFilename());
+      message.success(`已导出 ${logs.length} 条审计日志`);
+    } catch {
+      message.error("导出失败，请稍后重试");
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting, data, filters]);
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
+      <div className="flex items-center justify-between gap-4">
         <h1 className="type-title2">审计日志</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExport}
+          disabled={exporting || isLoading || !data}
+        >
+          {exporting ? (
+            <Loader2Icon className="size-4 animate-spin" />
+          ) : (
+            <DownloadIcon className="size-4" />
+          )}
+          {exporting ? "导出中…" : "导出当前筛选结果"}
+        </Button>
       </div>
 
       <AuditLogFilters value={filters} onChange={handleFiltersChange} />
