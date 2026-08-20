@@ -25,7 +25,9 @@ updates:
           - "react-dom"
           - "zustand"
           - "lucide-react"
-          - "@radix-ui/*"
+          # package.json depends on the `radix-ui` aggregate package, not the
+          # legacy @radix-ui/* split packages
+          - "radix-ui"
           - "class-variance-authority"
           - "clsx"
           - "tailwind-merge"
