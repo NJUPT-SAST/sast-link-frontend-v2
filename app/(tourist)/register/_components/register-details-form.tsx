@@ -11,7 +11,7 @@ import { toApiError } from "@/lib/api/errors";
 import { updateUserProfile } from "@/lib/api/user";
 import { message } from "@/lib/message";
 import { COLLEGES, type RegisterRequest } from "@/lib/api/types";
-import { consumeAuthNext } from "@/lib/auth-next";
+import { postAuthDestination } from "@/lib/auth-destination";
 import { createSession, setSession } from "@/lib/token";
 import { safeSessionStorage } from "@/lib/safe-session-storage";
 import { useUserListStore } from "@/store/use-user-list-store";
@@ -145,10 +145,12 @@ export default function RegisterDetailsForm({
       safeSessionStorage.removeItem("sast:register-ticket");
       safeSessionStorage.removeItem("sast:register-email");
       // A successful signup is a finished flow, but where the user lands depends
-      // on where they came from: a signup reached through an OAuth consent flow
-      // (consent → login → register) goes back to the pending consent request to
-      // finish the authorization; a direct signup falls through to /home.
-      router.replace(consumeAuthNext("/home"));
+      // on where they came from: an OAuth consent flow (consent → login →
+      // register) goes back to the pending consent request to finish the
+      // authorization; a direct signup falls through to /home (or, for an
+      // account still marked incomplete — e.g. a name that equals its student_id
+      // — to the guided completion page).
+      router.replace(postAuthDestination(data, "/home"));
     } catch (error) {
       const apiError = toApiError(error);
       form.setError("root", { message: apiError.message });

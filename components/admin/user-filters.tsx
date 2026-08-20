@@ -37,6 +37,12 @@ const DEPARTMENT_OPTIONS = [
   ...Object.entries(DEPARTMENT_LABELS).map(([value, label]) => ({ value, label })),
 ];
 
+const COMPLETION_OPTIONS = [
+  { value: "", label: "全部资料状态" },
+  { value: "true", label: "待补全" },
+  { value: "false", label: "已完整" },
+];
+
 const selectClass =
   "h-11 w-full rounded-lg border border-input bg-card px-3 text-[15px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
 
@@ -49,6 +55,10 @@ function toFormValues(params: AdminUserListParams): AdminUserFiltersFormValues {
     department: (params.department ?? "") as AdminUserFiltersFormValues["department"],
     student_id: params.student_id ?? "",
     keyword: params.keyword ?? "",
+    needs_completion:
+      params.needs_completion === undefined
+        ? ""
+        : (String(params.needs_completion) as "true" | "false"),
   };
 }
 
@@ -61,6 +71,8 @@ function toParams(values: AdminUserFiltersFormValues): AdminUserListParams {
     department: values.department ? (values.department as Exclude<typeof values.department, "">) : undefined,
     student_id: values.student_id?.trim() || undefined,
     keyword: values.keyword?.trim() || undefined,
+    needs_completion:
+      values.needs_completion === "" ? undefined : values.needs_completion === "true",
   };
 }
 
@@ -112,6 +124,16 @@ export function UserFilters({ value, onChange }: UserFiltersProps) {
         </label>
         <Select id="department" {...form.register("department")} className={selectClass}>
           {DEPARTMENT_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </Select>
+      </div>
+      <div className="w-[150px]">
+        <label htmlFor="needs_completion" className="mb-1.5 block text-xs text-muted-foreground">
+          资料状态
+        </label>
+        <Select id="needs_completion" {...form.register("needs_completion")} className={selectClass}>
+          {COMPLETION_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </Select>

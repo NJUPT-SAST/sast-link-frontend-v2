@@ -99,7 +99,19 @@ export function UserList({
             >
               #{user.id}
             </Link>
-            <div className="admin-cell-label-sm font-medium" data-label="姓名">{user.name}</div>
+            <div className="admin-cell-label-sm font-medium" data-label="姓名">
+              <span className="inline-flex items-center gap-2">
+                {user.name}
+                {user.profile_needs_completion && (
+                  <span
+                    title="该账号仍有必填资料待补全"
+                    className="inline-flex items-center rounded bg-amber-400/15 px-1.5 py-0.5 text-xs text-amber-600"
+                  >
+                    待补全
+                  </span>
+                )}
+              </span>
+            </div>
             <div className="admin-cell-label-sm text-tertiary" data-label="学号">{user.student_id}</div>
             <div className="admin-cell-label-sm truncate text-tertiary" data-label="邮箱">{user.login_email}</div>
             <div className="admin-cell-label-sm" data-label="角色">

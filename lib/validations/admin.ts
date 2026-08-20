@@ -48,6 +48,9 @@ export const adminUserFiltersSchema = z.object({
   department: departmentSchema.optional().or(z.literal("")),
   student_id: z.string().trim().optional(),
   keyword: z.string().trim().optional(),
+  /** Tri-state: "" = no filter (all), "true" = only accounts still needing
+   *  completion, "false" = only complete accounts. */
+  needs_completion: z.enum(["", "true", "false"]).optional(),
 });
 
 export type AdminUserFiltersFormValues = z.infer<typeof adminUserFiltersSchema>;

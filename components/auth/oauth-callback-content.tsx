@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 import { toApiError } from "@/lib/api/errors";
 import { exchangeLoginCode } from "@/lib/api/oauth";
 import { createSession, setSession } from "@/lib/token";
-import { consumeAuthNext } from "@/lib/auth-next";
+import { postAuthDestination } from "@/lib/auth-destination";
 import { useUserListStore } from "@/store/use-user-list-store";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { cn } from "@/lib/utils";
@@ -87,7 +87,7 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
           avatar: null,
           session,
         });
-        router.replace(consumeAuthNext("/home"));
+        router.replace(postAuthDestination(data, "/home"));
       })
       .catch((reason) => setExchangeError(toApiError(reason).message));
   }, [addAccount, code, resetProfile, router, searchParams, retryCount]);

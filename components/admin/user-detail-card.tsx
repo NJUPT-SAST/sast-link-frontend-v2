@@ -24,6 +24,17 @@ interface UserDetailCardProps {
   user: UserProfileData;
 }
 
+const INCOMPLETE_FIELD_LABELS: Record<string, string> = {
+  name: "姓名",
+  phone_number: "手机号",
+  qq_number: "QQ",
+  major: "专业",
+};
+
+function fieldLabels(fields: string[]): string[] {
+  return fields.map((f) => INCOMPLETE_FIELD_LABELS[f] ?? f);
+}
+
 export function UserDetailCard({ user }: UserDetailCardProps) {
   return (
     <div className="flex flex-col gap-8">
@@ -41,6 +52,14 @@ export function UserDetailCard({ user }: UserDetailCardProps) {
         <h2 className="type-tech mb-3 text-tertiary">身份与权限</h2>
         <Field label="角色" value={ROLE_LABELS[user.role] ?? user.role} />
         <Field label="状态" value={STATE_LABELS[user.state] ?? user.state} />
+        <Field
+          label="资料状态"
+          value={
+            user.profile_needs_completion
+              ? `待补全（${fieldLabels(user.incomplete_fields).join("、") || "未知字段"}）`
+              : "已完整"
+          }
+        />
         <Field
           label="部门"
           value={

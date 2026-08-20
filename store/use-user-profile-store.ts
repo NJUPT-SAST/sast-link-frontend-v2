@@ -30,6 +30,8 @@ export const initialProfile: UserProfileType = {
   blogUrl: null,
   githubUrl: null,
   identities: [],
+  profileNeedsCompletion: false,
+  incompleteFields: [],
 };
 
 export const useUserProfileStore = create<UserProfileState>()((set) => ({
