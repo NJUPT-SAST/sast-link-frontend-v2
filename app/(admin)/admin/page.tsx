@@ -77,15 +77,18 @@ function StatCard({
 function Donut({
   title,
   items,
-  total,
   labelMap,
 }: {
   title: string;
   items: [string, number][];
-  total: number;
   labelMap: Record<string, string>;
 }) {
   const sorted = [...items].sort((a, b) => b[1] - a[1]);
+  // The denominator is the donut's own segment sum rather than the account
+  // total: by_state spans every state (is_deleted included) while total counts
+  // live accounts only, so sharing total would push that ring past 100% and
+  // wrap the arc back over itself.
+  const total = sorted.reduce((sum, [, count]) => sum + count, 0);
   const r = 40;
   const circumference = 2 * Math.PI * r;
 
@@ -196,7 +199,6 @@ export default function AdminOverviewPage() {
                 Object.entries(data.users.by_role),
                 data.users.incomplete_by_role,
               )}
-              total={data.users.total}
               labelMap={ROLE_DONUT_LABELS}
             />
             <Donut
@@ -205,7 +207,6 @@ export default function AdminOverviewPage() {
                 Object.entries(data.users.by_state),
                 data.users.incomplete_by_state,
               )}
-              total={data.users.total}
               labelMap={STATE_DONUT_LABELS}
             />
             <Donut
@@ -217,7 +218,6 @@ export default function AdminOverviewPage() {
                 }
                 return items;
               })()}
-              total={data.users.total}
               labelMap={DEPARTMENT_LABELS}
             />
           </div>
