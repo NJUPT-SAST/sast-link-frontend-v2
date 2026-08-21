@@ -67,6 +67,44 @@ describe("AdminOverviewPage", () => {
     expect(screen.getByText("100")).toBeInTheDocument();
   });
 
+  // The state dimension spans every state (is_deleted included) while total
+  // counts live accounts only, so the ring cannot be scaled against total or its
+  // arcs overflow past 100% and wrap over themselves.
+  it("scales each ring against its own segment sum, not the account total", async () => {
+    mockGetAdminStats.mockResolvedValue({
+      data: {
+        data: {
+          ...statsData,
+          users: {
+            ...statsData.users,
+            total: 51, // live accounts only
+            by_state: { on_sast: 28, njupter: 19, retired_sast: 4, is_deleted: 2 },
+            incomplete_by_state: { njupter: 8 },
+          },
+        },
+      },
+    });
+
+    renderPage();
+    await waitFor(() => expect(screen.getByText("状态分布")).toBeInTheDocument());
+
+    // Segments sum to 53 (28+11+8+4+2) against a live total of 51. Each arc's
+    // dash length must still fit the circumference exactly once.
+    // Scope by heading rather than svg order: the stat-card icons are svgs too.
+    const stateRing = screen
+      .getByText("状态分布")
+      .closest("section")!
+      .querySelector("svg")!;
+    const circumference = 2 * Math.PI * 40;
+    let dashTotal = 0;
+    for (const circle of Array.from(stateRing.querySelectorAll("circle"))) {
+      const dash = circle.getAttribute("stroke-dasharray");
+      if (!dash) continue; // the track circle carries no dash array
+      dashTotal += Number(dash.split(" ")[0]);
+    }
+    expect(dashTotal).toBeCloseTo(circumference, 5);
+  });
+
   it("omits the 未补全 slice entirely when no account is incomplete", async () => {
     mockGetAdminStats.mockResolvedValue({
       data: {

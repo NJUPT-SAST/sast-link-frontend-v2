@@ -30,12 +30,30 @@ describe("mock GET /admin/stats user aggregation", () => {
   it("counts only the unfinished non-lecturer/admin accounts in the role bucket", async () => {
     const users = await fetchStats();
 
-    // The seed set has exactly one flagged account: a freshman in njupter.
-    expect(users.incomplete_by_role).toEqual({ freshman: 1 });
-    expect(users.incomplete_by_state).toEqual({ njupter: 1 });
-    // It is inside its true buckets too — the fold, not the API, subtracts it.
-    expect(users.by_role.freshman).toBe(1);
-    expect(users.by_state.njupter).toBe(1);
+    // Derive the expectation from the fixtures so demo-volume changes to the
+    // seed do not have to be mirrored here as hand-counted literals.
+    const live = mockUsers
+      .map((user) => user.profile)
+      .filter((profile) => profile.state !== "is_deleted");
+    const expectedByRole: Record<string, number> = {};
+    const expectedByState: Record<string, number> = {};
+    for (const profile of live) {
+      if (!profile.profile_needs_completion) continue;
+      if (profile.role !== "lecturer" && profile.role !== "admin") {
+        expectedByRole[profile.role] = (expectedByRole[profile.role] ?? 0) + 1;
+      }
+      if (profile.state === "njupter") {
+        expectedByState[profile.state] = (expectedByState[profile.state] ?? 0) + 1;
+      }
+    }
+
+    expect(users.incomplete_by_role).toEqual(expectedByRole);
+    expect(users.incomplete_by_state).toEqual(expectedByState);
+    // The seed must actually exercise both the fold and the exclusions.
+    expect(Object.keys(users.incomplete_by_role).length).toBeGreaterThan(0);
+    expect(users.incomplete_by_role.lecturer).toBeUndefined();
+    expect(users.incomplete_by_role.admin).toBeUndefined();
+    expect(Object.keys(users.incomplete_by_state)).toEqual(["njupter"]);
   });
 
   it("keeps every incomplete count inside its own true bucket", async () => {
@@ -51,15 +69,19 @@ describe("mock GET /admin/stats user aggregation", () => {
 
   it("excludes deleted accounts from total and the incomplete buckets, but keeps them in by_state", async () => {
     const before = await fetchStats();
-    const flaggedId = mockUsers.find(
-      (user) => user.profile.profile_needs_completion,
-    )?.profile.id;
-    expect(flaggedId).toBeDefined();
+    // Pick a live flagged njupter freshman so both buckets must lose exactly one.
+    const flagged = mockUsers.find(
+      (user) =>
+        user.profile.profile_needs_completion &&
+        user.profile.state === "njupter" &&
+        user.profile.role === "freshman",
+    );
+    expect(flagged).toBeDefined();
 
     // Soft deletion is a state bit, matching the backend's model. Mutate through
     // the handler rather than the fixture so jest.setup's resetUsers() undoes it
     // (the array is module-level state shared by every suite in this worker).
-    const deletion = await fetch(`${API_BASE_URL}/admin/users/${flaggedId}`, {
+    const deletion = await fetch(`${API_BASE_URL}/admin/users/${flagged!.profile.id}`, {
       method: "DELETE",
       headers: { Authorization: "Bearer access-2-0" },
     });
@@ -68,10 +90,14 @@ describe("mock GET /admin/stats user aggregation", () => {
     const after = await fetchStats();
 
     expect(after.total).toBe(before.total - 1);
-    expect(after.incomplete_by_role).toEqual({});
-    expect(after.incomplete_by_state).toEqual({});
+    expect(after.incomplete_by_role.freshman).toBe(
+      (before.incomplete_by_role.freshman ?? 0) - 1,
+    );
+    expect(after.incomplete_by_state.njupter).toBe(
+      (before.incomplete_by_state.njupter ?? 0) - 1,
+    );
     // by_state deliberately spans every state so the deleted count stays visible.
-    expect(after.by_state.is_deleted).toBe(1);
+    expect(after.by_state.is_deleted).toBe((before.by_state.is_deleted ?? 0) + 1);
     expect(
       Object.values(after.by_state).reduce((sum, count) => sum + count, 0),
     ).toBe(Object.values(before.by_state).reduce((sum, count) => sum + count, 0));

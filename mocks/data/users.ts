@@ -1,7 +1,10 @@
 import type {
   College,
+  Department,
   Identity,
   UserProfileData,
+  UserRole,
+  UserState,
 } from "@/lib/api/types";
 import { DEFAULT_AVATAR } from "@/lib/constants/profile";
 
@@ -186,6 +189,106 @@ export const mockUsers: MockUser[] = [
     },
   },
 ];
+
+// --- Demo volume ---------------------------------------------------------
+//
+// The four hand-written accounts above are the ones tests and flows log in as;
+// they are too few to read as a distribution in the admin overview donuts. The
+// seed below pads the set so the role / state / department mix (and the folded
+// 未补全 slice) is legible while developing against the mock.
+//
+// Deterministic on purpose: every field is derived from the index, so a reload
+// shows the same numbers and the donut percentages do not drift between runs.
+interface SeedSpec {
+  count: number;
+  role: UserRole;
+  state: UserState;
+  department: Department | null;
+  /** Migration debris (V010): blank required fields and name equal to student_id. */
+  incomplete?: boolean;
+}
+
+// Chosen so each donut has a clear majority plus a visible 未补全 slice:
+// roles freshman 18 / member 22 / lecturer 4 / admin 2 (+ the 4 fixtures),
+// states njupter 20 / on_sast 20 / retired_sast 4 / is_deleted 2,
+// unfinished 9 = 7 freshman + 2 member, of which 7 are njupter.
+const SEED_SPECS: SeedSpec[] = [
+  { count: 11, role: "freshman", state: "njupter", department: null },
+  { count: 7, role: "freshman", state: "njupter", department: null, incomplete: true },
+  { count: 9, role: "member", state: "on_sast", department: "software" },
+  { count: 7, role: "member", state: "on_sast", department: "media" },
+  { count: 2, role: "member", state: "on_sast", department: "software", incomplete: true },
+  { count: 4, role: "member", state: "retired_sast", department: "software" },
+  { count: 3, role: "lecturer", state: "on_sast", department: "software" },
+  // An unfinished lecturer and admin: both must stay out of the 未补全 slice,
+  // so the mock exercises the exclusion rather than only the happy path.
+  { count: 1, role: "lecturer", state: "on_sast", department: "media", incomplete: true },
+  { count: 1, role: "admin", state: "on_sast", department: "software" },
+  { count: 1, role: "admin", state: "on_sast", department: "software", incomplete: true },
+  // Soft-deleted accounts are a state bit, not a deleted_at column: they must
+  // drop out of total / by_role yet stay visible in by_state.
+  { count: 1, role: "member", state: "is_deleted", department: "software" },
+  { count: 1, role: "freshman", state: "is_deleted", department: null, incomplete: true },
+];
+
+const SEED_COLLEGE: College = "计算机学院、软件学院、网络空间安全学院";
+const SEED_MAJORS = ["软件工程", "计算机科学与技术", "信息安全", "网络工程"];
+const SEED_SURNAMES = ["赵", "钱", "孙", "李", "周", "吴", "郑", "王", "冯", "陈"];
+const SEED_GIVEN_NAMES = ["子轩", "雨桐", "思远", "欣怡", "浩然", "梦琪", "宇航", "佳怡"];
+
+function seedUser(index: number, spec: SeedSpec): MockUser {
+  // Ids continue after the hand-written fixtures so login tokens stay stable.
+  const id = 100 + index;
+  const studentId = `B240${String(41000 + index)}`;
+  const loginEmail = `${studentId.toLowerCase()}@njupt.edu.cn`;
+  const name = spec.incomplete
+    ? studentId // V010 flags name === student_id as debris
+    : `${SEED_SURNAMES[index % SEED_SURNAMES.length]}${SEED_GIVEN_NAMES[index % SEED_GIVEN_NAMES.length]}`;
+
+  return {
+    id,
+    loginEmail,
+    password: "Password123",
+    refreshToken: `refresh-${studentId.toLowerCase()}`,
+    profile: {
+      id,
+      name,
+      login_email: loginEmail,
+      role: spec.role,
+      state: spec.state,
+      email_type: "njupt_email",
+      phone_number: spec.incomplete ? "" : `138${String(10000000 + index * 7)}`,
+      qq_number: spec.incomplete ? "" : String(100000 + index * 13),
+      student_id: studentId,
+      college: SEED_COLLEGE,
+      major: spec.incomplete ? "" : SEED_MAJORS[index % SEED_MAJORS.length],
+      profile: {
+        nickname: spec.incomplete ? "" : name,
+        department: spec.department,
+        intro: null,
+        email: loginEmail,
+        avatar: DEFAULT_AVATAR,
+        blog_url: null,
+        github_url: null,
+      },
+      identities: [],
+      profile_needs_completion: spec.incomplete === true,
+      incomplete_fields: spec.incomplete
+        ? ["name", "phone_number", "qq_number", "major"]
+        : [],
+      created_at: createdAt,
+      updated_at: createdAt,
+    },
+  };
+}
+
+let seedIndex = 0;
+for (const spec of SEED_SPECS) {
+  for (let n = 0; n < spec.count; n += 1) {
+    mockUsers.push(seedUser(seedIndex, spec));
+    seedIndex += 1;
+  }
+}
 
 export function identity(id: number, provider: Identity["provider"], providerId: string): Identity {
   return { id, provider, provider_id: providerId, identity_data: null, token_expires_at: null, created_at: createdAt, updated_at: createdAt };
