@@ -148,6 +148,43 @@ export const mockUsers: MockUser[] = [
       updated_at: createdAt,
     },
   },
+  {
+    id: 5,
+    loginEmail: "b24040525@njupt.edu.cn",
+    password: "Password123",
+    refreshToken: "refresh-b24040525",
+    profile: {
+      // Migration-debris account (V010): blank major/phone/qq and name equal to
+      // student_id, kept live in the njupter state so it exercises the admin
+      // overview's "未补全" fold (GET /admin/stats incomplete_by_role /
+      // incomplete_by_state) against the same shape the backend flags.
+      id: 5,
+      name: "B24040525",
+      login_email: "b24040525@njupt.edu.cn",
+      role: "freshman",
+      state: "njupter",
+      email_type: "njupt_email",
+      phone_number: "",
+      qq_number: "",
+      student_id: "B24040525",
+      college: "计算机学院、软件学院、网络空间安全学院",
+      major: "",
+      profile: {
+        nickname: "",
+        department: null,
+        intro: null,
+        email: "b24040525@njupt.edu.cn",
+        avatar: DEFAULT_AVATAR,
+        blog_url: null,
+        github_url: null,
+      },
+      identities: [],
+      profile_needs_completion: true,
+      incomplete_fields: ["name", "phone_number", "qq_number", "major"],
+      created_at: createdAt,
+      updated_at: createdAt,
+    },
+  },
 ];
 
 export function identity(id: number, provider: Identity["provider"], providerId: string): Identity {

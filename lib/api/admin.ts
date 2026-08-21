@@ -24,6 +24,17 @@ export interface AdminStatsData {
     by_state: Record<string, number>;
     by_department: Record<string, number>;
     no_department: number;
+    /** Live accounts still V010-flagged incomplete whose role is not lecturer
+     *  or admin, grouped by role. The overview subtracts these from by_role
+     *  and folds them into a single 未补全 slice.
+     *
+     *  Optional: these two keys ship in a later backend release than this
+     *  field, so a frontend deployed first must render without them. */
+    incomplete_by_role?: Record<string, number>;
+    /** Live accounts still incomplete in the in-school student state (njupter),
+     *  grouped by state. Subtracted from by_state into 未补全. Optional for the
+     *  same deploy-order reason as incomplete_by_role. */
+    incomplete_by_state?: Record<string, number>;
   };
   clients: { total: number; active: number };
   audit: { recent: AdminAuditLog[] };

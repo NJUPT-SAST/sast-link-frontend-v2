@@ -19,6 +19,7 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Zustand stores for account list, profile state, and homepage panel state
 - Axios-based API client and auth/user API wrappers
 - Jest 30 + Testing Library + MSW test setup
+- Admin console overview folds V010-flagged incomplete-profile accounts into a single 未补全 slice in the role and state donuts (subtracted from their true buckets, so the total denominator is unchanged); consumes the new `incomplete_by_role` / `incomplete_by_state` fields from `GET /admin/stats`
 - GitHub Actions workflows for quality checks, coverage runs, static export build, and draft releases
 
 ### Changed
