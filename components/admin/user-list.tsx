@@ -28,6 +28,42 @@ const ROLE_BADGE: Record<string, string> = {
   freshman: "bg-muted text-muted-foreground",
 };
 
+// The nine fixed columns add up to ~968px plus the flexible name column, so the
+// table only fits from lg. Below that each user renders as a two-column card
+// (mirroring components/admin/oauth-client-list.tsx) instead of collapsing into
+// one undifferentiated stack of eight labelled lines.
+//
+// Written out as full literal class tokens: Tailwind scans source text, so these
+// arbitrary values cannot be assembled at runtime.
+const GRID_COLS = "grid-cols-[60px_1fr_120px_180px_80px_100px_80px_180px]";
+const GRID_COLS_LG = "lg:grid-cols-[60px_1fr_120px_180px_80px_100px_80px_180px]";
+const GRID_COLS_MANAGE =
+  "grid-cols-[40px_60px_1fr_120px_180px_80px_100px_80px_180px]";
+const GRID_COLS_MANAGE_LG =
+  "lg:grid-cols-[40px_60px_1fr_120px_180px_80px_100px_80px_180px]";
+
+/** On a card a cell spans the full width; the table restores it to one column. */
+const CELL_SPAN_FULL = "col-span-2 lg:col-span-1";
+
+// Card order: name leads (full width), then ID + 学号 side by side, 邮箱 full
+// width, 角色 + 部门 side by side, 状态 and actions full width. DOM order must stay
+// in the desktop column order, so mobile reordering goes through order-*.
+// Literal per index — Tailwind cannot see a runtime `order-${n}`.
+const ORDER_ID = "order-2 lg:order-none";
+const ORDER_NAME = "order-first lg:order-none";
+const ORDER_STUDENT_ID = "order-3 lg:order-none";
+const ORDER_EMAIL = "order-4 lg:order-none";
+const ORDER_ROLE = "order-5 lg:order-none";
+const ORDER_DEPARTMENT = "order-6 lg:order-none";
+const ORDER_STATE = "order-7 lg:order-none";
+const ORDER_ACTIONS = "order-8 lg:order-none";
+
+// The select checkbox is pulled out of the card flow and pinned to the top-right
+// corner: as a grid child it would claim a whole 1fr column and leave half the
+// first row empty. From lg it returns to its own narrow table column.
+const CHECKBOX_FLOAT =
+  "absolute right-0 top-4 lg:static lg:right-auto lg:top-auto";
+
 export function UserList({
   users,
   loading = false,
@@ -52,8 +88,8 @@ export function UserList({
     <div className="border-t border-hairline">
       <div
         className={cn(
-          "hidden grid-cols-[60px_1fr_120px_180px_80px_100px_80px_180px] gap-4 border-b border-hairline py-3 text-xs text-tertiary sm:grid",
-          canManage && "sm:grid-cols-[40px_60px_1fr_120px_180px_80px_100px_80px_180px]",
+          "hidden gap-4 border-b border-hairline py-3 text-xs text-tertiary lg:grid",
+          canManage ? GRID_COLS_MANAGE : GRID_COLS,
         )}
       >
         {canManage && (
@@ -80,9 +116,8 @@ export function UserList({
           <div
             key={user.id}
             className={cn(
-              "grid grid-cols-1 gap-2 border-b border-hairline py-4 text-sm sm:grid-cols-[60px_1fr_120px_180px_80px_100px_80px_180px] sm:items-center sm:gap-4",
-              canManage &&
-                "sm:grid-cols-[40px_60px_1fr_120px_180px_80px_100px_80px_180px]",
+              "relative grid grid-cols-2 gap-x-4 gap-y-2 border-b border-hairline py-4 text-sm lg:items-center lg:gap-4",
+              canManage ? GRID_COLS_MANAGE_LG : GRID_COLS_LG,
               selected && "bg-accent/40",
             )}
           >
@@ -92,17 +127,29 @@ export function UserList({
                 aria-label={`选择 ${user.name}`}
                 checked={selected}
                 onChange={() => onToggleSelect?.(user.id)}
-                className="size-4 accent-foreground"
+                className={cn(CHECKBOX_FLOAT, "size-4 accent-foreground")}
               />
             )}
             <Link
               href={adminUserDetailHref(user.id, listQuery)}
-              className="admin-cell-label-sm text-tertiary transition-colors hover:text-link hover:underline"
+              className={cn(
+                ORDER_ID,
+                "admin-cell-label-lg text-tertiary transition-colors hover:text-link hover:underline",
+              )}
               data-label="ID"
             >
               #{user.id}
             </Link>
-            <div className="admin-cell-label-sm font-medium" data-label="姓名">
+            <div
+              className={cn(
+                ORDER_NAME,
+                CELL_SPAN_FULL,
+                // Leaves room for the floated checkbox on the card.
+                canManage && "pr-8 lg:pr-0",
+                "admin-cell-label-lg font-medium lg:min-w-0",
+              )}
+              data-label="姓名"
+            >
               <span className="inline-flex items-center gap-2">
                 {user.name}
                 {user.profile_needs_completion && (
@@ -115,9 +162,24 @@ export function UserList({
                 )}
               </span>
             </div>
-            <div className="admin-cell-label-sm text-tertiary" data-label="学号">{user.student_id}</div>
-            <div className="admin-cell-label-sm truncate text-tertiary" data-label="邮箱">{user.login_email}</div>
-            <div className="admin-cell-label-sm" data-label="角色">
+            <div
+              className={cn(ORDER_STUDENT_ID, "admin-cell-label-lg text-tertiary")}
+              data-label="学号"
+            >
+              {user.student_id}
+            </div>
+            <div
+              className={cn(
+                ORDER_EMAIL,
+                CELL_SPAN_FULL,
+                "admin-cell-label-lg truncate text-tertiary lg:min-w-0",
+              )}
+              data-label="邮箱"
+              title={user.login_email}
+            >
+              {user.login_email}
+            </div>
+            <div className={cn(ORDER_ROLE, "admin-cell-label-lg")} data-label="角色">
               <span
                 className={cn(
                   "inline-flex w-fit items-center rounded px-2 py-0.5 text-xs",
@@ -127,13 +189,25 @@ export function UserList({
                 {ROLE_LABELS[user.role] ?? user.role}
               </span>
             </div>
-            <div className="admin-cell-label-sm text-tertiary" data-label="部门">
+            <div
+              className={cn(ORDER_DEPARTMENT, "admin-cell-label-lg text-tertiary")}
+              data-label="部门"
+            >
               {user.profile?.department ? DEPARTMENT_LABELS[user.profile.department] ?? user.profile.department : "-"}
             </div>
-            <div className="admin-cell-label-sm text-tertiary" data-label="状态">
+            <div
+              className={cn(ORDER_STATE, "admin-cell-label-lg text-tertiary")}
+              data-label="状态"
+            >
               {STATE_LABELS[user.state] ?? user.state}
             </div>
-            <div className="flex items-center justify-end gap-2">
+            <div
+              className={cn(
+                ORDER_ACTIONS,
+                CELL_SPAN_FULL,
+                "flex items-center justify-end gap-2 whitespace-nowrap",
+              )}
+            >
               <Button variant="ghost" size="sm" asChild>
                 <Link href={adminUserDetailHref(user.id, listQuery)}>查看</Link>
               </Button>

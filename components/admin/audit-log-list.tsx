@@ -59,6 +59,25 @@ function summarizeDetail(detail: Record<string, unknown> | null | undefined): st
   return parts.join(" · ");
 }
 
+// Seven fixed-ish columns only fit from lg; below that each log renders as a
+// two-column card (mirroring components/admin/oauth-client-list.tsx) instead of
+// stacking into seven labelled lines. Literal class tokens — Tailwind scans
+// source text and cannot see runtime-assembled arbitrary values or `order-${n}`.
+const GRID_COLS = "grid-cols-[150px_90px_120px_110px_70px_1fr_60px]";
+const GRID_COLS_LG = "lg:grid-cols-[150px_90px_120px_110px_70px_1fr_60px]";
+/** On a card a cell spans the full width; the table restores it to one column. */
+const CELL_SPAN_FULL = "col-span-2 lg:col-span-1";
+
+// Card order: 操作 leads (it is what the row is about), then 时间 + 结果 side by
+// side, 用户 + 资源 side by side, 信息 full width, JSON last.
+const ORDER_TIME = "order-2 lg:order-none";
+const ORDER_USER = "order-4 lg:order-none";
+const ORDER_ACTION = "order-first lg:order-none";
+const ORDER_RESOURCE = "order-5 lg:order-none";
+const ORDER_SUCCESS = "order-3 lg:order-none";
+const ORDER_DETAIL = "order-6 lg:order-none";
+const ORDER_JSON = "order-7 lg:order-none";
+
 export function AuditLogList({ logs }: AuditLogListProps) {
   const [rawLog, setRawLog] = useState<AdminAuditLog | null>(null);
 
@@ -72,7 +91,12 @@ export function AuditLogList({ logs }: AuditLogListProps) {
 
   return (
     <div className="border-t border-hairline">
-      <div className="hidden grid-cols-[150px_90px_120px_110px_70px_1fr_60px] gap-4 border-b border-hairline py-3 text-xs text-tertiary lg:grid">
+      <div
+        className={cn(
+          "hidden gap-4 border-b border-hairline py-3 text-xs text-tertiary lg:grid",
+          GRID_COLS,
+        )}
+      >
         <div>时间</div>
         <div>用户 ID</div>
         <div>操作</div>
@@ -84,15 +108,36 @@ export function AuditLogList({ logs }: AuditLogListProps) {
       {logs.map((log) => (
         <div
           key={log.id}
-          className="grid grid-cols-1 gap-2 border-b border-hairline py-4 text-sm lg:grid-cols-[150px_90px_120px_110px_70px_1fr_60px] lg:items-center lg:gap-4"
+          className={cn(
+            "grid grid-cols-2 gap-x-4 gap-y-2 border-b border-hairline py-4 text-sm lg:items-center lg:gap-4",
+            GRID_COLS_LG,
+          )}
         >
-          <div className="admin-cell-label-lg text-tertiary" data-label="时间">{formatAdminDate(log.created_at)}</div>
-          <div className="admin-cell-label-lg text-tertiary" data-label="用户 ID">
+          <div
+            className={cn(ORDER_TIME, "admin-cell-label-lg text-tertiary")}
+            data-label="时间"
+          >
+            {formatAdminDate(log.created_at)}
+          </div>
+          <div
+            className={cn(ORDER_USER, "admin-cell-label-lg truncate text-tertiary lg:min-w-0")}
+            data-label="用户 ID"
+          >
             {log.user_name ? `${log.user_name} (${log.user_id})` : log.user_id ?? "-"}
           </div>
-          <div className="admin-cell-label-lg" data-label="操作">{AUDIT_ACTION_LABELS[log.action] ?? log.action}</div>
-          <div className="admin-cell-label-lg text-tertiary" data-label="资源">{AUDIT_RESOURCE_LABELS[log.resource] ?? log.resource}</div>
-          <div className="admin-cell-label-lg" data-label="结果">
+          <div
+            className={cn(ORDER_ACTION, CELL_SPAN_FULL, "admin-cell-label-lg font-medium lg:font-normal")}
+            data-label="操作"
+          >
+            {AUDIT_ACTION_LABELS[log.action] ?? log.action}
+          </div>
+          <div
+            className={cn(ORDER_RESOURCE, "admin-cell-label-lg text-tertiary")}
+            data-label="资源"
+          >
+            {AUDIT_RESOURCE_LABELS[log.resource] ?? log.resource}
+          </div>
+          <div className={cn(ORDER_SUCCESS, "admin-cell-label-lg")} data-label="结果">
             <span
               className={cn(
                 "inline-flex items-center rounded px-2 py-0.5 text-xs",
@@ -102,8 +147,18 @@ export function AuditLogList({ logs }: AuditLogListProps) {
               {log.success ? "成功" : "失败"}
             </span>
           </div>
-          <div className="admin-cell-label-lg truncate text-tertiary" data-label="信息">{summarizeDetail(log.detail)}</div>
-          <div>
+          <div
+            className={cn(
+              ORDER_DETAIL,
+              CELL_SPAN_FULL,
+              "admin-cell-label-lg truncate text-tertiary lg:min-w-0",
+            )}
+            data-label="信息"
+            title={summarizeDetail(log.detail)}
+          >
+            {summarizeDetail(log.detail)}
+          </div>
+          <div className={cn(ORDER_JSON, CELL_SPAN_FULL, "lg:col-span-1")}>
             <button
               type="button"
               onClick={() => setRawLog(log)}
