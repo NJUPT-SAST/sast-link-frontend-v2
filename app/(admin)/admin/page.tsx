@@ -9,6 +9,11 @@ import { ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
 import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
 import { AdminErrorState } from "@/components/admin/error-state";
 import { DotLoading } from "@/components/ui/dot-loading";
+import {
+  foldIncompleteCounts,
+  INCOMPLETE_BUCKET_KEY,
+  INCOMPLETE_BUCKET_LABEL,
+} from "@/lib/admin/stats-incomplete";
 
 // A restrained categorical palette that reads on both light and dark.
 const PALETTE = [
@@ -25,6 +30,18 @@ const PALETTE = [
 function pickLabel(map: Record<string, string>, key: string): string {
   return map[key] ?? key;
 }
+
+// The folded incomplete bucket is a synthetic key, not a backend enum value, so
+// both donuts extend their enum label map with it rather than relying on
+// pickLabel's passthrough.
+const ROLE_DONUT_LABELS = {
+  ...ROLE_LABELS,
+  [INCOMPLETE_BUCKET_KEY]: INCOMPLETE_BUCKET_LABEL,
+};
+const STATE_DONUT_LABELS = {
+  ...STATE_LABELS,
+  [INCOMPLETE_BUCKET_KEY]: INCOMPLETE_BUCKET_LABEL,
+};
 
 function StatCard({
   icon,
@@ -60,15 +77,18 @@ function StatCard({
 function Donut({
   title,
   items,
-  total,
   labelMap,
 }: {
   title: string;
   items: [string, number][];
-  total: number;
   labelMap: Record<string, string>;
 }) {
   const sorted = [...items].sort((a, b) => b[1] - a[1]);
+  // The denominator is the donut's own segment sum rather than the account
+  // total: by_state spans every state (is_deleted included) while total counts
+  // live accounts only, so sharing total would push that ring past 100% and
+  // wrap the arc back over itself.
+  const total = sorted.reduce((sum, [, count]) => sum + count, 0);
   const r = 40;
   const circumference = 2 * Math.PI * r;
 
@@ -175,15 +195,19 @@ export default function AdminOverviewPage() {
           <div className="grid gap-4 lg:grid-cols-3">
             <Donut
               title="角色分布"
-              items={Object.entries(data.users.by_role)}
-              total={data.users.total}
-              labelMap={ROLE_LABELS}
+              items={foldIncompleteCounts(
+                Object.entries(data.users.by_role),
+                data.users.incomplete_by_role,
+              )}
+              labelMap={ROLE_DONUT_LABELS}
             />
             <Donut
               title="状态分布"
-              items={Object.entries(data.users.by_state)}
-              total={data.users.total}
-              labelMap={STATE_LABELS}
+              items={foldIncompleteCounts(
+                Object.entries(data.users.by_state),
+                data.users.incomplete_by_state,
+              )}
+              labelMap={STATE_DONUT_LABELS}
             />
             <Donut
               title="部门分布"
@@ -194,7 +218,6 @@ export default function AdminOverviewPage() {
                 }
                 return items;
               })()}
-              total={data.users.total}
               labelMap={DEPARTMENT_LABELS}
             />
           </div>

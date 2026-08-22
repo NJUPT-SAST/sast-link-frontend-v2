@@ -9,7 +9,10 @@ import type {
   AdminUpdateOAuthClientRequest,
   AdminUpdateUserRequest,
   AdminUserListParams,
+  Department,
   UserProfileData,
+  UserRole,
+  UserState,
 } from "@/lib/api/types";
 import { adminMockAuditLogs, adminMockOAuthClients } from "../data/admin";
 import { findUserByAccessToken, mockUsers } from "../data/users";
@@ -78,6 +81,63 @@ function generateClientSecret(): string {
   return randomMockValue(32, CLIENT_SECRET_ALPHABET);
 }
 
+/**
+ * Mirrors GET /admin/stats: aggregate counts over the mock users, plus the
+ * incomplete-profile buckets the overview folds into a "未补全" donut slice (role
+ * excludes lecturer/admin; state is njupter-only), matching the backend's
+ * UserStats shape (internal/repository/admin_user.go).
+ *
+ * Soft deletion is a state bit here too, so total / by_role / by_department /
+ * no_department and both incomplete buckets count live accounts only, while
+ * by_state deliberately keeps every state (is_deleted included) so the console
+ * can still show how many accounts were deleted.
+ */
+function buildUserStats() {
+  const all = mockUsers.map((item) => item.profile);
+
+  const byRole: Partial<Record<UserRole, number>> = {};
+  const byState: Partial<Record<UserState, number>> = {};
+  const byDepartment: Partial<Record<Department, number>> = {};
+  const incompleteByRole: Partial<Record<UserRole, number>> = {};
+  const incompleteByState: Partial<Record<UserState, number>> = {};
+  let total = 0;
+  let noDepartment = 0;
+
+  for (const user of all) {
+    // by_state spans every state, deleted accounts included.
+    byState[user.state] = (byState[user.state] ?? 0) + 1;
+    if (user.state === "is_deleted") continue;
+
+    total += 1;
+    byRole[user.role] = (byRole[user.role] ?? 0) + 1;
+
+    const department = user.profile?.department;
+    if (department) {
+      byDepartment[department] = (byDepartment[department] ?? 0) + 1;
+    } else {
+      noDepartment += 1;
+    }
+
+    if (!user.profile_needs_completion) continue;
+    if (user.role !== "lecturer" && user.role !== "admin") {
+      incompleteByRole[user.role] = (incompleteByRole[user.role] ?? 0) + 1;
+    }
+    if (user.state === "njupter") {
+      incompleteByState[user.state] = (incompleteByState[user.state] ?? 0) + 1;
+    }
+  }
+
+  return {
+    total,
+    by_role: byRole,
+    by_state: byState,
+    by_department: byDepartment,
+    no_department: noDepartment,
+    incomplete_by_role: incompleteByRole,
+    incomplete_by_state: incompleteByState,
+  };
+}
+
 function filterUsers(params: AdminUserListParams): UserProfileData[] {
   let result = mockUsers.map((item) => item.profile);
 
@@ -101,6 +161,11 @@ function filterUsers(params: AdminUserListParams): UserProfileData[] {
         user.name.toLowerCase().includes(keyword) ||
         user.student_id.toLowerCase().includes(keyword) ||
         user.login_email.toLowerCase().includes(keyword),
+    );
+  }
+  if (params.needs_completion !== undefined) {
+    result = result.filter(
+      (user) => user.profile_needs_completion === params.needs_completion,
     );
   }
 
@@ -135,6 +200,24 @@ function filterAuditLogs(params: AdminAuditLogListParams): AdminAuditLog[] {
 }
 
 export const adminHandlers = [
+  http.get(`${API_BASE_URL}/admin/stats`, ({ request }) => {
+    const auth = authenticatedAdmin(request);
+    if (auth.response) return auth.response;
+
+    const recent = [...adminMockAuditLogs]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 5);
+
+    return ok({
+      users: buildUserStats(),
+      clients: {
+        total: adminMockOAuthClients.length,
+        active: adminMockOAuthClients.filter((c) => c.is_active).length,
+      },
+      audit: { recent },
+    });
+  }),
+
   http.get(`${API_BASE_URL}/admin/users`, ({ request }) => {
     const auth = authenticatedAdmin(request, true);
     if (auth.response) return auth.response;
@@ -150,6 +233,12 @@ export const adminHandlers = [
       department: normalizeString(params.department) as AdminUserListParams["department"],
       student_id: normalizeString(params.student_id),
       keyword: normalizeString(params.keyword),
+      needs_completion:
+        params.needs_completion === "true"
+          ? true
+          : params.needs_completion === "false"
+            ? false
+            : undefined,
     };
 
     const users = filterUsers(filters);

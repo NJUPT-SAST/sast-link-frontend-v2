@@ -80,9 +80,17 @@ interface UserEditFormProps {
   user: UserProfileData;
   onSubmit: (data: AdminUpdateUserRequest) => Promise<void>;
   loading?: boolean;
+  /** Where 取消 goes when there is no history (direct visit / refresh). Carries
+   *  the list's filters so cancelling returns to the page the admin came from. */
+  cancelFallback?: string;
 }
 
-export function UserEditForm({ user, onSubmit, loading = false }: UserEditFormProps) {
+export function UserEditForm({
+  user,
+  onSubmit,
+  loading = false,
+  cancelFallback = "/admin/users",
+}: UserEditFormProps) {
   const router = useRouter();
   const form = useForm<AdminUpdateUserFormValues>({
     resolver: zodResolver(adminUpdateUserSchema),
@@ -286,7 +294,7 @@ export function UserEditForm({ user, onSubmit, loading = false }: UserEditFormPr
               // Direct visits have no history to go back to; fall back to the list
               // instead of leaving the site.
               if (window.history.length > 1) router.back();
-              else router.replace("/admin/users");
+              else router.replace(cancelFallback);
             }}
             disabled={loading}
           >

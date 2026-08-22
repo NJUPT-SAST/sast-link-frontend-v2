@@ -72,7 +72,7 @@ export function DatePickerField({
 
   return (
     <div className="w-full">
-      <label htmlFor={id} className="mb-2 block text-[13px] text-muted-foreground">
+      <label htmlFor={id} className="mb-1.5 block text-xs text-muted-foreground">
         {label}
       </label>
       <div className="flex w-full gap-2">

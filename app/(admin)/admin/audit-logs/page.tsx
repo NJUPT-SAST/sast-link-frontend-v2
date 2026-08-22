@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, Suspense } from "react";
 import { useSWRConfig } from "swr";
 import { DownloadIcon, Loader2Icon } from "lucide-react";
 
 import type { AdminAuditLogListParams } from "@/lib/api/types";
 import { useAdminAuditLogs, buildAdminAuditLogsKey } from "@/hooks/use-admin-audit-logs";
+import { useAdminAuditLogListParams } from "@/hooks/use-admin-list-params";
+import { PAGE_SIZE_OPTIONS } from "@/lib/admin/list-query";
 import { message } from "@/lib/message";
 import {
   AUDIT_EXPORT_MAX_ROWS,
@@ -21,23 +23,33 @@ import { AdminErrorState } from "@/components/admin/error-state";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { Button } from "@/components/ui/button";
 
-export default function AdminAuditLogsPage() {
+function AdminAuditLogsContent() {
   const { mutate } = useSWRConfig();
-  const [filters, setFilters] = useState<AdminAuditLogListParams>({ page: 1, page_size: 20 });
+  // Filters/page live in the URL: refreshing or coming back keeps the same view.
+  const [filters, setFilters] = useAdminAuditLogListParams();
   const [exporting, setExporting] = useState(false);
   const { data, isLoading, error } = useAdminAuditLogs(filters);
 
-  const handlePageChange = useCallback((page: number) => {
-    setFilters((prev) => ({ ...prev, page }));
-  }, []);
+  const handlePageChange = useCallback(
+    (page: number) => {
+      setFilters({ ...filters, page });
+    },
+    [filters, setFilters],
+  );
 
-  const handlePageSizeChange = useCallback((pageSize: number) => {
-    setFilters((prev) => ({ ...prev, page: 1, page_size: pageSize }));
-  }, []);
+  const handlePageSizeChange = useCallback(
+    (pageSize: number) => {
+      setFilters({ ...filters, page: 1, page_size: pageSize });
+    },
+    [filters, setFilters],
+  );
 
-  const handleFiltersChange = useCallback((next: AdminAuditLogListParams) => {
-    setFilters(next);
-  }, []);
+  const handleFiltersChange = useCallback(
+    (next: AdminAuditLogListParams) => {
+      setFilters(next);
+    },
+    [setFilters],
+  );
 
   const handleExport = useCallback(async () => {
     if (exporting) return;
@@ -65,9 +77,8 @@ export default function AdminAuditLogsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="type-title2">审计日志</h1>
-        <Button
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="type-title2">审计日志</h1>        <Button
           variant="outline"
           size="sm"
           onClick={handleExport}
@@ -103,9 +114,25 @@ export default function AdminAuditLogsPage() {
             total={data.total}
             onChange={handlePageChange}
             onPageSizeChange={handlePageSizeChange}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
           />
         </>
       )}
     </div>
+  );
+}
+
+export default function AdminAuditLogsPage() {
+  // useSearchParams (inside useAdminAuditLogListParams) suspends on a page load.
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-40 items-center justify-center">
+          <DotLoading />
+        </div>
+      }
+    >
+      <AdminAuditLogsContent />
+    </Suspense>
   );
 }
