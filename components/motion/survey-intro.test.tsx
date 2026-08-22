@@ -4,6 +4,11 @@ import { SurveyIntro } from "./survey-intro";
 
 const SEEN_KEY = "sast-survey-seen";
 
+let mockPathname = "/";
+jest.mock("next/navigation", () => ({
+  usePathname: () => mockPathname,
+}));
+
 function mockReducedMotion(reduced: boolean) {
   window.matchMedia = jest.fn().mockImplementation((query: string) => ({
     matches: query.includes("prefers-reduced-motion") ? reduced : false,
@@ -17,7 +22,20 @@ describe("SurveyIntro", () => {
   beforeEach(() => {
     sessionStorage.clear();
     mockReducedMotion(false);
+    mockPathname = "/";
   });
+
+  it.each(["/privacy", "/terms"])(
+    "stays out of the way on %s, which is a document rather than an entry point",
+    (route) => {
+      mockPathname = route;
+      render(<SurveyIntro />);
+      expect(screen.queryByTestId("survey-intro")).not.toBeInTheDocument();
+      // The boot flag must not be consumed either, so the intro still plays
+      // when the reader returns to the app.
+      expect(sessionStorage.getItem(SEEN_KEY)).toBeNull();
+    },
+  );
 
   it("plays once on the first visit of a session, on any route", () => {
     render(<SurveyIntro />);

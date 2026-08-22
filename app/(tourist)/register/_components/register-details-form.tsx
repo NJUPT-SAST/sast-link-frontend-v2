@@ -392,7 +392,6 @@ export default function RegisterDetailsForm({
                       我已阅读并同意
                       <Link
                         href="/terms"
-                        target="_blank"
                         className="text-link underline hover:no-underline"
                       >
                         《用户协议》
@@ -400,7 +399,6 @@ export default function RegisterDetailsForm({
                       与
                       <Link
                         href="/privacy"
-                        target="_blank"
                         className="text-link underline hover:no-underline"
                       >
                         《隐私政策》
