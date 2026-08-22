@@ -1,4 +1,8 @@
-import { adminAuditLogFiltersSchema, adminOAuthClientSchema } from "./admin";
+import {
+  adminAuditLogFiltersSchema,
+  adminOAuthClientSchema,
+  adminUpdateUserSchema,
+} from "./admin";
 
 const base = { page: 1, page_size: 20 };
 
@@ -98,5 +102,68 @@ describe("adminOAuthClientSchema", () => {
         scopes: ["openid", "user:read"],
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("adminUpdateUserSchema", () => {
+  const base = { name: "张三" };
+
+  it("rejects a blank phone_number like other required fields", () => {
+    const result = adminUpdateUserSchema.safeParse({ ...base, phone_number: "" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === "phone_number");
+      expect(issue?.message).toBe("手机号不可为空");
+    }
+  });
+
+  it("treats a whitespace-only phone_number as blank", () => {
+    const result = adminUpdateUserSchema.safeParse({ ...base, phone_number: "   " });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === "phone_number");
+      expect(issue?.message).toBe("手机号不可为空");
+    }
+  });
+
+  it("rejects a malformed phone_number with the format hint", () => {
+    const result = adminUpdateUserSchema.safeParse({ ...base, phone_number: "1380013800" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === "phone_number");
+      expect(issue?.message).toBe("请输入 11 位手机号");
+    }
+  });
+
+  it("accepts a valid phone_number", () => {
+    const result = adminUpdateUserSchema.safeParse({ ...base, phone_number: "13800138000" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a blank qq_number like other required fields", () => {
+    const result = adminUpdateUserSchema.safeParse({ ...base, qq_number: "" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === "qq_number");
+      expect(issue?.message).toBe("QQ 号不可为空");
+    }
+  });
+
+  it("rejects a malformed qq_number", () => {
+    const result = adminUpdateUserSchema.safeParse({ ...base, qq_number: "1234" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === "qq_number");
+      expect(issue?.message).toBe("请输入正确的 QQ 号");
+    }
+  });
+
+  it("accepts a valid qq_number", () => {
+    const result = adminUpdateUserSchema.safeParse({ ...base, qq_number: "123456789" });
+    expect(result.success).toBe(true);
+  });
+
+  it("still allows omitting phone_number/qq_number for a partial update", () => {
+    expect(adminUpdateUserSchema.safeParse({ name: "李四" }).success).toBe(true);
   });
 });

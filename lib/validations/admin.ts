@@ -61,12 +61,14 @@ export const adminUpdateUserSchema = z
     phone_number: z
       .string()
       .trim()
-      .refine((v) => v === undefined || v === "" || /^1\d{10}$/.test(v), "请输入 11 位手机号")
+      .min(1, "手机号不可为空")
+      .regex(/^1\d{10}$/, "请输入 11 位手机号")
       .optional(),
     qq_number: z
       .string()
       .trim()
-      .refine((v) => v === undefined || v === "" || /^\d{5,20}$/.test(v), "请输入正确的 QQ 号")
+      .min(1, "QQ 号不可为空")
+      .regex(/^\d{5,20}$/, "请输入正确的 QQ 号")
       .optional(),
     college: z.enum(COLLEGES).optional(),
     major: z.string().trim().min(1, "专业不可为空").max(50).optional(),

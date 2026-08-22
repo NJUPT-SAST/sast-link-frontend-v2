@@ -56,10 +56,13 @@ export function useAdminMutations(): UseAdminMutationsResult {
         message.success("用户信息更新成功");
         await revalidate(buildAdminUserKey(id));
         await revalidate(buildAdminUsersKey(options?.listParams));
-      } catch (error) {
-        message.error(toApiError(error).message);
-        throw error;
       } finally {
+        // No error toast here on purpose: the edit form is the only caller, and
+        // it surfaces server failures inline via its root <FormError />, matching
+        // register / reset / profile. A toast here popped a top-center popup for
+        // field errors (blank phone/qq) that every other field renders inline —
+        // the reported inconsistency. The rejection still propagates so the form
+        // can set the root error and stay on the page.
         setIsLoading(false);
       }
     },

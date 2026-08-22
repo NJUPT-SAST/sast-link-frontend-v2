@@ -12,6 +12,7 @@ import {
   type AdminUpdateUserFormValues,
 } from "@/lib/validations/admin";
 import { scrollToFirstError } from "@/lib/form";
+import { toApiError } from "@/lib/api/errors";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -102,7 +103,15 @@ export function UserEditForm({
   }, [user, form]);
 
   const handleValid = async (values: AdminUpdateUserFormValues) => {
-    await onSubmit(toRequest(values));
+    try {
+      await onSubmit(toRequest(values));
+    } catch (error) {
+      // Server-side failures (e.g. a login_email already bound to another
+      // account) render in the form's root <FormError /> instead of a toast,
+      // matching register / reset / profile. Field validation already blocks
+      // blank phone/qq inline, so the empty-value case never reaches this far.
+      form.setError("root", { message: toApiError(error).message });
+    }
   };
 
   const handleInvalid = () => {
