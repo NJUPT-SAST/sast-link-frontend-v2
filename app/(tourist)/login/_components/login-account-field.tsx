@@ -123,7 +123,7 @@ export function LoginAccountField({
               onEnter();
             }
           }}
-          className="w-full pr-28 bg-transparent text-[15px] text-foreground placeholder:text-tertiary outline-none"
+          className="w-full pr-36 bg-transparent text-[15px] text-foreground placeholder:text-tertiary outline-none"
         />
         {!atResolved && (
           <DropdownMenu>
@@ -136,7 +136,7 @@ export function LoginAccountField({
                   // resend button, so both fields share the same input width and
                   // right-aligned edge. Below 300px it disappears and the input
                   // becomes a plain full-email field (typing @ resolves it).
-                  "absolute right-3.5 top-1/2 -translate-y-1/2 max-[299px]:hidden rounded-md px-2.5 py-1 text-sm font-medium transition-colors",
+                  "absolute right-3.5 top-1/2 -translate-y-1/2 max-w-[8rem] truncate max-[299px]:hidden rounded-md px-2.5 py-1 text-sm font-medium transition-colors",
                   "bg-secondary/80 text-muted-foreground hover:bg-secondary",
                   "dark:bg-muted/60 dark:hover:bg-muted",
                 )}

@@ -7,13 +7,22 @@ interface FieldProps {
   label: string;
   value?: string | null;
   empty?: string;
+  /** let long values wrap instead of truncating (URLs, signatures, field lists) */
+  wrap?: boolean;
 }
 
-function Field({ label, value, empty = "-" }: FieldProps) {
+function Field({ label, value, empty = "-", wrap = false }: FieldProps) {
   return (
-    <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-5 border-b border-hairline py-4 first:border-t">
+    <div className="grid grid-cols-[80px_minmax(0,1fr)] gap-4 border-b border-hairline py-4 first:border-t sm:grid-cols-[100px_minmax(0,1fr)] sm:gap-5">
       <div className="type-tech text-tertiary">{label}</div>
-      <div className={cn("truncate text-sm leading-6", !value && "text-muted-foreground")}>
+      <div
+        className={cn(
+          "text-sm leading-6",
+          wrap ? "break-all" : "truncate",
+          !value && "text-muted-foreground",
+        )}
+        title={value || undefined}
+      >
         {value || empty}
       </div>
     </div>
@@ -44,8 +53,8 @@ export function UserDetailCard({ user }: UserDetailCardProps) {
         <Field label="姓名" value={user.name} />
         <Field label="昵称" value={user.profile?.nickname} />
         <Field label="学号" value={user.student_id} />
-        <Field label="学院" value={user.college} />
-        <Field label="专业" value={user.major} />
+        <Field label="学院" value={user.college} wrap />
+        <Field label="专业" value={user.major} wrap />
       </section>
 
       <section aria-label="身份与权限">
@@ -54,6 +63,7 @@ export function UserDetailCard({ user }: UserDetailCardProps) {
         <Field label="状态" value={STATE_LABELS[user.state] ?? user.state} />
         <Field
           label="资料状态"
+          wrap
           value={
             user.profile_needs_completion
               ? `待补全（${fieldLabels(user.incomplete_fields).join("、") || "未知字段"}）`
@@ -75,13 +85,13 @@ export function UserDetailCard({ user }: UserDetailCardProps) {
         <Field label="登录邮箱" value={user.login_email} />
         <Field label="手机号" value={user.phone_number} />
         <Field label="QQ" value={user.qq_number} />
-        <Field label="博客" value={user.profile?.blog_url} />
-        <Field label="GitHub" value={user.profile?.github_url} />
+        <Field label="博客" value={user.profile?.blog_url} wrap />
+        <Field label="GitHub" value={user.profile?.github_url} wrap />
       </section>
 
       <section aria-label="其他">
         <h2 className="type-tech mb-3 text-tertiary">其他</h2>
-        <Field label="签名" value={user.profile?.intro} empty="未填写" />
+        <Field label="签名" value={user.profile?.intro} empty="未填写" wrap />
         <Field label="注册时间" value={formatAdminDate(user.created_at)} />
         <Field label="更新时间" value={formatAdminDate(user.updated_at)} />
       </section>

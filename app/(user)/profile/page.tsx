@@ -25,15 +25,25 @@ function Field({
   label,
   value,
   empty = "未填写",
+  wrap = false,
 }: {
   label: string;
   value?: string | null;
   empty?: string;
+  /** let long values wrap instead of truncating (URLs, signatures) */
+  wrap?: boolean;
 }) {
   return (
-    <div data-cursor-target className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-5 border-b border-hairline py-4 first:border-t">
+    <div data-cursor-target className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-4 border-b border-hairline py-4 first:border-t sm:grid-cols-[88px_minmax(0,1fr)] sm:gap-5">
       <div className="type-tech text-tertiary">{label}</div>
-      <div className={cn("truncate text-sm leading-6", !value && "text-muted-foreground")}>
+      <div
+        className={cn(
+          "text-sm leading-6",
+          wrap ? "break-all" : "truncate",
+          !value && "text-muted-foreground",
+        )}
+        title={value || undefined}
+      >
         {value || empty}
       </div>
     </div>
@@ -81,9 +91,9 @@ export default function ProfilePage() {
         <Field label="真实姓名" value={profile.name} />
         <Field label="别名" value={profile.nickname} />
         <Field label="学号" value={profile.studentId} />
-        <Field label="学院" value={profile.college} />
-        <Field label="专业" value={profile.major} />
-        <Field label="签名" value={profile.intro} empty={profile.intro ? "" : "你还没留下签名哦～"} />
+        <Field label="学院" value={profile.college} wrap />
+        <Field label="专业" value={profile.major} wrap />
+        <Field label="签名" value={profile.intro} wrap empty={profile.intro ? "" : "你还没留下签名哦～"} />
         <Field
           label="部门"
           value={profile.department ? DEPARTMENT_LABELS[profile.department] ?? profile.department : null}
@@ -95,8 +105,8 @@ export default function ProfilePage() {
         <Field label="注册邮箱" value={profile.loginEmail} />
         <Field label="手机号" value={profile.phoneNumber} />
         <Field label="QQ" value={profile.qqNumber} />
-        <Field label="博客" value={profile.blogUrl} />
-        <Field label="GitHub 链接" value={profile.githubUrl} />
+        <Field label="博客" value={profile.blogUrl} wrap />
+        <Field label="GitHub 链接" value={profile.githubUrl} wrap />
       </section>
 
       <AvatarCropperDialog

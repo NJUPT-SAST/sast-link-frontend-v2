@@ -151,14 +151,17 @@ export function AuditLogList({ logs }: AuditLogListProps) {
             className={cn(
               ORDER_DETAIL,
               CELL_SPAN_FULL,
-              "admin-cell-label-lg truncate text-tertiary lg:min-w-0",
+              "admin-cell-label-lg break-all text-tertiary lg:min-w-0 lg:truncate lg:break-normal",
             )}
             data-label="信息"
             title={summarizeDetail(log.detail)}
           >
             {summarizeDetail(log.detail)}
           </div>
-          <div className={cn(ORDER_JSON, CELL_SPAN_FULL, "lg:col-span-1")}>
+          <div
+            className={cn(ORDER_JSON, CELL_SPAN_FULL, "admin-cell-label-lg lg:col-span-1")}
+            data-label="JSON"
+          >
             <button
               type="button"
               onClick={() => setRawLog(log)}

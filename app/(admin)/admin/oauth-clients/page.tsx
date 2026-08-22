@@ -143,11 +143,11 @@ export default function AdminOAuthClientsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="type-title2">OAuth 客户端管理</h1>
         </div>
-        <Button onClick={() => setFormOpen(true)}>注册客户端</Button>
+        <Button className="shrink-0" onClick={() => setFormOpen(true)}>注册客户端</Button>
       </div>
 
       {isLoading && (

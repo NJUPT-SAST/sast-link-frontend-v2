@@ -301,7 +301,7 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false, onRot
           <label className="mb-2 block text-[13px] text-muted-foreground">回调地址</label>
           <div className="flex flex-col gap-2">
             {redirectUris.map((_, index) => (
-              <div key={index} className="flex gap-2">
+              <div key={index} className="flex items-start gap-2">
                 <FormField
                   control={form.control}
                   name={`redirect_uris.${index}`}
@@ -323,6 +323,7 @@ export function OAuthClientForm({ mode, client, onSubmit, loading = false, onRot
                     type="button"
                     variant="outline"
                     size="icon"
+                    className="size-12 shrink-0"
                     onClick={() => removeRedirectUri(index)}
                     aria-label="删除回调地址"
                   >

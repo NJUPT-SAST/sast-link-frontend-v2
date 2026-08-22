@@ -114,15 +114,17 @@ export function UserBatchEditDialog({
         </DialogHeader>
 
         {dangerConfirm ? (
-          <div className="flex flex-col gap-4 py-2">
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm leading-6 text-destructive">
-              <ul className="flex list-inside list-disc flex-col gap-2">
-                {dangerHints.map((hint) => (
-                  <li key={hint}>{hint}</li>
-                ))}
-              </ul>
+          <>
+            <div className="flex flex-col gap-4 py-2">
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm leading-6 text-destructive">
+                <ul className="flex list-inside list-disc flex-col gap-2">
+                  {dangerHints.map((hint) => (
+                    <li key={hint}>{hint}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2">
               <Button
                 variant="outline"
                 onClick={() => setDangerConfirm(false)}
@@ -134,7 +136,7 @@ export function UserBatchEditDialog({
                 {loading ? <DotLoading /> : "仍要修改"}
               </Button>
             </DialogFooter>
-          </div>
+          </>
         ) : (
           <>
             <div className="flex flex-col gap-4 py-2">

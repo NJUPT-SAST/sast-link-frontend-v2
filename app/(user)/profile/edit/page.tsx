@@ -284,9 +284,6 @@ export default function EditPage() {
                       invalid={fieldState.invalid}
                       error={fieldState.error?.message}
                     />
-                    <div className="min-h-4 text-xs [&_p]:text-destructive">
-                      <FormMessage />
-                    </div>
                   </FormItem>
                 )}
               />

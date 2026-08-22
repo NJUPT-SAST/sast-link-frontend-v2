@@ -20,10 +20,10 @@ interface OAuthCallbackContentProps {
 function Steps({ failed }: { failed: boolean }) {
   const steps = ["授权", failed ? "登录失败" : "登录", "完成"];
   return (
-    <div className="flex items-center">
+    <div className="flex flex-wrap items-center justify-center">
       {steps.map((label, index) => (
         <Fragment key={label}>
-          {index > 0 && <span className="mx-3 h-px w-10 bg-input" />}
+          {index > 0 && <span className="mx-2 h-px w-6 bg-input sm:mx-3 sm:w-10" />}
           <span
             className={cn(
               "text-[13px]",

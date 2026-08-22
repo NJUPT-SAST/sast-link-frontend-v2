@@ -114,7 +114,7 @@ export function OAuthClientList({
               </span>
             </div>
             <div
-              className={`${CELL_ORDER(5)} ${CELL_SPAN_FULL} admin-cell-label-lg truncate text-tertiary lg:min-w-0`}
+              className={`${CELL_ORDER(5)} ${CELL_SPAN_FULL} admin-cell-label-lg break-all text-tertiary lg:min-w-0 lg:truncate lg:break-normal`}
               data-label="回调地址"
               title={client.redirect_uris.join("、")}
             >

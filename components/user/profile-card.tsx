@@ -111,7 +111,7 @@ export function ProfileCard() {
                   if (event.key === "Enter") void finishEditing(true);
                   if (event.key === "Escape") void finishEditing(false);
                 }}
-                className="w-full border-0 border-b border-foreground bg-transparent pb-1 text-left text-[13px] leading-7 outline-none"
+                className="w-full border-0 border-b border-foreground bg-transparent pb-1 text-left text-base leading-7 outline-none"
               />
             ) : (
               <p className="break-words text-left text-base leading-7 text-muted-foreground">

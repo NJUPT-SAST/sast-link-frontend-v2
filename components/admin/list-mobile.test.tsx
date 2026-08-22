@@ -83,7 +83,7 @@ describe("admin list mobile layout", () => {
     [
       "audit log list",
       () => render(<AuditLogList logs={[log()]} />),
-      ["时间", "用户 ID", "操作", "资源", "结果", "信息"],
+      ["时间", "用户 ID", "操作", "资源", "结果", "信息", "JSON"],
     ],
   ])("%s", (_name, renderList, expectedLabels) => {
     it("switches to the table only from lg, never at sm", () => {

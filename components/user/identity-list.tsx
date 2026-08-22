@@ -88,18 +88,18 @@ export function IdentityList({ actionable }: IdentityListProps) {
             key={provider.key}
             className="flex min-h-[52px] items-center justify-between border-b border-hairline py-3 text-sm last:border-b-0"
           >
-            <span className="flex items-center gap-2.5">
+            <span className="flex min-w-0 items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={provider.icon}
                 alt=""
                 width={18}
                 height={18}
-                className="dark:invert"
+                className="shrink-0 dark:invert"
               />
-              {provider.name}
+              <span className="truncate">{provider.name}</span>
             </span>
-            <span className="flex items-center gap-3.5">
+            <span className="flex shrink-0 items-center gap-3.5">
               <span
                 className={`flex items-center gap-1.5 text-xs ${
                   bound ? "text-success" : "text-tertiary"

@@ -150,12 +150,14 @@ export function UserList({
               )}
               data-label="姓名"
             >
-              <span className="inline-flex items-center gap-2">
-                {user.name}
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="truncate" title={user.name}>
+                  {user.name}
+                </span>
                 {user.profile_needs_completion && (
                   <span
                     title="该账号仍有必填资料待补全"
-                    className="inline-flex items-center rounded bg-amber-400/15 px-1.5 py-0.5 text-xs text-amber-600"
+                    className="inline-flex shrink-0 items-center rounded bg-amber-400/15 px-1.5 py-0.5 text-xs text-amber-600"
                   >
                     待补全
                   </span>
@@ -163,8 +165,12 @@ export function UserList({
               </span>
             </div>
             <div
-              className={cn(ORDER_STUDENT_ID, "admin-cell-label-lg text-tertiary")}
+              className={cn(
+                ORDER_STUDENT_ID,
+                "admin-cell-label-lg truncate text-tertiary lg:min-w-0",
+              )}
               data-label="学号"
+              title={user.student_id}
             >
               {user.student_id}
             </div>
