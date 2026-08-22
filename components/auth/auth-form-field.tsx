@@ -7,7 +7,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AuthFormFieldProps extends Omit<ComponentPropsWithoutRef<"input">, "size" | "prefix"> {
-  label: string;
+  /** omit or pass "" to render the input without a label row */
+  label?: string;
   description?: ReactNode;
   suffix?: ReactNode;
   /** fixed adornment shown inside the left edge of the input (e.g. "https://") */
@@ -20,8 +21,8 @@ interface AuthFormFieldProps extends Omit<ComponentPropsWithoutRef<"input">, "si
 }
 
 export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
-  function AuthFormField(
-    {
+  function AuthFormField(allProps, ref) {
+    const {
       label,
       description,
       suffix,
@@ -34,22 +35,26 @@ export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
       type,
       required = false,
       ...props
-    },
-    ref,
-  ) {
+    } = allProps;
+    // Callers either hand the message row to this component (by passing `error`,
+    // even as undefined) or render their own <FormMessage /> sibling. Only the
+    // former reserves height here, so the latter keeps its own single spacer.
+    const ownsMessageRow = "error" in allProps;
     const inputId = id ?? props.name;
     const isPassword = type === "password";
     const [passwordVisible, setPasswordVisible] = useState(false);
 
     return (
       <div className={cn("w-full", containerClassName)}>
-        <label
-          htmlFor={inputId}
-          className="mb-2 block text-[13px] text-muted-foreground"
-        >
-          {label}
-          {required && <span className="ml-0.5 text-destructive">*</span>}
-        </label>
+        {label ? (
+          <label
+            htmlFor={inputId}
+            className="mb-2 block text-[13px] text-muted-foreground"
+          >
+            {label}
+            {required && <span className="ml-0.5 text-destructive">*</span>}
+          </label>
+        ) : null}
         <div className="relative w-full">
           <input
             {...props}
@@ -65,7 +70,7 @@ export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
               invalid
                 ? "border-destructive focus-visible:border-destructive focus-visible:ring-2 focus-visible:ring-destructive/25"
                 : "border-input focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25",
-              isPassword ? "pr-11" : suffix ? "pr-28" : undefined,
+              isPassword ? "pr-11" : suffix ? "pr-36" : undefined,
               prefix ? "pl-24" : undefined,
               className,
             )}
@@ -87,17 +92,16 @@ export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
             </button>
           ) : null}
           {suffix ? (
-            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 select-none text-sm font-medium text-muted-foreground">
+            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 select-none bg-card pl-2 text-sm font-medium tabular-nums text-muted-foreground">
               {suffix}
             </div>
           ) : null}
         </div>
-        {error ? (
-          <p className="mt-1 min-h-4 text-xs text-destructive">{error}</p>
-        ) : description ? (
-          <p className="mt-2 text-xs leading-4 text-tertiary">
-            {description}
-          </p>
+        {description ? (
+          <p className="mt-1 text-xs leading-4 text-tertiary">{description}</p>
+        ) : null}
+        {ownsMessageRow ? (
+          <p className="mt-1 min-h-4 text-xs text-destructive">{error ?? ""}</p>
         ) : null}
       </div>
     );

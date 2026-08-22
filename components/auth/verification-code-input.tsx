@@ -46,7 +46,7 @@ export function VerificationCodeInput({ onResend }: VerificationCodeInputProps) 
       disabled={!clickable}
       onClick={handleResend}
       className={cn(
-        "appearance-none border-0 bg-transparent p-0 text-base font-semibold",
+        "appearance-none border-0 bg-transparent p-0 text-sm font-medium tabular-nums",
         clickable ? "cursor-pointer text-primary" : "text-muted-foreground",
       )}
     >
