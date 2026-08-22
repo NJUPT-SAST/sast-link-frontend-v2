@@ -58,7 +58,7 @@ export function OAuthClientSecretDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-4">
-          <div className="flex gap-2">
+          <div className="flex items-start gap-2">
             <div className="flex-1">
               <AuthFormField
                 id="client_secret"
@@ -71,7 +71,7 @@ export function OAuthClientSecretDialog({
               type="button"
               variant="outline"
               size="icon"
-              className="mt-6 shrink-0"
+              className="mt-[30px] size-12 shrink-0"
               onClick={handleCopy}
               aria-label="复制"
             >

@@ -15,7 +15,7 @@ export function AdminNav() {
 
   return (
     <nav className="border-b border-hairline">
-      <ul className="mx-auto flex max-w-[1200px] gap-1 px-5 sm:px-8">
+      <ul className="mx-auto flex max-w-[1200px] gap-1 overflow-x-auto px-5 whitespace-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-8">
         {items.map((item) => {
           // The overview lives exactly at /admin — a prefix match would keep it
           // lit for every /admin/* route.
@@ -24,7 +24,7 @@ export function AdminNav() {
               ? pathname === "/admin"
               : pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
-            <li key={item.href}>
+            <li key={item.href} className="shrink-0">
               <Link
                 href={item.href}
                 className={cn(
