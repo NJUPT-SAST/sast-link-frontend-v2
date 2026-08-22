@@ -72,7 +72,11 @@ export const adminMockOAuthClients: AdminOAuthClient[] = [
   },
 ];
 
-export const adminMockAuditLogs: AdminAuditLog[] = [
+// The hand-written entries below are the ones with interesting detail payloads
+// (login methods, changed_fields, a failure with an err_code, boundary dates for
+// the calendar filters). The generated batch after them exists purely so the
+// list spans many pages while developing against the mock.
+const adminMockAuditLogSeeds: AdminAuditLog[] = [
   mockAuditLog({
     id: 1,
     user: { id: 2, name: "Admin" },
@@ -139,3 +143,112 @@ export const adminMockAuditLogs: AdminAuditLog[] = [
     createdAt: mockTime(40, 15), // 40 天前 15:xx（上个月前）
   }),
 ];
+
+// --- Demo volume ---------------------------------------------------------
+//
+// Deterministic on purpose: everything is derived from the index, so a reload
+// shows the same list and page N always holds the same rows.
+const SEED_ACTORS = [
+  { id: 1, name: "Alice" },
+  { id: 2, name: "Admin" },
+  { id: 3, name: "Lecturer" },
+  { id: 4, name: "Bob" },
+  { id: 100, name: "赵子轩" },
+  { id: 104, name: "周浩然" },
+];
+
+// Each entry pairs an action with the resource the backend writes alongside it,
+// so the 操作/资源 filters stay consistent with AUDIT_ACTION_LABELS.
+const SEED_EVENTS: {
+  action: string;
+  resource: string;
+  detail: (index: number, actor: { id: number; name: string }) => Record<string, unknown> | null;
+}[] = [
+  {
+    action: "login",
+    resource: "session",
+    detail: (index, actor) => ({
+      method: index % 3 === 0 ? "password" : index % 3 === 1 ? "lark" : "github",
+      login_email: `user${actor.id}@njupt.edu.cn`,
+    }),
+  },
+  { action: "logout", resource: "session", detail: () => null },
+  { action: "refresh", resource: "session", detail: () => null },
+  {
+    action: "update_profile",
+    resource: "user",
+    detail: (index) => ({
+      changed_fields: index % 2 === 0 ? ["intro"] : ["nickname", "github_url"],
+    }),
+  },
+  { action: "upload_avatar", resource: "user", detail: () => null },
+  {
+    action: "admin_user_update",
+    resource: "user",
+    detail: (index) => ({
+      sub_action: "edit_user",
+      target_user_id: 100 + (index % 40),
+      // Only present on some rows: an explicit undefined would render as
+      // "目标角色：undefined" in the 信息 column.
+      ...(index % 4 === 0 ? { target_role: "member" } : {}),
+    }),
+  },
+  {
+    action: "register_send_code",
+    resource: "verification_code",
+    detail: (index) => ({ login_email: `b240${41000 + (index % 40)}@njupt.edu.cn` }),
+  },
+  {
+    action: "oauth_authorize",
+    resource: "oauth",
+    detail: () => ({ client_id: "sast-link-web", scope: "openid profile" }),
+  },
+  {
+    action: "oauth_token",
+    resource: "oauth",
+    detail: () => ({ client_id: "sast-link-web", grant_type: "authorization_code" }),
+  },
+  {
+    action: "oauth_bind",
+    resource: "identity",
+    detail: (index) => ({ provider: index % 2 === 0 ? "github" : "lark" }),
+  },
+  { action: "change_password", resource: "user", detail: () => null },
+  {
+    action: "logout_device",
+    resource: "session",
+    detail: (index) => ({ device_id: `device-${index % 7}` }),
+  },
+];
+
+/** 每 7 条里 1 条失败，保证「结果」筛选两边都有数据。 */
+const SEED_FAILURE_CODES = [40100, 40300, 40000, 50000];
+const SEED_COUNT = 96;
+
+function seedAuditLog(index: number, id: number): AdminAuditLog {
+  const actor = SEED_ACTORS[index % SEED_ACTORS.length];
+  const event = SEED_EVENTS[index % SEED_EVENTS.length];
+  const failed = index % 7 === 3;
+
+  return mockAuditLog({
+    id,
+    user: actor,
+    action: event.action,
+    resource: event.resource,
+    resourceId: actor.id,
+    detail: event.detail(index, actor),
+    // Spread over ~60 days, several per day, so the date filters carve out
+    // meaningfully different subsets.
+    createdAt: mockTime(Math.floor(index / 2), 8 + (index % 11)),
+    success: !failed,
+    errCode: failed ? SEED_FAILURE_CODES[index % SEED_FAILURE_CODES.length] : null,
+  });
+}
+
+export const adminMockAuditLogs: AdminAuditLog[] = [...adminMockAuditLogSeeds];
+
+for (let index = 0; index < SEED_COUNT; index += 1) {
+  adminMockAuditLogs.push(
+    seedAuditLog(index, adminMockAuditLogSeeds.length + index + 1),
+  );
+}

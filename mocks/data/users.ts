@@ -208,33 +208,66 @@ interface SeedSpec {
   incomplete?: boolean;
 }
 
-// Chosen so each donut has a clear majority plus a visible 未补全 slice:
-// roles freshman 18 / member 22 / lecturer 4 / admin 2 (+ the 4 fixtures),
-// states njupter 20 / on_sast 20 / retired_sast 4 / is_deleted 2,
-// unfinished 9 = 7 freshman + 2 member, of which 7 are njupter.
+// Chosen so each donut has a clear majority plus a visible 未补全 slice, and so
+// the list spans several pages at 20/page (~260 accounts → 13 pages):
+// roles freshman 91 / member 118 / lecturer 20 / admin 10 (+ the 5 fixtures),
+// unfinished 43 = 32 freshman + 8 member + 3 admin + 5 lecturer (the latter two
+// excluded from the fold on purpose).
+// Ratios mirror the original smaller seed, so the overview donuts read the same.
 const SEED_SPECS: SeedSpec[] = [
-  { count: 11, role: "freshman", state: "njupter", department: null },
-  { count: 7, role: "freshman", state: "njupter", department: null, incomplete: true },
-  { count: 9, role: "member", state: "on_sast", department: "software" },
-  { count: 7, role: "member", state: "on_sast", department: "media" },
-  { count: 2, role: "member", state: "on_sast", department: "software", incomplete: true },
-  { count: 4, role: "member", state: "retired_sast", department: "software" },
-  { count: 3, role: "lecturer", state: "on_sast", department: "software" },
-  // An unfinished lecturer and admin: both must stay out of the 未补全 slice,
+  { count: 55, role: "freshman", state: "njupter", department: null },
+  { count: 32, role: "freshman", state: "njupter", department: null, incomplete: true },
+  { count: 45, role: "member", state: "on_sast", department: "software" },
+  { count: 35, role: "member", state: "on_sast", department: "media" },
+  { count: 12, role: "member", state: "on_sast", department: "electronics" },
+  { count: 8, role: "member", state: "on_sast", department: "publicity" },
+  { count: 6, role: "member", state: "on_sast", department: "outreach" },
+  { count: 4, role: "member", state: "on_sast", department: "office" },
+  { count: 8, role: "member", state: "on_sast", department: "software", incomplete: true },
+  { count: 20, role: "member", state: "retired_sast", department: "software" },
+  { count: 15, role: "lecturer", state: "on_sast", department: "software" },
+  // Unfinished lecturers and admins: both must stay out of the 未补全 slice,
   // so the mock exercises the exclusion rather than only the happy path.
-  { count: 1, role: "lecturer", state: "on_sast", department: "media", incomplete: true },
-  { count: 1, role: "admin", state: "on_sast", department: "software" },
-  { count: 1, role: "admin", state: "on_sast", department: "software", incomplete: true },
+  { count: 5, role: "lecturer", state: "on_sast", department: "media", incomplete: true },
+  { count: 7, role: "admin", state: "on_sast", department: "software" },
+  { count: 3, role: "admin", state: "on_sast", department: "software", incomplete: true },
   // Soft-deleted accounts are a state bit, not a deleted_at column: they must
   // drop out of total / by_role yet stay visible in by_state.
-  { count: 1, role: "member", state: "is_deleted", department: "software" },
-  { count: 1, role: "freshman", state: "is_deleted", department: null, incomplete: true },
+  { count: 6, role: "member", state: "is_deleted", department: "software" },
+  { count: 4, role: "freshman", state: "is_deleted", department: null, incomplete: true },
 ];
 
-const SEED_COLLEGE: College = "计算机学院、软件学院、网络空间安全学院";
-const SEED_MAJORS = ["软件工程", "计算机科学与技术", "信息安全", "网络工程"];
-const SEED_SURNAMES = ["赵", "钱", "孙", "李", "周", "吴", "郑", "王", "冯", "陈"];
-const SEED_GIVEN_NAMES = ["子轩", "雨桐", "思远", "欣怡", "浩然", "梦琪", "宇航", "佳怡"];
+// Several colleges/majors so the detail pages and the list are not a wall of one
+// value; index-derived, so still deterministic.
+const SEED_COLLEGES: College[] = [
+  "计算机学院、软件学院、网络空间安全学院",
+  "通信与信息工程学院",
+  "自动化学院",
+  "人工智能学院",
+  "物联网学院",
+  "集成电路科学与工程学院（产教融合学院）",
+  "贝尔英才学院",
+];
+const SEED_MAJORS = [
+  "软件工程",
+  "计算机科学与技术",
+  "信息安全",
+  "网络工程",
+  "电子信息工程",
+  "物联网工程",
+  "人工智能",
+  "自动化",
+];
+// 20 surnames × 16 given names: enough combinations that a page of 20 rows shows
+// no duplicate names.
+const SEED_SURNAMES = [
+  "赵", "钱", "孙", "李", "周", "吴", "郑", "王", "冯", "陈",
+  "褚", "卫", "蒋", "沈", "韩", "杨", "朱", "秦", "尤", "许",
+];
+const SEED_GIVEN_NAMES = [
+  "子轩", "雨桐", "思远", "欣怡", "浩然", "梦琪", "宇航", "佳怡",
+  "云帆", "嘉宁", "致远", "依依", "俊辉", "若殷", "子涵", "雨轩",
+];
 
 function seedUser(index: number, spec: SeedSpec): MockUser {
   // Ids continue after the hand-written fixtures so login tokens stay stable.
@@ -260,7 +293,7 @@ function seedUser(index: number, spec: SeedSpec): MockUser {
       phone_number: spec.incomplete ? "" : `138${String(10000000 + index * 7)}`,
       qq_number: spec.incomplete ? "" : String(100000 + index * 13),
       student_id: studentId,
-      college: SEED_COLLEGE,
+      college: SEED_COLLEGES[index % SEED_COLLEGES.length],
       major: spec.incomplete ? "" : SEED_MAJORS[index % SEED_MAJORS.length],
       profile: {
         nickname: spec.incomplete ? "" : name,

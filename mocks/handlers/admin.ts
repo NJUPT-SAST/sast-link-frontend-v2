@@ -163,6 +163,11 @@ function filterUsers(params: AdminUserListParams): UserProfileData[] {
         user.login_email.toLowerCase().includes(keyword),
     );
   }
+  if (params.needs_completion !== undefined) {
+    result = result.filter(
+      (user) => user.profile_needs_completion === params.needs_completion,
+    );
+  }
 
   return result;
 }
@@ -228,6 +233,12 @@ export const adminHandlers = [
       department: normalizeString(params.department) as AdminUserListParams["department"],
       student_id: normalizeString(params.student_id),
       keyword: normalizeString(params.keyword),
+      needs_completion:
+        params.needs_completion === "true"
+          ? true
+          : params.needs_completion === "false"
+            ? false
+            : undefined,
     };
 
     const users = filterUsers(filters);
