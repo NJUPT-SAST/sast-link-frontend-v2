@@ -13,6 +13,8 @@ interface UserListProps {
   loading?: boolean;
   /** Read-only mode (e.g. lecturer): hides selection and edit/restore actions. */
   canManage?: boolean;
+  /** Serialized list filters, forwarded so detail/edit can return to this page. */
+  listQuery?: string;
   onRestore?: (user: UserProfileData) => void;
   selectedIds?: Set<number>;
   onToggleSelect?: (id: number) => void;
@@ -30,6 +32,7 @@ export function UserList({
   users,
   loading = false,
   canManage = true,
+  listQuery,
   onRestore,
   selectedIds = new Set(),
   onToggleSelect,
@@ -93,7 +96,7 @@ export function UserList({
               />
             )}
             <Link
-              href={adminUserDetailHref(user.id)}
+              href={adminUserDetailHref(user.id, listQuery)}
               className="admin-cell-label-sm text-tertiary transition-colors hover:text-link hover:underline"
               data-label="ID"
             >
@@ -132,12 +135,12 @@ export function UserList({
             </div>
             <div className="flex items-center justify-end gap-2">
               <Button variant="ghost" size="sm" asChild>
-                <Link href={adminUserDetailHref(user.id)}>查看</Link>
+                <Link href={adminUserDetailHref(user.id, listQuery)}>查看</Link>
               </Button>
               {canManage && (
                 <>
                   <Button variant="ghost" size="sm" asChild>
-                    <Link href={adminUserEditHref(user.id)}>编辑</Link>
+                    <Link href={adminUserEditHref(user.id, listQuery)}>编辑</Link>
                   </Button>
                   {user.state === "is_deleted" && (
                     <Button

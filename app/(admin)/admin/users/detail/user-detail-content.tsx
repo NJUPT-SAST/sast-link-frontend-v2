@@ -12,13 +12,16 @@ import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { useAdminMutations } from "@/hooks/use-admin-mutations";
 import { useAdminUser } from "@/hooks/use-admin-users";
-import { adminUserEditHref, parseAdminUserId } from "@/lib/admin-user-route";
+import { adminUsersListHref, adminUserEditHref, parseAdminUserId, parseAdminUsersListQuery } from "@/lib/admin-user-route";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 
 export function AdminUserDetailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const id = parseAdminUserId(searchParams);
+  // Carried over from the list so 返回/注销后跳转 lands on the same filtered page.
+  const listQuery = parseAdminUsersListQuery(searchParams);
+  const listHref = adminUsersListHref(listQuery);
   const { data: user, isLoading, error } = useAdminUser(id);
   const { deleteUser, restoreUser, isLoading: mutationLoading } = useAdminMutations();
   const canManage = canManageUsers(useUserProfileStore((state) => state.profile.role));
@@ -28,7 +31,7 @@ export function AdminUserDetailContent() {
     if (!user) return;
     await deleteUser(user.id);
     setConfirmOpen(false);
-    router.push("/admin/users");
+    router.push(listHref);
   };
 
   const handleRestore = async () => {
@@ -41,7 +44,7 @@ export function AdminUserDetailContent() {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4">
         <p className="text-tertiary">用户不存在或链接无效</p>
-        <Button variant="outline" asChild><Link href="/admin/users">返回用户列表</Link></Button>
+        <Button variant="outline" asChild><Link href={listHref}>返回用户列表</Link></Button>
       </div>
     );
   }
@@ -56,7 +59,7 @@ export function AdminUserDetailContent() {
 
   return (
     <div className="flex flex-col gap-8">
-      <BackButton fallback="/admin/users" />
+      <BackButton fallback={listHref} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="type-title2">{user.name}</h1>
@@ -64,7 +67,7 @@ export function AdminUserDetailContent() {
         </div>
         {canManage && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" asChild><Link href={adminUserEditHref(user.id)}>编辑</Link></Button>
+            <Button variant="outline" asChild><Link href={adminUserEditHref(user.id, listQuery)}>编辑</Link></Button>
             <Button
               variant={isDeleted ? "default" : "destructive"}
               onClick={() => setConfirmOpen(true)}

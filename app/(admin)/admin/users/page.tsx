@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { useSWRConfig } from "swr";
 
 import type {
@@ -22,6 +22,11 @@ import { toApiError } from "@/lib/api/errors";
 import { message } from "@/lib/message";
 import { useAdminUsers, buildAdminUsersKey } from "@/hooks/use-admin-users";
 import { useAdminMutations } from "@/hooks/use-admin-mutations";
+import { useAdminUserListParams } from "@/hooks/use-admin-list-params";
+import {
+  PAGE_SIZE_OPTIONS,
+  serializeAdminUserListParams,
+} from "@/lib/admin/list-query";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { canManageUsers } from "@/components/admin/permissions";
 import { UserFilters } from "@/components/admin/user-filters";
@@ -36,12 +41,15 @@ import {
 import { DotLoading } from "@/components/ui/dot-loading";
 import { Button } from "@/components/ui/button";
 
-export default function AdminUsersPage() {
+function AdminUsersContent() {
   const { mutate } = useSWRConfig();
   const role = useUserProfileStore((state) => state.profile.role);
   const canManage = canManageUsers(role);
-  const [filters, setFilters] = useState<AdminUserListParams>({ page: 1, page_size: 20 });
+  // Filters live in the URL so "查看/编辑 → 返回" lands back on the same page of
+  // the same filtered list instead of resetting to page 1.
+  const [filters, setFilters] = useAdminUserListParams();
   const { data, isLoading, error } = useAdminUsers(filters);
+  const listQuery = serializeAdminUserListParams(filters);
   const { deleteUser, restoreUser, isLoading: mutationLoading } = useAdminMutations();
 
   const [confirm, setConfirm] = useState<{
@@ -150,13 +158,33 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handlePageChange = useCallback((page: number) => {
-    setFilters((prev) => ({ ...prev, page }));
-  }, []);
+  const handlePageChange = useCallback(
+    (page: number) => {
+      // Selection is per-page on purpose: the checkboxes and 全选本页 only ever
+      // reflect the rows currently on screen, so carrying ids across a page turn
+      // would let a batch edit hit users the admin can no longer see.
+      setSelectedIds(new Set());
+      setFilters({ ...filters, page });
+    },
+    [filters, setFilters],
+  );
 
-  const handleFiltersChange = useCallback((next: AdminUserListParams) => {
-    setFilters(next);
-  }, []);
+  const handlePageSizeChange = useCallback(
+    (pageSize: number) => {
+      setSelectedIds(new Set());
+      setFilters({ ...filters, page: 1, page_size: pageSize });
+    },
+    [filters, setFilters],
+  );
+
+  const handleFiltersChange = useCallback(
+    (next: AdminUserListParams) => {
+      // A new filter set replaces the visible rows entirely — same reasoning.
+      setSelectedIds(new Set());
+      setFilters(next);
+    },
+    [setFilters],
+  );
 
   const handleRestore = (user: UserProfileData) => {
     setConfirm({ open: true, user, action: "restore" });
@@ -174,7 +202,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="type-title2">用户管理</h1>
         </div>
@@ -210,6 +238,7 @@ export default function AdminUsersPage() {
             users={data.users}
             loading={mutationLoading}
             canManage={canManage}
+            listQuery={listQuery}
             onRestore={handleRestore}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
@@ -220,6 +249,8 @@ export default function AdminUsersPage() {
             pageSize={data.page_size}
             total={data.total}
             onChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
           />
         </>
       )}
@@ -249,5 +280,20 @@ export default function AdminUsersPage() {
         onConfirm={handleBatchConfirm}
       />
     </div>
+  );
+}
+
+export default function AdminUsersPage() {
+  // useSearchParams (inside useAdminUserListParams) suspends on a page load.
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-40 items-center justify-center">
+          <DotLoading />
+        </div>
+      }
+    >
+      <AdminUsersContent />
+    </Suspense>
   );
 }
