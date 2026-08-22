@@ -54,10 +54,12 @@ describe("auth validation schemas", () => {
       college: "计算机学院、软件学院、网络空间安全学院",
       major: "软件工程",
       studentId: "B24040001",
+      agreedToTerms: true,
     };
 
-    it("accepts empty optional phone and qq", () => {
-      expect(registerDetailsSchema.safeParse({ ...valid, phoneNumber: "", qqNumber: "" }).success).toBe(true);
+    it("requires phone and qq", () => {
+      expect(registerDetailsSchema.safeParse({ ...valid, phoneNumber: "" }).success).toBe(false);
+      expect(registerDetailsSchema.safeParse({ ...valid, qqNumber: "" }).success).toBe(false);
     });
 
     it("accepts Chinese and ethnic minority real names", () => {
@@ -88,6 +90,18 @@ describe("auth validation schemas", () => {
       if (!qq.success) {
         expect(qq.error.issues.some((i) => i.path.includes("qqNumber"))).toBe(true);
       }
+    });
+
+    it("requires explicit consent to the terms and privacy policy", () => {
+      const unchecked = registerDetailsSchema.safeParse({ ...valid, agreedToTerms: false });
+      expect(unchecked.success).toBe(false);
+      if (!unchecked.success) {
+        expect(unchecked.error.issues.some((i) => i.path.includes("agreedToTerms"))).toBe(true);
+      }
+      // A missing field must fail too, not fall through as undefined.
+      const withoutConsent = { ...valid };
+      delete (withoutConsent as { agreedToTerms?: boolean }).agreedToTerms;
+      expect(registerDetailsSchema.safeParse(withoutConsent).success).toBe(false);
     });
   });
 });

@@ -72,14 +72,20 @@ export const registerDetailsSchema = z
     phoneNumber: z
       .string()
       .trim()
-      .refine((v) => v === "" || /^1\d{10}$/.test(v), "请输入 11 位手机号"),
+      .regex(/^1\d{10}$/, "请输入 11 位手机号"),
     qqNumber: z
       .string()
       .trim()
-      .refine((v) => v === "" || /^\d{5,20}$/.test(v), "请输入正确的 QQ 号"),
+      .regex(/^\d{5,20}$/, "请输入正确的 QQ 号"),
     college: z.enum(COLLEGES),
     major: z.string().trim().min(1, "专业不可为空").max(50),
     studentId: z.string().trim().max(50).regex(studentIdPattern, "请输入正确的学号"),
+    // Explicit consent to the privacy policy and terms of service. zod/v3's
+    // z.literal() ignores a custom message, so refine() carries the copy the
+    // user actually sees.
+    agreedToTerms: z
+      .boolean()
+      .refine((v) => v === true, "请阅读并同意《用户协议》与《隐私政策》"),
   })
   .refine((value) => value.password === value.confirmPassword, {
     message: "密码不一致",
