@@ -56,13 +56,16 @@ describe("profileEditSchema", () => {
   it("accepts empty optional fields", () => {
     const data = {
       ...valid,
-      phoneNumber: "",
-      qqNumber: "",
       department: "",
       blogUrl: "",
       githubUrl: "",
     };
     expect(profileEditSchema.safeParse(data).success).toBe(true);
+  });
+
+  it("requires phone and qq", () => {
+    expect(profileEditSchema.safeParse({ ...valid, phoneNumber: "" }).success).toBe(false);
+    expect(profileEditSchema.safeParse({ ...valid, qqNumber: "" }).success).toBe(false);
   });
 
   it("rejects empty nickname", () => {

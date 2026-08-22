@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { ArrowLeft } from "lucide-react";
@@ -24,6 +25,8 @@ import { scrollToFirstError } from "@/lib/form";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { FormError } from "@/components/ui/form-error";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
@@ -49,6 +52,7 @@ const FIELD_ORDER = [
   "major",
   "phoneNumber",
   "qqNumber",
+  "agreedToTerms",
 ];
 
 const studentIdPattern = /^[A-Za-z]\d{8}$/;
@@ -110,6 +114,8 @@ export default function RegisterDetailsForm({
       major: "",
       phoneNumber: "",
       qqNumber: "",
+      // Deliberately unchecked — consent must be an explicit user action.
+      agreedToTerms: false,
     },
   });
 
@@ -339,6 +345,7 @@ export default function RegisterDetailsForm({
                   ref={field.ref}
                   label="手机号"
                   type="tel"
+                  required
                   invalid={fieldState.invalid}
                   error={fieldState.error?.message}
                 />
@@ -355,6 +362,7 @@ export default function RegisterDetailsForm({
                   {...field}
                   ref={field.ref}
                   label="QQ 号"
+                  required
                   invalid={fieldState.invalid}
                   error={fieldState.error?.message}
                 />
@@ -363,6 +371,47 @@ export default function RegisterDetailsForm({
           />
 
           <FormError message={form.formState.errors.root?.message} />
+
+          <FormField
+            control={form.control}
+            name="agreedToTerms"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-start gap-2.5">
+                  <Checkbox
+                    id="agreedToTerms"
+                    checked={field.value}
+                    onCheckedChange={(checked) => field.onChange(checked === true)}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                    aria-invalid={!!form.formState.errors.agreedToTerms}
+                    className="mt-0.5"
+                  />
+                  <Label htmlFor="agreedToTerms" className="text-sm leading-6 font-normal">
+                    <span>
+                      我已阅读并同意
+                      <Link
+                        href="/terms"
+                        target="_blank"
+                        className="text-link underline hover:no-underline"
+                      >
+                        《用户协议》
+                      </Link>
+                      与
+                      <Link
+                        href="/privacy"
+                        target="_blank"
+                        className="text-link underline hover:no-underline"
+                      >
+                        《隐私政策》
+                      </Link>
+                    </span>
+                  </Label>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {(ticketInvalid || form.formState.errors.root?.message?.includes("过期")) && (
             <button

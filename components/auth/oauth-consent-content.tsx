@@ -177,7 +177,16 @@ export function OAuthConsentContent() {
           拒绝
         </Button>
       </div>
-      <p className="text-xs text-tertiary">授权即表示你同意该应用访问上述信息</p>
+      <p className="text-xs text-tertiary">
+        授权即表示你同意该应用访问上述信息，并遵循
+        <Link href="/terms" className="text-link hover:underline">
+          《用户协议》
+        </Link>
+        与
+        <Link href="/privacy" className="text-link hover:underline">
+          《隐私政策》
+        </Link>
+      </p>
     </div>
   );
 }

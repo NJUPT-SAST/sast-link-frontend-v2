@@ -112,10 +112,10 @@ describe("EditPage", () => {
     expect(screen.getByRole("button", { name: "选择图片" })).toBeInTheDocument();
   });
 
-  it("marks required fields with a star (nickname/name/major)", () => {
+  it("marks required fields with a star (nickname/name/major/phone/qq)", () => {
     render(<EditPage />);
 
-    expect(screen.getAllByText("*")).toHaveLength(3);
+    expect(screen.getAllByText("*")).toHaveLength(5);
   });
 
   it("pre-fills nickname from profile", () => {

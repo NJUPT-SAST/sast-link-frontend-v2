@@ -58,11 +58,11 @@ export const profileEditSchema = z.object({
   phoneNumber: z
     .string()
     .trim()
-    .refine((v) => v === "" || /^1\d{10}$/.test(v), "请输入 11 位手机号"),
+    .regex(/^1\d{10}$/, "请输入 11 位手机号"),
   qqNumber: z
     .string()
     .trim()
-    .refine((v) => v === "" || /^\d{5,20}$/.test(v), "请输入正确的 QQ 号"),
+    .regex(/^\d{5,20}$/, "请输入正确的 QQ 号"),
   // college may be empty until the user picks one — "其他" as a default would
   // silently overwrite a blank value on save.
   college: z.enum(COLLEGES).or(z.literal("")),
