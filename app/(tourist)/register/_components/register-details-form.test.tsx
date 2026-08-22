@@ -64,8 +64,15 @@ describe("RegisterDetailsForm consent gate", () => {
 
   it("links to the terms of service and the privacy policy", () => {
     const { container } = renderForm();
-    expect(container.querySelector('a[href="/terms"]')).toBeInTheDocument();
-    expect(container.querySelector('a[href="/privacy"]')).toBeInTheDocument();
+    const terms = container.querySelector('a[href="/terms"]');
+    const privacy = container.querySelector('a[href="/privacy"]');
+    expect(terms).toBeInTheDocument();
+    expect(privacy).toBeInTheDocument();
+    // Same-tab navigation keeps the step recoverable: the ticket and email are
+    // in sessionStorage, which a new tab cannot see. Opening a new tab also
+    // replays the boot intro and leaves the reader with no way back.
+    expect(terms).not.toHaveAttribute("target", "_blank");
+    expect(privacy).not.toHaveAttribute("target", "_blank");
   });
 
   it("starts unchecked so consent is an explicit action", () => {

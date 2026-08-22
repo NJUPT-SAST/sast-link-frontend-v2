@@ -32,10 +32,12 @@ export function LegalPage({
   const router = useRouter();
 
   // These documents are opened mid-flow — from the register consent tick and
-  // from the OAuth consent screen. A fixed link to /login would abandon a
-  // half-finished registration, so step back to wherever the reader came from
-  // and only fall back to /login when there is no history to return to (a
-  // document opened in a new tab, or linked directly).
+  // from the OAuth consent screen — so a fixed link to /login would abandon a
+  // half-finished registration. Both entry points navigate in the same tab, so
+  // clicking through pushes a history entry and stepping back returns the
+  // reader to the form exactly as they left it. A document opened directly
+  // (typed URL, bookmark, shared link) has nothing to step back to, so offer
+  // the login page instead.
   const goBack = () => {
     if (window.history.length > 1) router.back();
     else router.replace("/login");

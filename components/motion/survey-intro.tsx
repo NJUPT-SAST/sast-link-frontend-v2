@@ -1,12 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 
 import { useHideCursor } from "@/hooks/use-hide-cursor";
 import { safeSessionStorage } from "@/lib/safe-session-storage";
 import { generateStars, type Star } from "@/lib/visual/starfield";
 
 const SEEN_KEY = "sast-survey-seen";
+/** Static legal documents are not an entry point to the app — a reader who
+ *  opens 《隐私政策》 mid-registration should get the text, not a boot sequence.
+ *  Skipping here also avoids replaying the intro for anyone who lands on a
+ *  document link directly. */
+const NO_INTRO_ROUTES = ["/privacy", "/terms"];
 const INTRO_SEED = 179;
 const STAR_COUNT = 24;
 const OUT_MS = 2600; // fade-out starts
@@ -27,6 +33,7 @@ const CORNERS = [
  *  skippable, never under reduced-motion. Always dark: it is a boot survey. */
 export function SurveyIntro() {
   const [phase, setPhase] = useState<Phase>("hidden");
+  const pathname = usePathname();
   const stars = useMemo<Star[]>(
     () => generateStars(INTRO_SEED, 1440, 900).slice(0, STAR_COUNT),
     [],
@@ -39,6 +46,7 @@ export function SurveyIntro() {
   // see it too. Skippable, never under reduced-motion.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (NO_INTRO_ROUTES.includes(pathname)) return setPhase("done");
     if (safeSessionStorage.getItem(SEEN_KEY)) return setPhase("done");
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return setPhase("done");
 
@@ -62,7 +70,7 @@ export function SurveyIntro() {
       window.removeEventListener("pointerdown", skip);
       window.removeEventListener("keydown", skip);
     };
-  }, []);
+  }, [pathname]);
 
   if (phase === "hidden" || phase === "done") return null;
 
