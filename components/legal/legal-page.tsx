@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 /** Shared chrome for the privacy policy and terms of service pages: scope
  *  header, a summary of contents (GB/T 35273-2020 Appendix D recommends leading
@@ -29,6 +29,18 @@ export function LegalPage({
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
+  const router = useRouter();
+
+  // These documents are opened mid-flow — from the register consent tick and
+  // from the OAuth consent screen. A fixed link to /login would abandon a
+  // half-finished registration, so step back to wherever the reader came from
+  // and only fall back to /login when there is no history to return to (a
+  // document opened in a new tab, or linked directly).
+  const goBack = () => {
+    if (window.history.length > 1) router.back();
+    else router.replace("/login");
+  };
+
   return (
     <main className="stagger-rise mx-auto flex w-full max-w-[760px] flex-col px-5 pb-24 pt-14 sm:px-10">
       <header className="flex flex-col gap-3 border-b border-hairline pb-8">
@@ -73,9 +85,9 @@ export function LegalPage({
 
       <footer className="mt-14 flex flex-wrap gap-x-6 gap-y-2 border-t border-hairline pt-6 text-sm">
         {footer}
-        <Link href="/login" className="text-link hover:underline">
-          ← 返回登录
-        </Link>
+        <button type="button" onClick={goBack} className="text-link hover:underline">
+          ← 返回
+        </button>
       </footer>
     </main>
   );
