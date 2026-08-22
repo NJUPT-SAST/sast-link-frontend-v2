@@ -176,38 +176,47 @@ export function BoundEmailSection() {
           </div>
         </div>
       ) : mode.kind === "verify-code" ? (
-        <div className="flex flex-col gap-3 border-b border-hairline py-4 sm:flex-row sm:items-start">
-          <div className="flex-1">
-            <p className="mb-2 text-[13px] text-muted-foreground">
-              验证码已发送至 {mode.email}
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => {
-                  void bindEmail(mode.email)
-                    .then(() => message.info("验证码已重新发送"))
-                    .catch((error) => setError(toApiError(error).message));
-                }}
-                className="ml-2 text-xs text-link hover:underline disabled:text-muted-foreground"
-              >
-                重新发送
-              </button>
-            </p>
-            <AuthFormField
-              label="验证码"
-              placeholder="6 位验证码"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              error={error}
-            />
-          </div>
-          <div className="flex shrink-0 gap-2 sm:pt-7">
-            <Button variant="outline" size="sm" onClick={reset}>
-              取消
-            </Button>
-            <Button size="sm" onClick={handleVerify} disabled={loading}>
-              {loading ? <DotLoading /> : "确认绑定"}
-            </Button>
+        <div className="border-b border-hairline py-4">
+          <p className="mb-3 text-[13px] text-muted-foreground">
+            验证码已发送至 {mode.email}
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                void bindEmail(mode.email)
+                  .then((res) => {
+                    setMode({
+                      kind: "verify-code",
+                      email: mode.email,
+                      bindTicket: res.data.data.bind_ticket,
+                    });
+                    message.info("验证码已重新发送");
+                  })
+                  .catch((error) => setError(toApiError(error).message));
+              }}
+              className="ml-2 text-xs text-link hover:underline disabled:text-muted-foreground"
+            >
+              重新发送
+            </button>
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+            <div className="flex-1">
+              <AuthFormField
+                label="验证码"
+                placeholder="6 位验证码"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                error={error}
+              />
+            </div>
+            <div className="flex shrink-0 gap-2 sm:pt-7">
+              <Button variant="outline" size="sm" onClick={reset}>
+                取消
+              </Button>
+              <Button size="sm" onClick={handleVerify} disabled={loading}>
+                {loading ? <DotLoading /> : "确认绑定"}
+              </Button>
+            </div>
           </div>
         </div>
       ) : others.length >= MAX_OTHER_EMAILS ? (
