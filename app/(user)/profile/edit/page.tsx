@@ -372,6 +372,7 @@ export default function EditPage() {
                         ref={field.ref}
                         label={label}
                         type={type}
+                        required
                         invalid={fieldState.invalid}
                         error={fieldState.error?.message}
                       />
