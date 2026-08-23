@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 
 import { cn } from "@/lib/utils";
-import { isLowEndDevice } from "@/components/visual/starfield";
 import { LOGO_DATA_URL } from "@/lib/visual/brand-mark";
 import {
   RAMP,
@@ -12,8 +11,10 @@ import {
   luma601,
 } from "@/lib/visual/ascii-field";
 
-/** Canvas DPR cap; low-end devices force 1. */
-const MAX_DPR = 2;
+/** Canvas DPR cap. PhotoGlyphs is the page's signature mark; it keeps the same
+ *  glyph density and crisp anti-aliasing on phones and desktop, so we scale the
+ *  backing store with the device (up to 3x) and let CSS shrink the element to fit. */
+const MAX_DPR = 3;
 /** Repaint at most ~30fps — the grain crawls slowly, extra frames are waste. */
 const FRAME_INTERVAL = 1000 / 30;
 const FONT_STACK = "ui-monospace, SFMono-Regular, Menlo, monospace";
@@ -49,7 +50,6 @@ export function PhotoGlyphs({
     }
     if (!ctx) return;
 
-    const lowEnd = isLowEndDevice();
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // Offscreen canvas: downsample the source to grid size to read luminance.
@@ -63,7 +63,7 @@ export function PhotoGlyphs({
 
     const img = new Image();
     const startedAt = performance.now();
-    const dpr = () => Math.min(window.devicePixelRatio || 1, lowEnd ? 1 : MAX_DPR);
+    const dpr = () => Math.min(window.devicePixelRatio || 1, MAX_DPR);
 
     // Grid state, rebuilt on load/resize.
     let cols = 0;
@@ -91,7 +91,7 @@ export function PhotoGlyphs({
       if (!img.complete || img.naturalWidth === 0 || !srcOffCtx || !ctx) return false;
 
       const availW = canvas.clientWidth || window.innerWidth || 600;
-      const fontSize = lowEnd ? 13 : 10;
+      const fontSize = 10;
       ctx.font = `${fontSize}px ${FONT_STACK}`;
       const charW = ctx.measureText("M").width;
       const grid = computeAsciiGrid(
@@ -99,7 +99,6 @@ export function PhotoGlyphs({
         img.naturalHeight / img.naturalWidth,
         charW,
         fontSize,
-        lowEnd,
       );
       cols = grid.cols;
       rows = grid.rows;

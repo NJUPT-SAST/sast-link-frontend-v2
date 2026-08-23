@@ -1,0 +1,17 @@
+[
+  {
+    "name": "SAST Homepage",
+    "github_url": "https://github.com/NJUPT-SAST/sast-homepage-next",
+    "url": "https://sast.fun/"
+  },
+  {
+    "name": "SAST People",
+    "github_url": "https://github.com/NJUPT-SAST/sast-people-next",
+    "url": "https://people.sast.fun/"
+  },
+  {
+    "name": "SAST Link",
+    "github_url": "https://github.com/NJUPT-SAST/sast-link-frontend-v2",
+    "url": "https://link.sast.fun/"
+  }
+]

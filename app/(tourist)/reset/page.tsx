@@ -131,7 +131,6 @@ function ResetFlow() {
           <>
             <div className="mb-8 flex flex-col gap-2.5">
               <h2 className="type-title1">重置密码</h2>
-              <p className="text-[15px] text-muted-foreground">输入登录邮箱或已绑定的个人邮箱，我们发送验证码。</p>
             </div>
             <form onSubmit={handleSendCodeSubmit} className="flex flex-col gap-4">
               <LoginAccountField

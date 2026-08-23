@@ -94,15 +94,21 @@ export default function ProfilePage() {
         <Field label="学院" value={profile.college} wrap />
         <Field label="专业" value={profile.major} wrap />
         <Field label="签名" value={profile.intro} wrap empty={profile.intro ? "" : "你还没留下签名哦～"} />
-        <Field
-          label="部门"
-          value={profile.department ? DEPARTMENT_LABELS[profile.department] ?? profile.department : null}
-        />
       </section>
+
+      {profile.state !== "njupter" && (
+        <section aria-label="所属部门">
+          <h2 className="type-tech mb-3 text-tertiary">所属部门</h2>
+          <Field
+            label="部门"
+            value={profile.department ? DEPARTMENT_LABELS[profile.department] ?? profile.department : null}
+            empty="qwq，字段还在维护"
+          />
+        </section>
+      )}
 
       <section aria-label="联系方式">
         <h2 className="type-tech mb-3 text-tertiary">联系方式</h2>
-        <Field label="注册邮箱" value={profile.loginEmail} />
         <Field label="手机号" value={profile.phoneNumber} />
         <Field label="QQ" value={profile.qqNumber} />
         <Field label="博客" value={profile.blogUrl} wrap />

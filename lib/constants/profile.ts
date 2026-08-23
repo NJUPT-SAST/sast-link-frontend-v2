@@ -18,15 +18,15 @@ export function avatarFallbackChar(profile: Pick<UserProfileType, "nickname">): 
 }
 
 export const ROLE_LABELS: Record<string, string > = {
-  freshman: "新生",
-  member: "成员",
-  lecturer: "讲师",
-  admin: "管理员",
+  freshman: "Freshman",
+  member: "Member",
+  lecturer: "Lecturer",
+  admin: "Admin",
 };
 
 export const STATE_LABELS: Record<string, string > = {
-  njupter: "在校学生",
-  on_sast: "SAST 成员",
-  retired_sast: "已退休",
-  is_deleted: "已注销",
+  njupter: "NJUPTer",
+  on_sast: "SASTer",
+  retired_sast: "SAST专业养老团队",
+  is_deleted: "滚木",
 };

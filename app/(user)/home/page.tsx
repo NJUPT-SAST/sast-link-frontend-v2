@@ -6,6 +6,7 @@ import { useFetchProfile } from "@/hooks/use-fetch-profile";
 import { HomeHero } from "@/components/user/home-hero";
 import { HomeSkeleton } from "@/components/user/home-skeleton";
 import { ProfileCard } from "@/components/user/profile-card";
+import { ProjectsCarousel } from "@/components/user/projects-carousel";
 
 export default function HomePage() {
   const { isLoading } = useFetchProfile();
@@ -30,6 +31,7 @@ export default function HomePage() {
     <main className="w-full">
       <HomeHero />
       <ProfileCard />
+      <ProjectsCarousel />
     </main>
   );
 }

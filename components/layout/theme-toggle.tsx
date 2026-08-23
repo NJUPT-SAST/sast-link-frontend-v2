@@ -63,7 +63,7 @@ export function ThemeToggle() {
   return (
     <TooltipProvider delayDuration={500}>
       <Tooltip>
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
               <Button
