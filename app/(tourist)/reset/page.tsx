@@ -9,7 +9,7 @@ import Link from "next/link";
 import { forgotPasswordSendCode, resetPassword } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
 import {
-  loginEmailSchema,
+  resetEmailSchema,
   resetPasswordFormSchema,
   type ResetPasswordFormValues,
 } from "@/lib/validations/auth";
@@ -44,8 +44,8 @@ function parseEmail(email: string): AccountValue {
   const domain: Domain = ALLOWED_DOMAINS.find((d) => d === suffix) ?? "其他邮箱";
   if (domain === "其他邮箱") {
     // Keep the whole address (login's other-mail mode does the same) instead of
-    // silently rewriting e.g. alice@qq.com to alice@njupt.edu.cn; validation
-    // then explains reset only supports primary @njupt.edu.cn / @sast.fun.
+    // silently rewriting e.g. alice@qq.com to alice@njupt.edu.cn; a bound
+    // personal email is a valid reset identity, so the full address submits.
     return { localPart: trimmed, domain };
   }
   return { localPart, domain };
@@ -95,7 +95,7 @@ function ResetFlow() {
 
   const sendCode = async () => {
     setAccountError(undefined);
-    const parsed = loginEmailSchema.safeParse(loginEmail);
+    const parsed = resetEmailSchema.safeParse(loginEmail);
     if (!parsed.success) {
       setAccountError(parsed.error.issues[0]?.message);
       return;
@@ -131,7 +131,7 @@ function ResetFlow() {
           <>
             <div className="mb-8 flex flex-col gap-2.5">
               <h2 className="type-title1">重置密码</h2>
-              <p className="text-[15px] text-muted-foreground">输入注册邮箱，我们发送验证码。</p>
+              <p className="text-[15px] text-muted-foreground">输入登录邮箱或已绑定的个人邮箱，我们发送验证码。</p>
             </div>
             <form onSubmit={handleSendCodeSubmit} className="flex flex-col gap-4">
               <LoginAccountField

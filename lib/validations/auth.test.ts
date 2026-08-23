@@ -1,9 +1,9 @@
 import {
   loginAccountFormSchema,
   loginAccountSchema,
-  loginEmailSchema,
   passwordSchema,
   registerDetailsSchema,
+  resetEmailSchema,
   verificationCodeSchema,
 } from "./auth";
 
@@ -11,8 +11,6 @@ describe("auth validation schemas", () => {
   it("accepts student ids and supported login emails", () => {
     expect(loginAccountSchema.safeParse("B12345678").success).toBe(true);
     expect(loginAccountSchema.safeParse("student@njupt.edu.cn").success).toBe(true);
-    expect(loginEmailSchema.safeParse("member@sast.fun").success).toBe(true);
-    expect(loginEmailSchema.safeParse("user@example.com").success).toBe(false);
   });
 
   it("requires six-digit codes and passwords of at least 8 characters", () => {
@@ -102,6 +100,23 @@ describe("auth validation schemas", () => {
       const withoutConsent = { ...valid };
       delete (withoutConsent as { agreedToTerms?: boolean }).agreedToTerms;
       expect(registerDetailsSchema.safeParse(withoutConsent).success).toBe(false);
+    });
+  });
+
+  describe("resetEmailSchema", () => {
+    // Reset resolves the account by login identifier and sends the code to the
+    // submitted mailbox, so any reachable email works — including a bound
+    // other_mail personal identity, not just the registration whitelist domains.
+    it("accepts whitelist login emails and bound personal emails alike", () => {
+      expect(resetEmailSchema.safeParse("alice@njupt.edu.cn").success).toBe(true);
+      expect(resetEmailSchema.safeParse("member@sast.fun").success).toBe(true);
+      expect(resetEmailSchema.safeParse("alice@qq.com").success).toBe(true);
+      expect(resetEmailSchema.safeParse("alice@example.com").success).toBe(true);
+    });
+
+    it("rejects malformed or empty identifiers", () => {
+      expect(resetEmailSchema.safeParse("not-an-email").success).toBe(false);
+      expect(resetEmailSchema.safeParse("").success).toBe(false);
     });
   });
 });

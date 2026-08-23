@@ -7,6 +7,8 @@ import type {
   AdminBatchRoleUpdateResult,
   AdminBatchUsersData,
   AdminCreateOAuthClientRequest,
+  AdminCreateUserData,
+  AdminCreateUserRequest,
   AdminOAuthClient,
   AdminUpdateOAuthClientRequest,
   AdminUpdateUserRequest,
@@ -57,6 +59,13 @@ export function updateAdminUser(id: number, data: AdminUpdateUserRequest) {
     `/admin/users/${id}`,
     data,
   );
+}
+
+/** Admin provisions an account — see `AdminCreateUserRequest`. The response's
+ *  `initial_password` is the only time it is ever returned: the caller must
+ *  surface it once (the create dialog shows it on a success screen). */
+export function createAdminUser(data: AdminCreateUserRequest) {
+  return apiClient.post<ApiEnvelope<AdminCreateUserData>>("/admin/users", data);
 }
 
 export function deleteAdminUser(id: number) {

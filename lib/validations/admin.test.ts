@@ -1,5 +1,6 @@
 import {
   adminAuditLogFiltersSchema,
+  adminCreateUserSchema,
   adminOAuthClientSchema,
   adminUpdateUserSchema,
 } from "./admin";
@@ -165,5 +166,66 @@ describe("adminUpdateUserSchema", () => {
 
   it("still allows omitting phone_number/qq_number for a partial update", () => {
     expect(adminUpdateUserSchema.safeParse({ name: "李四" }).success).toBe(true);
+  });
+});
+
+describe("adminCreateUserSchema", () => {
+  const base = {
+    name: "张三",
+    phone_number: "13800138000",
+    qq_number: "12345",
+    student_id: "B24040525",
+    login_email: "b24040525@njupt.edu.cn",
+    college: "其他",
+    major: "",
+    personal_email: "",
+    role: "member",
+    state: "retired_sast",
+  };
+
+  it("accepts a complete provisioning request with a bound personal email", () => {
+    const result = adminCreateUserSchema.safeParse({
+      ...base,
+      personal_email: "zhangsan@qq.com",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("restricts login_email to the registration whitelist domains", () => {
+    expect(adminCreateUserSchema.safeParse({ ...base, login_email: "a@qq.com" }).success).toBe(false);
+    expect(adminCreateUserSchema.safeParse({ ...base, login_email: "a@njupt.edu.cn" }).success).toBe(true);
+    expect(adminCreateUserSchema.safeParse({ ...base, login_email: "a@SAST.FUN" }).success).toBe(true);
+  });
+
+  it("rejects is_deleted as a creation state", () => {
+    expect(adminCreateUserSchema.safeParse({ ...base, state: "is_deleted" }).success).toBe(false);
+    expect(adminCreateUserSchema.safeParse({ ...base, state: "on_sast" }).success).toBe(true);
+  });
+
+  it("allows an empty personal_email (no bound identity)", () => {
+    expect(adminCreateUserSchema.safeParse(base).success).toBe(true);
+  });
+
+  it("rejects personal_email identical to login_email", () => {
+    const result = adminCreateUserSchema.safeParse({
+      ...base,
+      personal_email: "B24040525@njupt.edu.cn",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === "personal_email");
+      expect(issue?.message).toBe("个人邮箱不能与登录邮箱相同");
+    }
+  });
+
+  it("rejects a malformed personal_email", () => {
+    expect(adminCreateUserSchema.safeParse({ ...base, personal_email: "not-an-email" }).success).toBe(false);
+  });
+
+  it("requires the mandatory provisioning fields", () => {
+    expect(adminCreateUserSchema.safeParse({ ...base, name: "" }).success).toBe(false);
+    expect(adminCreateUserSchema.safeParse({ ...base, student_id: "" }).success).toBe(false);
+    expect(adminCreateUserSchema.safeParse({ ...base, phone_number: "123" }).success).toBe(false);
+    expect(adminCreateUserSchema.safeParse({ ...base, qq_number: "12" }).success).toBe(false);
   });
 });

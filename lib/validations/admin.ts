@@ -1,6 +1,6 @@
 import { z } from "zod/v3";
 
-import { COLLEGES } from "@/lib/api/types";
+import { COLLEGES, CREATE_USER_STATES } from "@/lib/api/types";
 
 function isValidRedirectUri(value: string): boolean {
   if (value.length > 2048) return false;
@@ -81,6 +81,65 @@ export const adminUpdateUserSchema = z
   .refine((values) => Object.keys(values).length > 0, "至少修改一个字段");
 
 export type AdminUpdateUserFormValues = z.infer<typeof adminUpdateUserSchema>;
+
+/** Create user (admin provisioning) — mirrors the registration whitelist for
+ *  `login_email` (email_type is derived server-side), lets `personal_email`
+ *  stay empty (no bound identity), and never accepts `state: is_deleted`. */
+export const adminCreateUserSchema = z
+  .object({
+    name: z.string().trim().min(1, "姓名不可为空").max(255, "姓名最多 255 字符"),
+    student_id: z
+      .string()
+      .trim()
+      .min(1, "学号不可为空")
+      .max(50, "学号最多 50 字符"),
+    college: z.enum(COLLEGES),
+    major: z.string().trim().max(50, "专业最多 50 字符"),
+    login_email: z
+      .string()
+      .trim()
+      .email("请输入有效的邮箱")
+      .max(255, "邮箱最多 255 字符")
+      .regex(
+        /^[^\s@]+@(njupt\.edu\.cn|sast\.fun)$/i,
+        "仅支持 @njupt.edu.cn 或 @sast.fun 邮箱",
+      ),
+    phone_number: z
+      .string()
+      .trim()
+      .regex(/^1\d{10}$/, "请输入 11 位手机号"),
+    qq_number: z
+      .string()
+      .trim()
+      .regex(/^\d{5,20}$/, "请输入正确的 QQ 号"),
+    // Empty means "no personal email"; a filled value is admin-vouched and
+    // bound as an `other_mail` login identity without verification.
+    personal_email: z
+      .string()
+      .trim()
+      .max(255, "邮箱最多 255 字符")
+      .refine(
+        (value) => value === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+        "请输入有效的个人邮箱",
+      ),
+    role: userRoleSchema,
+    // A fresh account is never deleted on creation (backend 422).
+    state: z.enum(CREATE_USER_STATES),
+  })
+  .superRefine((values, ctx) => {
+    if (
+      values.personal_email &&
+      values.personal_email.toLowerCase() === values.login_email.toLowerCase()
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["personal_email"],
+        message: "个人邮箱不能与登录邮箱相同",
+      });
+    }
+  });
+
+export type AdminCreateUserFormValues = z.infer<typeof adminCreateUserSchema>;
 
 export const adminOAuthClientSchema = z
   .object({
