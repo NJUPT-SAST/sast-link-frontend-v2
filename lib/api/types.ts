@@ -239,6 +239,43 @@ export interface AdminUpdateUserRequest {
   department?: Department;
 }
 
+/** States an admin may provision a new account in. `is_deleted` is never a
+ *  creation state — a fresh account is not a deletion (backend 422). */
+export const CREATE_USER_STATES = ["njupter", "on_sast", "retired_sast"] as const;
+export type CreateUserState = (typeof CREATE_USER_STATES)[number];
+
+/** Request body for `POST /admin/users` — admin provisions an account for a
+ *  member who can no longer self-register (the fallback for graduated members
+ *  whose school mailbox is dead). `login_email` is restricted to the
+ *  registration whitelist domains; an optional `personal_email` is bound as an
+ *  `other_mail` login identity in the same transaction. */
+export interface AdminCreateUserRequest {
+  name: string;
+  phone_number: string;
+  qq_number: string;
+  student_id: string;
+  login_email: string;
+  /** Optional; backend default "" — the profile's declared major. */
+  major?: string;
+  /** Optional; backend default 「其他」. */
+  college?: College;
+  /** Optional. When supplied, bound as an `other_mail` login identity
+   *  (admin-vouched, no verification) in the same transaction. */
+  personal_email?: string;
+  /** Optional; backend default `member`. */
+  role?: UserRole;
+  /** Optional; backend default `retired_sast`. */
+  state?: CreateUserState;
+}
+
+/** `POST /admin/users` success payload. `initial_password` is returned exactly
+ *  once — never stored, never audited — and must be captured before leaving. */
+export interface AdminCreateUserData {
+  id: number;
+  login_email: string;
+  initial_password: string;
+}
+
 export interface AdminBatchRoleUpdateRequest {
   ids: number[];
   role: UserRole;

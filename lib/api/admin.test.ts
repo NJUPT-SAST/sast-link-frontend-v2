@@ -10,6 +10,7 @@ jest.mock("./client", () => ({
 import { apiClient } from "./client";
 import {
   computeRoleFailedIds,
+  createAdminUser,
   getAdminUsersBatch,
   summarizeBatchEdit,
   updateAdminUsersRole,
@@ -44,6 +45,52 @@ describe("lib/api/admin batch wrappers", () => {
     const res = await updateAdminUsersRole({ ids: [1], role: "member" });
 
     expect(res.data.data.results).toEqual(results);
+  });
+});
+
+describe("lib/api/admin createAdminUser", () => {
+  it("POSTs the provisioning request to /admin/users with the body", () => {
+    createAdminUser({
+      name: "张三",
+      phone_number: "13800138000",
+      qq_number: "12345",
+      student_id: "B24040525",
+      login_email: "b24040525@njupt.edu.cn",
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith("/admin/users", {
+      name: "张三",
+      phone_number: "13800138000",
+      qq_number: "12345",
+      student_id: "B24040525",
+      login_email: "b24040525@njupt.edu.cn",
+    });
+  });
+
+  it("threads the one-time initial_password through the envelope", async () => {
+    (apiClient.post as jest.Mock).mockResolvedValueOnce({
+      data: {
+        code: 0,
+        message: "ok",
+        data: {
+          id: 2001,
+          login_email: "b24040525@njupt.edu.cn",
+          // Placeholder, not a real password — low-entropy so secret scanners
+          // (GitGuardian Generic Password) don't flag the fixture.
+          initial_password: "initial-password-placeholder",
+        },
+      },
+    });
+
+    const res = await createAdminUser({
+      name: "张三",
+      phone_number: "13800138000",
+      qq_number: "12345",
+      student_id: "B24040525",
+      login_email: "b24040525@njupt.edu.cn",
+    });
+
+    expect(res.data.data.initial_password).toBe("initial-password-placeholder");
   });
 });
 

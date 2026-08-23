@@ -5,6 +5,8 @@ import { useSWRConfig } from "swr";
 
 import type {
   AdminBatchRoleUpdateResult,
+  AdminCreateUserData,
+  AdminCreateUserRequest,
   AdminUpdateUserRequest,
   AdminUserListParams,
   Department,
@@ -14,6 +16,7 @@ import type {
 } from "@/lib/api/types";
 import {
   computeRoleFailedIds,
+  createAdminUser,
   summarizeBatchEdit,
   updateAdminUser,
   updateAdminUsersRole,
@@ -38,6 +41,7 @@ import {
   UserBatchEditDialog,
   type BatchEditFields,
 } from "@/components/admin/user-batch-edit-dialog";
+import { UserCreateDialog } from "@/components/admin/user-create-dialog";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { Button } from "@/components/ui/button";
 
@@ -60,6 +64,7 @@ function AdminUsersContent() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [batchOpen, setBatchOpen] = useState(false);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const handleToggleSelect = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -190,6 +195,17 @@ function AdminUsersContent() {
     setConfirm({ open: true, user, action: "restore" });
   };
 
+  // Provisions an account (see AdminCreateUserRequest) and refreshes the list so
+  // the new user shows up immediately. The dialog stays open to present the
+  // one-time password; the list refresh runs in the background and a revalidate
+  // failure must not surface as an unhandled rejection (the list owns its error
+  // state).
+  const handleCreate = async (data: AdminCreateUserRequest): Promise<AdminCreateUserData> => {
+    const res = await createAdminUser(data);
+    void mutate(buildAdminUsersKey(filters)).catch(() => undefined);
+    return res.data.data;
+  };
+
   const handleConfirm = async () => {
     if (!confirm.user) return;
     if (confirm.action === "delete") {
@@ -206,11 +222,16 @@ function AdminUsersContent() {
         <div>
           <h1 className="type-title2">用户管理</h1>
         </div>
-        {canManage && selectedIds.size > 0 && (
-          <Button onClick={() => setBatchOpen(true)} disabled={batchLoading}>
-            批量修改（{selectedIds.size}）
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {canManage && selectedIds.size > 0 && (
+            <Button onClick={() => setBatchOpen(true)} disabled={batchLoading}>
+              批量修改（{selectedIds.size}）
+            </Button>
+          )}
+          {canManage && (
+            <Button onClick={() => setCreateOpen(true)}>创建账号</Button>
+          )}
+        </div>
       </div>
 
       <UserFilters value={filters} onChange={handleFiltersChange} />
@@ -278,6 +299,12 @@ function AdminUsersContent() {
         count={selectedIds.size}
         loading={batchLoading}
         onConfirm={handleBatchConfirm}
+      />
+
+      <UserCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreate={handleCreate}
       />
     </div>
   );

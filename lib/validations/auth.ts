@@ -20,11 +20,15 @@ export const loginAccountSchema = z
 
 const loginPasswordSchema = z.string().min(1, "密码不可为空");
 
-export const loginEmailSchema = z
+/** Password-reset identifier: the account's `login_email` OR any bound
+ *  `other_mail` personal identity. The backend resolves the account by login
+ *  identifier and sends the code to this submitted mailbox, so any reachable
+ *  email is acceptable — not just the registration whitelist domains. */
+export const resetEmailSchema = z
   .string()
   .trim()
-  .email("请输入正确的邮箱")
-  .regex(emailPattern, "仅支持 @njupt.edu.cn 或 @sast.fun 邮箱");
+  .min(1, "邮箱不可为空")
+  .email("请输入正确的邮箱");
 
 const registerAccountFormSchema = z.object({
   account: z

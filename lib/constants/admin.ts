@@ -88,6 +88,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   admin_oauth_client_update: "更新 OAuth 客户端",
   admin_oauth_client_rotate_secret: "轮换客户端密钥",
   admin_oauth_client_delete: "删除 OAuth 客户端",
+  admin_user_create: "创建用户（管理）",
   admin_user_update: "更新用户（管理）",
   admin_user_delete: "删除用户（管理）",
   admin_user_restore: "恢复用户（管理）",
