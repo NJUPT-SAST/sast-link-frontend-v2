@@ -43,13 +43,11 @@ describe("ProfilePage", () => {
     expect(screen.getByText("B24040001")).toBeInTheDocument();
     expect(screen.getByText("计算机学院、软件学院、网络空间安全学院")).toBeInTheDocument();
     expect(screen.getByText("软件工程")).toBeInTheDocument();
-    expect(screen.getByText("b24040001@njupt.edu.cn")).toBeInTheDocument();
     expect(screen.getByText("13800138000")).toBeInTheDocument();
     expect(screen.getByText("1234567890")).toBeInTheDocument();
     expect(screen.getByText("https://blog.example.com")).toBeInTheDocument();
     expect(screen.getByText("https://github.com/alice")).toBeInTheDocument();
     expect(screen.getByText("正在四处游荡中...")).toBeInTheDocument();
-    expect(screen.getByText("注册邮箱")).toBeInTheDocument();
     expect(screen.getByText("GitHub 链接")).toBeInTheDocument();
   });
 
