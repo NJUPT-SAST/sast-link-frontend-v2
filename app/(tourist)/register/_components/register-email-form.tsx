@@ -69,11 +69,14 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
     setCountdownActive(true);
   };
 
-  const loginEmail = (() => {
+  // Read at call time, never during render: typing only re-renders the
+  // `account` Controller, so a render-body getValues() would stay frozen at the
+  // mount value and post a bare "@njupt.edu.cn".
+  const buildLoginEmail = () => {
     const account = form.getValues("account");
     const localPart = account.localPart.trim().toLowerCase();
     return account.domain.startsWith("@") ? `${localPart}${account.domain}` : localPart;
-  })();
+  };
 
   const handleSendCode = async () => {
     if (sendingRef.current) return;
@@ -83,7 +86,7 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
     sendingRef.current = true;
     setSending(true);
     try {
-      await registerSendCode(loginEmail);
+      await registerSendCode(buildLoginEmail());
       setSent(true);
       startCountdown();
       form.clearErrors("code");
@@ -97,6 +100,7 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
 
   const handleVerify = form.handleSubmit(async ({ code }) => {
     setVerifying(true);
+    const loginEmail = buildLoginEmail();
     try {
       const response = await registerVerifyCode(loginEmail, code);
       const ticket = response.data.data.register_ticket;
