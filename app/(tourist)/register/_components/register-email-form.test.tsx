@@ -17,6 +17,12 @@ jest.mock(
     },
 );
 
+// Default to a solvable challenge so the pre-existing cases see the form as-is;
+// the alumni-entry block below overrides it per case.
+jest.mock("@/hooks/use-turnstile", () => ({
+  useTurnstileScript: jest.fn(() => "ready"),
+}));
+
 const mockSendCode = registerSendCode as jest.MockedFunction<typeof registerSendCode>;
 
 describe("RegisterEmailForm", () => {
@@ -46,4 +52,30 @@ describe("RegisterEmailForm", () => {
     expect(mockSendCode).toHaveBeenCalledTimes(1);
     expect(mockSendCode).toHaveBeenCalledWith("b23000000@njupt.edu.cn");
   });
+});
+
+// The alumni fallback is only reachable when a Turnstile challenge can actually
+// be solved: the backend verifies the token unconditionally, so linking to a form
+// that cannot succeed would strand the applicant on a dead page.
+describe("RegisterEmailForm alumni entry", () => {
+  const useTurnstileScript = jest.requireMock("@/hooks/use-turnstile")
+    .useTurnstileScript as jest.Mock;
+
+  it.each(["ready", "loading"] as const)(
+    "shows the alumni entry when the captcha is %s",
+    (state) => {
+      useTurnstileScript.mockReturnValue(state);
+      render(<RegisterEmailForm onVerified={jest.fn()} />);
+      expect(screen.getByText(/申请建号/)).toBeInTheDocument();
+    },
+  );
+
+  it.each(["disabled", "unavailable"] as const)(
+    "hides the alumni entry when the captcha is %s",
+    (state) => {
+      useTurnstileScript.mockReturnValue(state);
+      render(<RegisterEmailForm onVerified={jest.fn()} />);
+      expect(screen.queryByText(/申请建号/)).not.toBeInTheDocument();
+    },
+  );
 });
