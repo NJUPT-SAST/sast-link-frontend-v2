@@ -9,6 +9,9 @@ export interface AdminNavItem {
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: "概览", href: "/admin", roles: ["admin"] },
   { label: "用户管理", href: "/admin/users", roles: ["admin", "lecturer"] },
+  // Listing is RequireReader (admin + lecturer) on the backend; approve/reject
+  // are admin-only and the review dialog hides those actions for a lecturer.
+  { label: "建号申请", href: "/admin/alumni-requests", roles: ["admin", "lecturer"] },
   { label: "OAuth 客户端", href: "/admin/oauth-clients", roles: ["admin"] },
   { label: "审计日志", href: "/admin/audit-logs", roles: ["admin"] },
 ];
@@ -92,6 +95,10 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   admin_user_update: "更新用户（管理）",
   admin_user_delete: "删除用户（管理）",
   admin_user_restore: "恢复用户（管理）",
+  // 校友建号工单
+  alumni_request_submit: "提交建号申请",
+  alumni_request_approve: "通过建号申请",
+  alumni_request_reject: "驳回建号申请",
 };
 
 /**
@@ -104,6 +111,14 @@ export const AUDIT_RESOURCE_LABELS: Record<string, string> = {
   session: "会话",
   verification_code: "验证码",
   oauth: "OAuth",
+  alumni_request: "建号申请",
+};
+
+/** 建号申请状态 → 中文标签。键与后端 alumni_request_status_enum 一致。 */
+export const ALUMNI_REQUEST_STATUS_LABELS: Record<string, string> = {
+  pending: "待审核",
+  approved: "已通过",
+  rejected: "已驳回",
 };
 
 export function formatAdminDate(iso: string | null): string {
