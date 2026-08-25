@@ -110,7 +110,7 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
           <h1 className="type-title3">第三方登录被取消</h1>
           <Steps failed />
           <p className="max-w-[360px] text-[15px] leading-[22px] text-muted-foreground">
-            你未通过 {provider.name} 完成登录，未执行任何操作。
+            你已手动取消，{provider.name}登录未完成。
           </p>
           <div className="mt-2">
             <Button onClick={() => router.replace("/login")}>返回登录</Button>
