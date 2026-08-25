@@ -52,7 +52,7 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
   const exchangedRef = useRef(false);
   const code = searchParams.get("code");
   // The provider bounces back with an `error` query when the user cancels the
-  // consent step — treat that as "已取消登录", not a stale link.
+  // consent step — treat that as a cancellation, not a stale link.
   const cancelled = searchParams.get("error") !== null;
   const inputError = cancelled
     ? null
@@ -107,10 +107,10 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
       </div>
       {cancelled ? (
         <>
-          <h1 className="type-title3">已取消登录</h1>
+          <h1 className="type-title3">第三方登录被取消</h1>
           <Steps failed />
           <p className="max-w-[360px] text-[15px] leading-[22px] text-muted-foreground">
-            已取消通过 {provider.name} 登录，未执行任何操作。
+            你未通过 {provider.name} 完成登录，未执行任何操作。
           </p>
           <div className="mt-2">
             <Button onClick={() => router.replace("/login")}>返回登录</Button>

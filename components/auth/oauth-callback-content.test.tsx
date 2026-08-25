@@ -87,7 +87,7 @@ describe("OAuthCallbackContent", () => {
 
     render(<OAuthCallbackContent provider={provider} />);
 
-    expect(screen.getByText("已取消登录")).toBeInTheDocument();
+    expect(screen.getByText("第三方登录被取消")).toBeInTheDocument();
     expect(screen.queryByText(/登录链接已失效/)).not.toBeInTheDocument();
     expect(mockExchangeLoginCode).not.toHaveBeenCalled();
   });
