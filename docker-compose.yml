@@ -13,6 +13,7 @@ services:
         NEXT_PUBLIC_FEISHU_BIND_REDIRECT_URI: ${NEXT_PUBLIC_FEISHU_BIND_REDIRECT_URI:-}
         NEXT_PUBLIC_GITHUB_CLIENT_ID: ${NEXT_PUBLIC_GITHUB_CLIENT_ID:-}
         NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI: ${NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI:-}
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
     container_name: sast-link-frontend-v2
     ports:
       # Caddy runs on the host and reaches this container through this published

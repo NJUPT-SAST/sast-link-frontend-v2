@@ -20,6 +20,12 @@ export type TurnstileState = "disabled" | "loading" | "ready" | "unavailable";
 const SCRIPT_SRC =
   "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 const SCRIPT_ID = "cf-turnstile-script";
+/** Must equal the backend's TURNSTILE_ACTION (default `alumni_request`):
+ *  siteverify returns the action the token was issued for, and the backend
+ *  refuses a token whose action differs. The widget sets this client-side, so
+ *  the match is not trust — it only stops a token minted for another form on
+ *  the same site from being spent here. */
+const TURNSTILE_ACTION = "alumni_request";
 /** A script that neither loads nor errors (blocked by a network filter that
  *  swallows the request) would leave the form stuck on a spinner forever, so a
  *  ceiling turns that silence into an explicit `unavailable`. */
@@ -30,6 +36,8 @@ interface TurnstileApi {
     container: HTMLElement,
     options: {
       sitekey: string;
+      /** Must match the backend's expected action; see TURNSTILE_ACTION. */
+      action?: string;
       callback: (token: string) => void;
       "error-callback": () => void;
       "expired-callback": () => void;
@@ -132,6 +140,7 @@ export function useTurnstileWidget({ state, onUnavailable }: UseTurnstileWidgetO
     try {
       widgetIdRef.current = api.render(container, {
         sitekey: TURNSTILE_SITE_KEY as string,
+        action: TURNSTILE_ACTION,
         callback: (next) => setToken(next),
         // An expired token is not a failure — clearing it disables submit until
         // the widget issues a fresh one.

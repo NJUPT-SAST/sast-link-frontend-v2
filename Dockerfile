@@ -25,6 +25,13 @@ ENV NEXT_PUBLIC_GITHUB_CLIENT_ID=${NEXT_PUBLIC_GITHUB_CLIENT_ID}
 ARG NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI
 ENV NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI=${NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI}
 
+# Turnstile site key for the alumni request form. Public by design — the widget
+# renders it in the browser — but it must be baked in at build time like every
+# NEXT_PUBLIC_* value. Absent, the alumni channel is hidden: the hook reports
+# "disabled" and the backend would answer 50301 anyway.
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+
 # pnpm-workspace.yaml carries the `overrides` block that is baked into the
 # lockfile — omitting it makes --frozen-lockfile fail with a config mismatch.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
