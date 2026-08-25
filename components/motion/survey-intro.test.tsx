@@ -37,7 +37,7 @@ describe("SurveyIntro", () => {
     },
   );
 
-  it.each(["/oauth/error", "/oauth/callback", "/oauth/bind/github", "/oauth/consent"])(
+  it.each(["/oauth/error", "/oauth/callback", "/oauth/bind/github", "/oauth/bind/lark", "/oauth/consent"])(
     "stays out of the way on %s, a landing page a login bounces the visitor to",
     (route) => {
       mockPathname = route;

@@ -88,6 +88,9 @@ describe("OAuthCallbackContent", () => {
     render(<OAuthCallbackContent provider={provider} />);
 
     expect(screen.getByText("第三方登录被取消")).toBeInTheDocument();
+    // The step bar names the outcome without dressing it as a failure.
+    expect(screen.getByText("登录取消")).toBeInTheDocument();
+    expect(screen.queryByText("登录失败")).not.toBeInTheDocument();
     expect(screen.queryByText(/登录链接已失效/)).not.toBeInTheDocument();
     expect(mockExchangeLoginCode).not.toHaveBeenCalled();
   });

@@ -23,7 +23,9 @@ export function OAuthErrorContent() {
   // description means the link was hand-edited or truncated, which the generic
   // line covers — the advice below it carries the action.
   const reason = description?.trim() || "第三方登录未能完成";
-  const retryable = code === null || RETRYABLE_CODES.has(code);
+  // An empty ?error= is the same degraded link shape as a missing one and
+  // should follow the same retryable path, not the terminal one.
+  const retryable = code === null || code.trim() === "" || RETRYABLE_CODES.has(code);
 
   return (
     <div className="flex flex-col items-center gap-4 text-center">

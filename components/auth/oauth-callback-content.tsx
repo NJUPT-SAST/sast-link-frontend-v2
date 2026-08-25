@@ -17,8 +17,8 @@ interface OAuthCallbackContentProps {
   provider: { name: string; icon: ReactNode };
 }
 
-function Steps({ failed }: { failed: boolean }) {
-  const steps = ["授权", failed ? "登录失败" : "登录", "完成"];
+function Steps({ failed, cancelled }: { failed: boolean; cancelled?: boolean }) {
+  const steps = ["授权", cancelled ? "登录取消" : failed ? "登录失败" : "登录", "完成"];
   return (
     <div className="flex flex-wrap items-center justify-center">
       {steps.map((label, index) => (
@@ -108,7 +108,7 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
       {cancelled ? (
         <>
           <h1 className="type-title3">第三方登录被取消</h1>
-          <Steps failed />
+          <Steps failed={false} cancelled />
           <p className="max-w-[360px] text-[15px] leading-[22px] text-muted-foreground">
             你已手动取消，{provider.name}登录未完成。
           </p>

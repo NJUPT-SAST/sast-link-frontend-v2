@@ -54,6 +54,15 @@ describe("OAuthErrorContent", () => {
     render(<OAuthErrorContent />);
 
     expect(screen.getByText(/第三方登录未能完成/)).toBeInTheDocument();
+    expect(screen.getByText(/请稍后重试或换用其他登录方式/)).toBeInTheDocument();
     expect(screen.queryByTestId("oauth-error-code")).not.toBeInTheDocument();
+  });
+
+  it("treats an empty ?error= like a missing one, on the retryable path", () => {
+    setup("error=");
+    render(<OAuthErrorContent />);
+
+    expect(screen.getByText(/请稍后重试或换用其他登录方式/)).toBeInTheDocument();
+    expect(screen.queryByText(/请联系管理员/)).not.toBeInTheDocument();
   });
 });
