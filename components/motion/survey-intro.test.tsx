@@ -37,6 +37,18 @@ describe("SurveyIntro", () => {
     },
   );
 
+  it.each(["/oauth/error", "/oauth/callback", "/oauth/bind/github", "/oauth/bind/lark", "/oauth/consent"])(
+    "stays out of the way on %s, a landing page a login bounces the visitor to",
+    (route) => {
+      mockPathname = route;
+      render(<SurveyIntro />);
+      expect(screen.queryByTestId("survey-intro")).not.toBeInTheDocument();
+      // Landing pages skip without consuming the boot flag, so a later visit
+      // to an entry point still gets the intro.
+      expect(sessionStorage.getItem(SEEN_KEY)).toBeNull();
+    },
+  );
+
   it("plays once on the first visit of a session, on any route", () => {
     render(<SurveyIntro />);
     expect(screen.getByTestId("survey-intro")).toBeInTheDocument();

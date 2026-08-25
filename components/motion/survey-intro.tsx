@@ -13,6 +13,11 @@ const SEEN_KEY = "sast-survey-seen";
  *  Skipping here also avoids replaying the intro for anyone who lands on a
  *  document link directly. */
 const NO_INTRO_ROUTES = ["/privacy", "/terms"];
+/** OAuth landing pages are destinations, not entry points: a visitor bounced
+ *  here by a login gets its result (a failed state, a code exchange, a bind
+ *  confirmation), and a 2.9s boot sequence in front of that is noise. Prefix
+ *  match so a future landing page is covered without touching this list. */
+const NO_INTRO_PREFIXES = ["/oauth/"];
 const INTRO_SEED = 179;
 const STAR_COUNT = 24;
 const OUT_MS = 2600; // fade-out starts
@@ -47,6 +52,9 @@ export function SurveyIntro() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (NO_INTRO_ROUTES.includes(pathname)) return setPhase("done");
+    if (NO_INTRO_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+      return setPhase("done");
+    }
     if (safeSessionStorage.getItem(SEEN_KEY)) return setPhase("done");
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return setPhase("done");
 
