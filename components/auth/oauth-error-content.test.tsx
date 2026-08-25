@@ -27,22 +27,26 @@ describe("OAuthErrorContent", () => {
     );
   });
 
-  it("falls back to a per-code message when only the code arrives", () => {
+  it("falls back to the generic line when only the code arrives, and keeps it", () => {
     setup("error=40302");
     render(<OAuthErrorContent />);
 
-    expect(screen.getByText(/仅限 SAST 成员登录/)).toBeInTheDocument();
+    // The backend owns the copy; a code-only link (hand-edited or truncated)
+    // gets the generic reason plus the terminal advice for this code.
+    expect(screen.getByText(/第三方登录未能完成/)).toBeInTheDocument();
+    expect(screen.getByText(/请联系管理员/)).toBeInTheDocument();
+    expect(screen.getByTestId("oauth-error-code")).toHaveTextContent("错误码 40302");
   });
 
   it("tells a retryable failure to try again, and a terminal one not to", () => {
     setup("error=50300");
     const { unmount } = render(<OAuthErrorContent />);
-    expect(screen.getByText(/返回登录页重新发起登录即可/)).toBeInTheDocument();
+    expect(screen.getByText(/请稍后重试或换用其他登录方式/)).toBeInTheDocument();
     unmount();
 
     setup("error=40301");
     render(<OAuthErrorContent />);
-    expect(screen.getByText(/请换一种方式登录，或联系管理员/)).toBeInTheDocument();
+    expect(screen.getByText(/请联系管理员/)).toBeInTheDocument();
   });
 
   it("stays useful when the callback carries no query at all", () => {
