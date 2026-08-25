@@ -98,6 +98,15 @@ export default function PrivacyPolicyPage() {
           <li>昵称：收集方式为您手动填写，用于在本服务及经您授权的第三方应用中标识您。</li>
         </LegalList>
         <p>若您不提供上述信息，我们将无法完成您的资料核验，您也无法正常使用本服务。</p>
+
+        <LegalSubheading>（三）毕业校友建号申请</LegalSubheading>
+        <p>
+          若您已毕业且校内邮箱不再可用，无法自助注册，您可以通过注册页的「毕业校友建号申请」向我们提交申请。此时您需要向我们提供：真实姓名、<LegalSensitive>学号</LegalSensitive>、原校内邮箱、常用邮箱、<LegalSensitive>手机号</LegalSensitive>、QQ 号、学院、专业、入会年份，以及您自愿填写的所属部门与补充说明。收集方式为您在申请表单中手动填写。
+        </p>
+        <p>
+          该信息用于人工核验您的社团成员身份并为您创建账号；其中常用邮箱同时作为您的登录身份与审核结果的接收地址。申请记录仅供管理员审核与事后追溯之用，在申请被通过或驳回后按本政策约定的期限留存并删除。我们不会通过邮件向您发送账号密码，您需自行通过密码找回流程设置密码。
+        </p>
+        <p>若您不提供上述信息，我们将无法核验您的身份，也无法为您创建账号。</p>
         <p>您可自主选择是否向我们提供下列信息：</p>
         <LegalList>
           <li>备用邮箱：收集方式为您手动填写，用于辅助登录。</li>
@@ -110,17 +119,17 @@ export default function PrivacyPolicyPage() {
           上述可选信息并非业务功能运行所必需。您拒绝提供不会影响您注册、登录及使用统一身份认证功能，仅可能导致相关展示或联络功能无法实现。
         </p>
 
-        <LegalSubheading>（三）第三方账号绑定与快捷登录</LegalSubheading>
+        <LegalSubheading>（四）第三方账号绑定与快捷登录</LegalSubheading>
         <p>
           若您选择绑定 GitHub 或飞书账号，我们会收集该平台在您授权后返回的账号唯一标识符及基础身份信息，收集方式为该平台接口返回，用于建立绑定关系并支持您后续通过该平台快捷登录。不绑定不影响使用邮箱密码登录。
         </p>
 
-        <LegalSubheading>（四）统一身份认证与第三方应用授权</LegalSubheading>
+        <LegalSubheading>（五）统一身份认证与第三方应用授权</LegalSubheading>
         <p>
           当第三方应用请求验证您的身份时，我们会收集并记录您的授权操作、被授权的应用、授权范围与授权时间，收集方式为系统自动记录，用于执行您的授权决定、向您展示已授权应用列表并支持您随时撤回授权。
         </p>
 
-        <LegalSubheading>（五）安全保障与审计</LegalSubheading>
+        <LegalSubheading>（六）安全保障与审计</LegalSubheading>
         <p>为保障账号与服务安全，我们会自动收集：</p>
         <LegalList>
           <li>
@@ -133,7 +142,7 @@ export default function PrivacyPolicyPage() {
           该项收集是保障服务安全所必需，属于《个人信息保护法》所规定的为履行法定义务及维护服务安全稳定运行所必要的情形。
         </p>
 
-        <LegalSubheading>（六）征得授权同意的例外</LegalSubheading>
+        <LegalSubheading>（七）征得授权同意的例外</LegalSubheading>
         <p>
           根据法律法规规定，在与履行法定义务相关、与公共安全或重大公共利益直接相关、为维护您或他人重大合法权益但难以取得本人同意、以及维护所提供服务的安全稳定运行所必需等情形下，我们收集和使用您的个人信息无需另行征得您的授权同意。
         </p>

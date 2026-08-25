@@ -20,6 +20,7 @@ name: Docker Deploy
 #   GH_CLIENT_ID                 GitHub OAuth client id
 #   FEISHU_BIND_REDIRECT_URI     e.g. https://link.sast.fun/oauth/bind/lark
 #   GH_BIND_REDIRECT_URI         e.g. https://link.sast.fun/oauth/bind/github
+#   TURNSTILE_SITE_KEY           Cloudflare Turnstile site key (alumni requests)
 # GitHub rejects variable names starting with GITHUB_, hence the GH_ prefix.
 #
 # Server prerequisites (one-off):
@@ -70,10 +71,12 @@ jobs:
           GH_CLIENT_ID: ${{ vars.GH_CLIENT_ID }}
           FEISHU_BIND_REDIRECT_URI: ${{ vars.FEISHU_BIND_REDIRECT_URI }}
           GH_BIND_REDIRECT_URI: ${{ vars.GH_BIND_REDIRECT_URI }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
         run: |
           missing=""
           for v in API_BASE_URL FEISHU_CLIENT_ID GH_CLIENT_ID \
-                   FEISHU_BIND_REDIRECT_URI GH_BIND_REDIRECT_URI; do
+                   FEISHU_BIND_REDIRECT_URI GH_BIND_REDIRECT_URI \
+                   TURNSTILE_SITE_KEY; do
             [ -n "${!v}" ] || missing="$missing $v"
           done
           if [ -n "$missing" ]; then
@@ -81,7 +84,7 @@ jobs:
             echo "Set them under Settings > Secrets and variables > Actions > Variables."
             exit 1
           fi
-          echo "all five build-time values present"
+          echo "all six build-time values present"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -107,6 +110,7 @@ jobs:
             NEXT_PUBLIC_FEISHU_BIND_REDIRECT_URI=${{ vars.FEISHU_BIND_REDIRECT_URI }}
             NEXT_PUBLIC_GITHUB_CLIENT_ID=${{ vars.GH_CLIENT_ID }}
             NEXT_PUBLIC_GITHUB_BIND_REDIRECT_URI=${{ vars.GH_BIND_REDIRECT_URI }}
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.TURNSTILE_SITE_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -122,6 +126,7 @@ jobs:
           GH_CLIENT_ID: ${{ vars.GH_CLIENT_ID }}
           FEISHU_BIND_REDIRECT_URI: ${{ vars.FEISHU_BIND_REDIRECT_URI }}
           GH_BIND_REDIRECT_URI: ${{ vars.GH_BIND_REDIRECT_URI }}
+          TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
         run: |
           set -u
           docker pull -q "$IMAGE_REF"
@@ -129,7 +134,8 @@ jobs:
 
           echo "--- build args baked into the bundle ---"
           for value in "$API_BASE_URL" "$FEISHU_CLIENT_ID" "$GH_CLIENT_ID" \
-                       "$FEISHU_BIND_REDIRECT_URI" "$GH_BIND_REDIRECT_URI"; do
+                       "$FEISHU_BIND_REDIRECT_URI" "$GH_BIND_REDIRECT_URI" \
+                       "$TURNSTILE_SITE_KEY"; do
             # -F: these are literal URLs/client ids — a dot in a URL would act
             # as a regex wildcard otherwise. Values are our own deployment
             # config, so plain quoting keeps the shell command intact.
@@ -152,13 +158,13 @@ jobs:
 
           # Derived from app/**/page.tsx (19 pages + index) — update when routes
           # are added or removed.
-          for route in /login /register /reset /home \
+          for route in /login /register /register/alumni /reset /home \
                        /profile /profile/edit \
                        /settings /settings/password /settings/apps \
                        /admin /admin/users /admin/users/detail /admin/users/edit \
-                       /admin/audit-logs /admin/oauth-clients \
+                       /admin/audit-logs /admin/oauth-clients /admin/alumni-requests \
                        /oauth/callback /oauth/consent \
-                       /oauth/bind/lark /oauth/bind/github; do
+                       /oauth/bind/lark /oauth/bind/github /oauth/error; do
             size=$(docker exec verify \
               sh -c "wget -qO- http://127.0.0.1:80${route} 2>/dev/null | wc -c")
             if [ "$size" = "0" ]; then

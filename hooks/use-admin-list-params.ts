@@ -3,12 +3,18 @@
 import { useCallback, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import type { AdminAuditLogListParams, AdminUserListParams } from "@/lib/api/types";
+import type {
+  AdminAuditLogListParams,
+  AdminUserListParams,
+  AlumniRequestListParams,
+} from "@/lib/api/types";
 import {
   parseAdminAuditLogListParams,
   parseAdminUserListParams,
+  parseAlumniRequestListParams,
   serializeAdminAuditLogListParams,
   serializeAdminUserListParams,
+  serializeAlumniRequestListParams,
 } from "@/lib/admin/list-query";
 
 /**
@@ -59,5 +65,12 @@ export function useAdminAuditLogListParams() {
   return useUrlSyncedParams<AdminAuditLogListParams>(
     parseAdminAuditLogListParams,
     serializeAdminAuditLogListParams,
+  );
+}
+
+export function useAlumniRequestListParams() {
+  return useUrlSyncedParams<AlumniRequestListParams>(
+    parseAlumniRequestListParams,
+    serializeAlumniRequestListParams,
   );
 }

@@ -25,6 +25,9 @@ const NO_REFRESH_PATHS = new Set([
   "/auth/forgot-password/send-code",
   "/auth/reset-password",
   "/oauth/exchange-code",
+  // Unauthenticated by design (the applicant has no account yet), so a 4xx here
+  // must never kick off a token refresh.
+  "/alumni-requests",
 ]);
 
 export const apiClient = axios.create({ baseURL: API_BASE_URL });

@@ -16,6 +16,7 @@ import { AuthFormField } from "@/components/auth/auth-form-field";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { Button } from "@/components/ui/button";
 import { Form, FormItem } from "@/components/ui/form";
+import { useTurnstileScript } from "@/hooks/use-turnstile";
 
 interface RegisterEmailFormProps {
   defaultEmail?: string;
@@ -26,6 +27,11 @@ const COUNTDOWN_SECONDS = 60;
 
 export default function RegisterEmailForm({ defaultEmail = "", onVerified }: RegisterEmailFormProps) {
   const [sent, setSent] = useState(false);
+  // The alumni channel needs a solvable Turnstile challenge; without one the
+  // backend refuses every submission, so linking to a form that cannot succeed
+  // would only strand the applicant. Hide the entry point in that case.
+  const turnstileState = useTurnstileScript();
+  const alumniChannelOpen = turnstileState === "loading" || turnstileState === "ready";
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
@@ -191,6 +197,14 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
         已有账号？
         <Link href="/login" className="text-link hover:underline">登录</Link>
       </p>
+      {alumniChannelOpen && (
+        <p className="mt-2 text-center text-sm text-muted-foreground">
+          已毕业、学生邮箱不可用？
+          <Link href="/register/alumni" className="text-link hover:underline">
+            申请建号
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

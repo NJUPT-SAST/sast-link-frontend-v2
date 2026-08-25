@@ -283,8 +283,10 @@ export function UserCreateDialog({ open, onOpenChange, onCreate }: UserCreateDia
                         {...field}
                         ref={field.ref}
                         label="专业"
+                        required
                         invalid={fieldState.invalid}
                         error={fieldState.error?.message}
+                        description="留空会让新账号被标为「待补全」，成员登录后会被引导到资料补全页。"
                       />
                     </FormItem>
                   )}

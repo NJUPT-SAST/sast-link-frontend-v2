@@ -34,6 +34,11 @@ const BACKEND_AUDIT_ACTIONS = [
   "admin_user_update",
   "admin_user_delete",
   "admin_user_restore",
+  // 校友建号工单（.pi/PLAN-alumni-backend.md §4）。alumni_request_submit 写入时
+  // user_id 为 NULL（提交人未登录），approve 伴随一条 admin_user_create。
+  "alumni_request_submit",
+  "alumni_request_approve",
+  "alumni_request_reject",
 ];
 
 const BACKEND_AUDIT_RESOURCES = [
@@ -43,6 +48,7 @@ const BACKEND_AUDIT_RESOURCES = [
   "session",
   "verification_code",
   "oauth",
+  "alumni_request",
 ];
 
 // 前端字典的键必须与后端审计写入值严格一一对应（缺失或多余都会失败）。

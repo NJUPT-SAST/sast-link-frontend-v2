@@ -10,6 +10,8 @@
 import type {
   AdminAuditLogListParams,
   AdminUserListParams,
+  AlumniRequestListParams,
+  AlumniRequestStatus,
   Department,
   UserRole,
   UserState,
@@ -29,7 +31,7 @@ const DEPARTMENTS: Department[] = [
   "publicity",
   "outreach",
 ];
-
+const ALUMNI_STATUSES: AlumniRequestStatus[] = ["pending", "approved", "rejected"];
 type SearchParamsLike = Pick<URLSearchParams, "get">;
 
 function parsePositiveInt(value: string | null, max?: number): number | undefined {
@@ -115,5 +117,30 @@ export function serializeAdminAuditLogListParams(
   if (params.success !== undefined) search.set("success", String(params.success));
   if (params.start_time) search.set("start_time", params.start_time);
   if (params.end_time) search.set("end_time", params.end_time);
+  return search.toString();
+}
+
+export function parseAlumniRequestListParams(
+  searchParams: SearchParamsLike,
+): AlumniRequestListParams {
+  return {
+    page: parsePositiveInt(searchParams.get("page")) ?? 1,
+    page_size: parsePositiveInt(searchParams.get("page_size"), 100) ?? DEFAULT_PAGE_SIZE,
+    status: parseEnum(searchParams.get("status"), ALUMNI_STATUSES),
+    keyword: parseText(searchParams.get("keyword")),
+    notified: parseBool(searchParams.get("notified")),
+  };
+}
+
+export function serializeAlumniRequestListParams(
+  params: AlumniRequestListParams,
+): string {
+  const search = new URLSearchParams();
+  if (params.page && params.page > 1) search.set("page", String(params.page));
+  if (params.page_size && params.page_size !== DEFAULT_PAGE_SIZE)
+    search.set("page_size", String(params.page_size));
+  if (params.status) search.set("status", params.status);
+  if (params.keyword) search.set("keyword", params.keyword);
+  if (params.notified !== undefined) search.set("notified", String(params.notified));
   return search.toString();
 }

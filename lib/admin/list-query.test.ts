@@ -2,8 +2,10 @@ import {
   DEFAULT_PAGE_SIZE,
   parseAdminAuditLogListParams,
   parseAdminUserListParams,
+  parseAlumniRequestListParams,
   serializeAdminAuditLogListParams,
   serializeAdminUserListParams,
+  serializeAlumniRequestListParams,
 } from "./list-query";
 
 describe("admin user list query", () => {
@@ -113,5 +115,70 @@ describe("admin audit log list query", () => {
       start_time: undefined,
       end_time: undefined,
     });
+  });
+});
+
+describe("alumni request list query", () => {
+  it("defaults to page 1 with the default page size", () => {
+    expect(parseAlumniRequestListParams(new URLSearchParams())).toEqual({
+      page: 1,
+      page_size: DEFAULT_PAGE_SIZE,
+      status: undefined,
+      keyword: undefined,
+      notified: undefined,
+    });
+  });
+
+  it("parses a full query", () => {
+    expect(
+      parseAlumniRequestListParams(
+        new URLSearchParams("page=2&page_size=50&status=pending&keyword=B18&notified=false"),
+      ),
+    ).toEqual({
+      page: 2,
+      page_size: 50,
+      status: "pending",
+      keyword: "B18",
+      notified: false,
+    });
+  });
+
+  // notified is tri-state: absent means no filter, so a bad value must degrade to
+  // absent rather than to false (which would return the opposite set).
+  it("drops an unparseable notified value", () => {
+    expect(
+      parseAlumniRequestListParams(new URLSearchParams("notified=ture")).notified,
+    ).toBeUndefined();
+  });
+
+  it("serializes notified=false rather than omitting it", () => {
+    expect(
+      serializeAlumniRequestListParams({ page: 1, page_size: 20, notified: false }),
+    ).toBe("notified=false");
+  });
+
+  // The URL is user-editable input; an unknown status must degrade to "no
+  // filter" rather than reach the backend.
+  it("drops an unknown status", () => {
+    expect(
+      parseAlumniRequestListParams(new URLSearchParams("status=whatever")).status,
+    ).toBeUndefined();
+  });
+
+  it("omits defaults when serializing", () => {
+    expect(
+      serializeAlumniRequestListParams({ page: 1, page_size: DEFAULT_PAGE_SIZE }),
+    ).toBe("");
+  });
+
+  it("serializes a full query", () => {
+    expect(
+      serializeAlumniRequestListParams({
+        page: 2,
+        page_size: 50,
+        status: "approved",
+        keyword: "张",
+      }),
+    ).toBe("page=2&page_size=50&status=approved&keyword=%E5%BC%A0");
   });
 });

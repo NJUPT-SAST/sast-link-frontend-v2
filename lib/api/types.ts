@@ -358,3 +358,115 @@ export interface AdminAuditLogListData {
   page: number;
   page_size: number;
 }
+
+// --- Alumni provisioning requests ---
+
+/** Lifecycle of an alumni account request. `pending` rows are never swept by
+ *  retention — the "three working days" figure is copy, not an enforced deadline. */
+export const ALUMNI_REQUEST_STATUSES = ["pending", "approved", "rejected"] as const;
+export type AlumniRequestStatus = (typeof ALUMNI_REQUEST_STATUSES)[number];
+
+/** Body of the unauthenticated `POST /alumni-requests`.
+ *
+ *  Two mailboxes are mandatory and serve different purposes: `login_email` is the
+ *  account identifier and stays bound by the registration whitelist (the backend
+ *  derives `email_type` from it via a V001 trigger), while `personal_email` becomes
+ *  an `other_mail` identity — the address the alumnus can actually receive at and
+ *  the one they use to set a password through `/reset`.
+ *
+ *  `major` is required even though `POST /admin/users` allows it empty: V010's
+ *  generated `profile_needs_completion` column flags a blank major, which would
+ *  divert the new account to `/profile/complete` on its first login. */
+export interface SubmitAlumniRequestRequest {
+  name: string;
+  student_id: string;
+  login_email: string;
+  personal_email: string;
+  phone_number: string;
+  qq_number: string;
+  college: College;
+  major: string;
+  join_year: string;
+  department_note?: string;
+  note?: string;
+  /** Turnstile token. The backend verifies unconditionally — there is no skip
+   *  path — so a request without one is refused. */
+  captcha_token: string;
+}
+
+export interface SubmitAlumniRequestData {
+  id: number;
+}
+
+export interface AlumniRequest {
+  id: number;
+  name: string;
+  student_id: string;
+  login_email: string;
+  personal_email: string;
+  phone_number: string;
+  qq_number: string;
+  college: College;
+  major: string;
+  join_year: string;
+  department_note: string;
+  note: string;
+  status: AlumniRequestStatus;
+  reject_reason: string;
+  /** Set once approved; nulled if that account is later deleted, so the request
+   *  history outlives the account. */
+  created_user_id: number | null;
+  reviewed_by: number | null;
+  reviewed_at: string | null;
+  /** When the result email was accepted by SMTP. `null` means it has not landed.
+   *
+   *  Pairs with `notify_attempts` to separate "never tried" from "tried and did
+   *  not confirm": the worker increments attempts before each delivery and writes
+   *  `notified_at` only once SMTP accepts, so `notify_attempts > 0` with a null
+   *  `notified_at` is a delivery that failed. */
+  notified_at: string | null;
+  notify_attempts: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AlumniRequestListParams {
+  page?: number;
+  page_size?: number;
+  status?: AlumniRequestStatus;
+  keyword?: string;
+  /** Filter on notification delivery. The backend accepts only true/false and
+   *  answers 40000 for anything else rather than silently ignoring it, so a
+   *  mistyped `notified=ture` cannot return the opposite of what was asked. */
+  notified?: boolean;
+}
+
+export interface AlumniRequestListData {
+  requests: AlumniRequest[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+/** `POST /admin/alumni-requests/:id/approve` result.
+ *
+ *  Deliberately carries no initial password: the approval mails the alumnus a
+ *  pointer to `/reset` instead, so no plaintext credential is ever transmitted. */
+export interface ApproveAlumniRequestData extends AlumniNotifyResult {
+  user_id: number;
+  login_email: string;
+}
+
+/** Whether a result notification made it into the delivery queue.
+ *
+ *  This answers a different question from `notified_at`: enqueued means the job
+ *  was accepted (false when the bounded queue was full), delivered means SMTP
+ *  took it. Both approve and reject report it, and the account/verdict stands
+ *  either way — so a false here is something the reviewer must act on by hand. */
+export interface AlumniNotifyResult {
+  notify_enqueued: boolean;
+}
+
+export interface RejectAlumniRequestRequest {
+  reject_reason: string;
+}
