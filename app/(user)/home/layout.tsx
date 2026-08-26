@@ -9,7 +9,7 @@ export default function HomeLayout({ children }: { children: ReactNode }) {
   useFetchProfile();
 
   return (
-    <div className="h-dvh snap-y snap-proximity overflow-y-auto scroll-smooth scroll-pt-16 pt-16">
+    <div className="h-dvh snap-y snap-proximity overflow-y-auto overflow-x-clip scroll-smooth scroll-pt-16 pt-16">
       <TopBar />
       {children}
     </div>
