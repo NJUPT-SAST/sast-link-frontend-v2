@@ -51,12 +51,12 @@ export default function AlumniRegisterPage() {
             接下来会发生什么
           </h2>
           <ol className="flex list-decimal flex-col gap-2 pl-5 text-[15px] leading-7">
-            <li>你提交申请，我们会在 {ALUMNI_REVIEW_WINDOW}内人工核验；</li>
+            <li>你提交申请，我们会在{ALUMNI_REVIEW_WINDOW}内人工核验；</li>
             <li>通过后你会收到一封邮件，按邮件里的链接自行设置密码；</li>
             <li>之后用你的常用邮箱和新密码登录。</li>
           </ol>
           <p className="text-sm leading-6 text-muted-foreground">
-            我们不会通过邮件发送密码。若超过 {ALUMNI_REVIEW_WINDOW}未收到回复，
+            我们不会通过邮件发送密码。若超过{ALUMNI_REVIEW_WINDOW}未收到回复，
             可发信到{" "}
             <a href={`mailto:${SUPPORT_EMAIL}`} className="text-link hover:underline">
               {SUPPORT_EMAIL}

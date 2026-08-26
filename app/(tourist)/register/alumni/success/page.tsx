@@ -12,7 +12,7 @@ export default function AlumniRequestSuccessPage() {
         <header className="flex flex-col gap-2.5">
           <h1 className="type-title1">申请已提交</h1>
           <p className="text-[15px] leading-7 text-muted-foreground">
-            我们会在 {ALUMNI_REVIEW_WINDOW}内人工核验，结果将发到你填写的常用邮箱。
+            我们会在{ALUMNI_REVIEW_WINDOW}内人工核验，结果将发到你填写的常用邮箱。
           </p>
         </header>
 
