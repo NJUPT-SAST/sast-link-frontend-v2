@@ -7,6 +7,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { canManageUsers } from "@/components/admin/permissions";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { UserDetailCard } from "@/components/admin/user-detail-card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { avatarFallbackChar, DEFAULT_AVATAR } from "@/lib/constants/profile";
 import { BackButton } from "@/components/navigation/back-button";
 import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
@@ -61,13 +63,24 @@ export function AdminUserDetailContent() {
     <div className="flex flex-col gap-8">
       <BackButton fallback={listHref} />
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="type-title2 truncate" title={user.name}>
-            {user.name}
-          </h1>
-          <p className="mt-1 truncate text-sm text-tertiary" title={user.login_email}>
-            {user.login_email}
-          </p>
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <Avatar className="size-16 shrink-0 border border-hairline">
+            <AvatarImage
+              src={user.profile?.avatar ?? DEFAULT_AVATAR}
+              alt={`${user.name} 的头像`}
+            />
+            <AvatarFallback className="text-xl">
+              {avatarFallbackChar({ nickname: user.profile?.nickname ?? "" })}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <h1 className="type-title2 truncate" title={user.name}>
+              {user.name}
+            </h1>
+            <p className="mt-1 truncate text-sm text-tertiary" title={user.login_email}>
+              {user.login_email}
+            </p>
+          </div>
         </div>
         {canManage && (
           <div className="flex shrink-0 flex-wrap items-center gap-2">
