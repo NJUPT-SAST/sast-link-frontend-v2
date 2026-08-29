@@ -6,6 +6,9 @@
  *  either never emitted or needs no special handling.
  */
 
+/** Generic validation failure — the envelope message names the offending field. */
+export const CODE_VALIDATION = 40000;
+
 /** Human verification ran and did not pass. Recoverable: the widget issues a
  *  fresh token, so the user should try again. */
 export const CODE_CAPTCHA_FAILED = 40021;
@@ -18,6 +21,16 @@ export const CODE_EMAIL_ALREADY_REGISTERED = 40901;
 
 /** The student id already has an account. */
 export const CODE_STUDENT_ID_OCCUPIED = 40902;
+
+/** A `recover` approval found no account for the ticket's student id — the
+ *  account disappeared or the data drifted since the ticket was filed. The
+ *  review queue must be refreshed before acting again. */
+export const CODE_ALUMNI_ACCOUNT_MISSING = 40900;
+
+/** The account's `other_mail` binds are at the cap (2). Surfaced when a
+ *  `recover` approval tries to bind another one, or when `PUT /admin/users/:id`
+ *  is asked to bind a personal email onto a full account. */
+export const CODE_ALUMNI_BOUND_EMAIL_LIMIT = 40905;
 
 /** The student id already has a ticket awaiting review. Distinct from 40901/40902:
  *  nothing is registered yet, the earlier application is simply still open. */

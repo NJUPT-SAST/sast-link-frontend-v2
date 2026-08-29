@@ -13,8 +13,13 @@ import {
   CODE_CAPTCHA_FAILED,
   CODE_EMAIL_ALREADY_REGISTERED,
   CODE_STUDENT_ID_OCCUPIED,
+  CODE_VALIDATION,
 } from "@/lib/api/error-codes";
-import { COLLEGES, type SubmitAlumniRequestRequest } from "@/lib/api/types";
+import {
+  COLLEGES,
+  type AlumniIntent,
+  type SubmitAlumniRequestRequest,
+} from "@/lib/api/types";
 import {
   alumniRequestSchema,
   type AlumniRequestFormValues,
@@ -28,6 +33,7 @@ import {
 } from "@/hooks/use-turnstile";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { FormError } from "@/components/ui/form-error";
 import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
@@ -35,6 +41,57 @@ import { Select } from "@/components/ui/select";
 
 const selectClass =
   "h-12 w-full rounded-lg border border-input bg-card px-3.5 text-[15px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
+
+const INTENT_OPTIONS: {
+  value: AlumniIntent;
+  title: string;
+  description: string;
+  hint: string;
+}[] = [
+  {
+    value: "provision",
+    title: "新开账号",
+    description: "我还没有可用账号，申请开通一个新的。",
+    hint: "核验通过后为你新建账号，常用邮箱作为登录身份。",
+  },
+  {
+    value: "recover",
+    title: "恢复已有账号访问",
+    description: "我此前开通过账号，但学校邮箱停用、从未绑定过常用邮箱，登录不进去了。",
+    hint: "不创建新账号。核验通过后，常用邮箱将直接绑定为原账号的登录身份，之后用它与密码登录、重置密码。",
+  },
+];
+
+/** A submission-time conflict that is resolved by switching intent, rendered
+ *  with a clickable switch action — a form root error can only carry a string. */
+interface IntentSwitchHint {
+  before: string;
+  action: string;
+  after: string;
+  to: AlumniIntent;
+}
+
+function IntentSwitchBanner({
+  hint,
+  onSwitch,
+}: {
+  hint: IntentSwitchHint;
+  onSwitch: (to: AlumniIntent) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs leading-5 text-destructive">
+      {hint.before}
+      <button
+        type="button"
+        className="mx-0.5 font-medium underline underline-offset-2 hover:opacity-80"
+        onClick={() => onSwitch(hint.to)}
+      >
+        {hint.action}
+      </button>
+      {hint.after}
+    </div>
+  );
+}
 
 const FIELD_ORDER = [
   "name",
@@ -116,6 +173,10 @@ export default function AlumniRequestForm() {
     defaultValues: createEmptyValues(),
   });
   const [loading, setLoading] = useState(false);
+  const [intent, setIntent] = useState<AlumniIntent>("provision");
+  // Submission-time conflicts answerable by switching intent render as a banner
+  // with a clickable switch — a root error cannot express the action.
+  const [switchHint, setSwitchHint] = useState<IntentSwitchHint | null>(null);
 
   // The school mailbox is the account identifier, and for NJUPT accounts it is
   // conventionally the student id — offer it so the applicant does not have to
@@ -135,6 +196,8 @@ export default function AlumniRequestForm() {
       return;
     }
     setLoading(true);
+    setSwitchHint(null);
+    form.clearErrors("root");
     const payload: SubmitAlumniRequestRequest = {
       name: values.name,
       student_id: values.student_id,
@@ -147,6 +210,9 @@ export default function AlumniRequestForm() {
       join_year: values.join_year,
       captcha_token: token,
     };
+    // Omitted for provision on purpose: the backend treats omission as
+    // provision, so a request without it is byte-for-byte the historical one.
+    if (intent === "recover") payload.intent = intent;
     if (values.department_note) payload.department_note = values.department_note;
     if (values.note) payload.note = values.note;
 
@@ -171,14 +237,36 @@ export default function AlumniRequestForm() {
           setChannelDown(true);
           break;
         case CODE_ALUMNI_REQUEST_PENDING:
-          form.setError("student_id", {
-            message: "该学号已有待审核的申请，请等待处理，无需重复提交",
+          form.setError("root", {
+            message: "该学号或常用邮箱已有待审核的申请，请等待处理；如被驳回，可修改后重新提交",
           });
           break;
         case CODE_STUDENT_ID_OCCUPIED:
-          form.setError("student_id", {
-            message: "该学号已有账号，请直接登录或找回密码",
+          setSwitchHint({
+            before: "该学号已有账号。若这是您本人且无法登录（如毕业邮箱已停用），可",
+            action: "切换为「恢复已有账号访问」",
+            after: "重新提交，或联系 " + SUPPORT_EMAIL + "。",
+            to: "recover",
           });
+          break;
+        // 40000 carries two recover-specific checks the code cannot tell apart,
+        // so the branch keys off the backend's fixed message text while the
+        // user-facing copy stays ours.
+        case CODE_VALIDATION:
+          if (intent === "recover" && apiError.message.includes("尚无账号")) {
+            setSwitchHint({
+              before: "该学号下暂无账号，没有可恢复的账号。如需新开账号，请",
+              action: "切换为「新开账号」",
+              after: "重新提交。",
+              to: "provision",
+            });
+          } else if (intent === "recover") {
+            form.setError("login_email", {
+              message: "原学号邮箱与该学号账号登记的不一致，请核对后重试",
+            });
+          } else {
+            form.setError("root", { message: apiError.message });
+          }
           break;
         // The backend uses one code for both addresses, so the message cannot name
         // which collided. Attach it to the personal mailbox as the likelier of the
@@ -209,6 +297,51 @@ export default function AlumniRequestForm() {
   return (
     <Form {...form}>
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
+        <section aria-labelledby="intent-heading" className="flex flex-col gap-3">
+          <h2 id="intent-heading" className="type-tech text-xs text-tertiary">
+            申请类型
+          </h2>
+          <div role="radiogroup" aria-label="申请类型" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {INTENT_OPTIONS.map((option) => {
+              const selected = intent === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => {
+                    setIntent(option.value);
+                    // A stale conflict banner belongs to the previous intent.
+                    setSwitchHint(null);
+                  }}
+                  className={[
+                    "flex flex-col gap-1 rounded-lg border p-3.5 text-left",
+                    selected
+                      ? "border-ring bg-card ring-2 ring-ring/25"
+                      : "border-hairline bg-card hover:border-input",
+                  ].join(" ")}
+                >
+                  <span
+                    className={cn(
+                      "type-tech text-sm",
+                      selected ? "text-foreground" : "text-tertiary",
+                    )}
+                  >
+                    {option.title}
+                  </span>
+                  <span className="text-[13px] leading-5 text-muted-foreground">
+                    {option.description}
+                  </span>
+                  {selected && (
+                    <span className="text-xs leading-5 text-tertiary">{option.hint}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
         <p className="type-tech text-xs text-tertiary">
           带 <span className="text-destructive">*</span> 项为必填
         </p>
@@ -264,7 +397,11 @@ export default function AlumniRequestForm() {
                 required
                 invalid={fieldState.invalid}
                 error={fieldState.error?.message}
-                description="仅支持 @njupt.edu.cn。它只作为账号标识，无需还能收信。"
+                description={
+                  intent === "recover"
+                    ? "填写你账号原先登记的学校邮箱（仅支持 @njupt.edu.cn）。提交时后端会校验它与该学号账号的登记一致。"
+                    : "仅支持 @njupt.edu.cn。它只作为账号标识，无需还能收信。"
+                }
               />
             </FormItem>
           )}
@@ -433,6 +570,15 @@ export default function AlumniRequestForm() {
         </div>
 
         <FormError message={form.formState.errors.root?.message} />
+        {switchHint && (
+          <IntentSwitchBanner
+            hint={switchHint}
+            onSwitch={(to) => {
+              setIntent(to);
+              setSwitchHint(null);
+            }}
+          />
+        )}
 
         <Button type="submit" disabled={loading || !token} className="mt-2 w-full">
           {loading ? <DotLoading /> : "提交申请"}

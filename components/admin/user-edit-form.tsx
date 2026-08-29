@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
 import type { AdminUpdateUserRequest, UserProfileData } from "@/lib/api/types";
 import { COLLEGES } from "@/lib/api/types";
@@ -13,6 +13,7 @@ import {
 } from "@/lib/validations/admin";
 import { scrollToFirstError } from "@/lib/form";
 import { toApiError } from "@/lib/api/errors";
+import { CODE_ALUMNI_BOUND_EMAIL_LIMIT, CODE_VALIDATION } from "@/lib/api/error-codes";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -31,6 +32,7 @@ const FIELD_ORDER = [
   "role",
   "state",
   "login_email",
+  "personal_email",
   "phone_number",
   "qq_number",
 ];
@@ -58,6 +60,9 @@ function toFormValues(user: UserProfileData): AdminUpdateUserFormValues {
     major: user.major,
     student_id: user.student_id,
     login_email: user.login_email,
+    // A bind is append-only: existing other_mail identities are shown on the
+    // detail page, never echoed back here to be edited in place.
+    personal_email: "",
     role: user.role,
     state: user.state,
   };
@@ -72,6 +77,8 @@ function toRequest(values: AdminUpdateUserFormValues): AdminUpdateUserRequest {
   if (values.major !== undefined) request.major = values.major;
   if (values.student_id !== undefined) request.student_id = values.student_id;
   if (values.login_email !== undefined) request.login_email = values.login_email;
+  // A blank value means "no bind requested", so it is withheld entirely.
+  if (values.personal_email) request.personal_email = values.personal_email;
   if (values.role !== undefined) request.role = values.role;
   if (values.state !== undefined) request.state = values.state;
   return request;
@@ -110,7 +117,22 @@ export function UserEditForm({
       // account) render in the form's root <FormError /> instead of a toast,
       // matching register / reset / profile. Field validation already blocks
       // blank phone/qq inline, so the empty-value case never reaches this far.
-      form.setError("root", { message: toApiError(error).message });
+      const apiError = toApiError(error);
+      if (apiError.code === CODE_ALUMNI_BOUND_EMAIL_LIMIT) {
+        form.setError("root", {
+          message: "该账号的邮箱绑定数量已达上限（最多 2 个），如需更换请先解绑现有绑定",
+        });
+      } else if (apiError.code === CODE_VALIDATION && values.personal_email) {
+        // The schema already blocks malformed or duplicate addresses, so a
+        // 40000 with a bind present is the backend's remaining edge (e.g. a
+        // mailbox already bound elsewhere inside a race). Point at the field
+        // rather than the generic root error.
+        form.setError("personal_email", {
+          message: "个人邮箱无法绑定，请检查格式或是否已被其他账号占用",
+        });
+      } else {
+        form.setError("root", { message: apiError.message });
+      }
     }
   };
 
@@ -119,6 +141,12 @@ export function UserEditForm({
   };
 
   const submit = form.handleSubmit(handleValid, handleInvalid);
+
+  // A deleted account cannot take a new bind; the backend answers 40000. The
+  // field unblocks the moment the admin switches 状态 back to a live one in
+  // the same form, which the backend accepts transactionally.
+  const stateDeleted =
+    useWatch({ control: form.control, name: "state" }) === "is_deleted";
 
   return (
     <Form {...form}>
@@ -252,6 +280,28 @@ export function UserEditForm({
                     type="email"
                     invalid={fieldState.invalid}
                     error={fieldState.error?.message}
+                  />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="personal_email"
+              render={({ field, fieldState }) => (
+                <FormItem>
+                  <AuthFormField
+                    {...field}
+                    ref={field.ref}
+                    label="绑定个人邮箱"
+                    type="email"
+                    disabled={stateDeleted}
+                    invalid={fieldState.invalid}
+                    error={fieldState.error?.message}
+                    description={
+                      stateDeleted
+                        ? "已注销用户不可绑定邮箱，请先将状态改回再绑定。"
+                        : "免验证直接绑定为登录身份（用于毕业生救援）。不填写则不绑定。"
+                    }
                   />
                 </FormItem>
               )}

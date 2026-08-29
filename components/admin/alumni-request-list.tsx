@@ -31,6 +31,17 @@ function StatusBadge({ status }: { status: AlumniRequest["status"] }) {
   );
 }
 
+/** A recover-intent ticket is a high-risk approval: granting it binds a
+ *  receivable mailbox onto a live account's login identities instead of
+ *  creating a fresh one, so the card must say so at a glance. */
+function RecoverBadge() {
+  return (
+    <span className="type-tech rounded-sm border border-destructive/50 px-1.5 py-0.5 text-xs text-destructive">
+      恢复访问
+    </span>
+  );
+}
+
 /** A reviewed ticket whose result email never landed.
  *
  *  The email is the alumnus's only instruction to go set a password, so an
@@ -66,12 +77,16 @@ export function AlumniRequestList({
       {requests.map((request) => (
         <li
           key={request.id}
-          className="flex flex-col gap-3 border border-hairline bg-card p-4"
+          className={cn(
+            "flex flex-col gap-3 border bg-card p-4",
+            request.intent === "recover" ? "border-destructive/50" : "border-hairline",
+          )}
         >
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span className="type-headline">{request.name}</span>
             <span className="type-tech text-xs text-tertiary">{request.student_id}</span>
             <StatusBadge status={request.status} />
+            {request.intent === "recover" && <RecoverBadge />}
             {isNotifyPending(request) && (
               <span className="type-tech text-xs text-destructive">通知未送达</span>
             )}
@@ -79,6 +94,13 @@ export function AlumniRequestList({
               #{request.id} · {formatAdminDate(request.created_at)}
             </span>
           </div>
+
+          {request.intent === "recover" && request.status === "pending" && (
+            <p className="rounded-sm border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs leading-5 text-destructive">
+              高危操作：批准后，申请中的常用邮箱将直接绑定为该学号账号的登录身份，
+              可凭其登录与重置密码。请核对账号资料后谨慎审批。
+            </p>
+          )}
 
           <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
             <div className="flex gap-2">

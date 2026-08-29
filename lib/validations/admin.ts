@@ -77,8 +77,34 @@ export const adminUpdateUserSchema = z
     role: userRoleSchema.optional(),
     state: userStateSchema.optional(),
     email_type: emailTypeSchema.optional(),
+    // Empty means "no bind requested"; a filled value is admin-vouched and
+    // bound as an `other_mail` login identity without verification.
+    personal_email: z
+      .string()
+      .trim()
+      .max(255, "邮箱最多 255 字符")
+      .refine(
+        (value) => value === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+        "请输入有效的个人邮箱",
+      )
+      .optional(),
   })
-  .refine((values) => Object.keys(values).length > 0, "至少修改一个字段");
+  .refine((values) => Object.keys(values).length > 0, "至少修改一个字段")
+  .superRefine((values, ctx) => {
+    // The backend refuses a bind equal to the account's login email — current
+    // or, when both change in this request, the newly-set one.
+    if (
+      values.personal_email &&
+      values.login_email &&
+      values.personal_email.toLowerCase() === values.login_email.toLowerCase()
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["personal_email"],
+        message: "个人邮箱不能与登录邮箱相同",
+      });
+    }
+  });
 
 export type AdminUpdateUserFormValues = z.infer<typeof adminUpdateUserSchema>;
 

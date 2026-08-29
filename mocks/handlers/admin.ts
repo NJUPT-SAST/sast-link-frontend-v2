@@ -15,7 +15,7 @@ import type {
   UserState,
 } from "@/lib/api/types";
 import { adminMockAuditLogs, adminMockOAuthClients } from "../data/admin";
-import { findUserByAccessToken, mockUsers } from "../data/users";
+import { findUserByAccessToken, identity, mockUsers } from "../data/users";
 
 function ok<T>(data: T, status = 200) {
   return HttpResponse.json({ code: 0, message: "ok", data }, { status });
@@ -276,6 +276,7 @@ export const adminHandlers = [
       "role",
       "state",
       "email_type",
+      "personal_email",
     ];
 
     let hasUpdate = false;
@@ -284,6 +285,24 @@ export const adminHandlers = [
         if (field === "login_email" && typeof body.login_email === "string") {
           target.profile.login_email = body.login_email;
           target.profile.email_type = body.login_email.endsWith("@sast.fun") ? "sast_email" : "njupt_email";
+        } else if (field === "personal_email") {
+          // Admin-vouched other_mail bind, no verification — mirrors the real
+          // endpoint's single-transaction semantics. An empty string means no
+          // bind requested, so it is withheld entirely.
+          if (body.personal_email) {
+            const already = target.profile.identities.some(
+              (item) =>
+                item.provider === "other_mail" &&
+                item.provider_id === body.personal_email,
+            );
+            if (!already) {
+              const maxId = Math.max(0, ...target.profile.identities.map((item) => item.id));
+              target.profile.identities.push(
+                identity(maxId + 1, "other_mail", body.personal_email),
+              );
+            }
+            hasUpdate = true;
+          }
         } else {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (target.profile as any)[field] = body[field];

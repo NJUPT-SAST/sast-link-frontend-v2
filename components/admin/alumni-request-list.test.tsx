@@ -11,6 +11,7 @@ function makeRequest(overrides: Partial<AlumniRequest> = {}): AlumniRequest {
     student_id: "B18040101",
     login_email: "b18040101@njupt.edu.cn",
     personal_email: "zhangsan@qq.com",
+    intent: "provision",
     phone_number: "13800000001",
     qq_number: "100001",
     college: "其他",
@@ -141,5 +142,21 @@ describe("AlumniRequestList", () => {
       />,
     );
     expect(screen.getByText("9007")).toBeInTheDocument();
+  });
+
+  // A recover ticket binds a receivable mailbox onto a live account instead of
+  // creating a fresh one — the card must say so at a glance, with the warning
+  // confined to the pending state that can still escalate.
+  it("flags a recover ticket with the high-risk badge and warning", () => {
+    render(
+      <AlumniRequestList
+        requests={[
+          makeRequest({ id: 1, intent: "recover", status: "pending" }),
+          makeRequest({ id: 2, intent: "recover", status: "rejected" }),
+        ]}
+      />,
+    );
+    expect(screen.getAllByText("恢复访问")).toHaveLength(2);
+    expect(screen.getByText(/高危操作：批准后，申请中的常用邮箱将直接绑定/)).toBeInTheDocument();
   });
 });

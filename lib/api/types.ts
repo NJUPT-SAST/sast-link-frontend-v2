@@ -237,6 +237,13 @@ export interface AdminUpdateUserRequest {
   state?: UserState;
   email_type?: EmailType;
   department?: Department;
+  /** Optional. When supplied, bound as an `other_mail` login identity in the
+   *  same transaction (admin-vouched, no verification, no mailbox check) — the
+   *  rescue path for graduated members whose school mailbox died before they
+   *  bound a receivable one. Backend rejects: same as `login_email` (old or
+   *  newly-set), already occupied by another account, account at the 2-bind
+   *  cap (40905), or the target account is deleted. */
+  personal_email?: string;
 }
 
 /** States an admin may provision a new account in. `is_deleted` is never a
@@ -366,6 +373,20 @@ export interface AdminAuditLogListData {
 export const ALUMNI_REQUEST_STATUSES = ["pending", "approved", "rejected"] as const;
 export type AlumniRequestStatus = (typeof ALUMNI_REQUEST_STATUSES)[number];
 
+/** What an alumni request is meant to accomplish.
+ *
+ *  - `provision` (default, and the historical behaviour): open a brand-new
+ *    account. The personal mailbox becomes an `other_mail` login identity of
+ *    the fresh account.
+ *  - `recover`: the applicant's school mailbox died and they never bound a
+ *    receivable address, so their old account is unreachable. No account is
+ *    created — approval binds the request's `personal_email` straight onto the
+ *    existing account for that student id (an admin-vouched bind, no
+ *    verification), restoring their way in.
+ */
+export const ALUMNI_INTENTS = ["provision", "recover"] as const;
+export type AlumniIntent = (typeof ALUMNI_INTENTS)[number];
+
 /** Body of the unauthenticated `POST /alumni-requests`.
  *
  *  Two mailboxes are mandatory and serve different purposes: `login_email` is the
@@ -376,7 +397,12 @@ export type AlumniRequestStatus = (typeof ALUMNI_REQUEST_STATUSES)[number];
  *
  *  `major` is required even though `POST /admin/users` allows it empty: V010's
  *  generated `profile_needs_completion` column flags a blank major, which would
- *  divert the new account to `/profile/complete` on its first login. */
+ *  divert the new account to `/profile/complete` on its first login.
+ *
+ *  `intent` is optional and defaults to `provision`: an omission is exactly the
+ *  historical request. `recover` skips account creation and asks approval to bind
+ *  `personal_email` onto the existing account for `student_id` instead, so the
+ *  backend re-verifies `login_email` matches that account's registered address. */
 export interface SubmitAlumniRequestRequest {
   name: string;
   student_id: string;
@@ -389,6 +415,8 @@ export interface SubmitAlumniRequestRequest {
   join_year: string;
   department_note?: string;
   note?: string;
+  /** Defaults to `provision` when omitted; see `AlumniIntent`. */
+  intent?: AlumniIntent;
   /** Turnstile token. The backend verifies unconditionally — there is no skip
    *  path — so a request without one is refused. */
   captcha_token: string;
@@ -404,6 +432,7 @@ export interface AlumniRequest {
   student_id: string;
   login_email: string;
   personal_email: string;
+  intent: AlumniIntent;
   phone_number: string;
   qq_number: string;
   college: College;

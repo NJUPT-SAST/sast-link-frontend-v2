@@ -43,6 +43,14 @@ function injectedFailure(body: SubmitAlumniRequestRequest) {
   if (note.includes("!down")) return fail(503, 50301, "申请通道暂不可用");
   if (note.includes("!email")) return fail(409, 40901, "邮箱已被注册");
   if (note.includes("!student")) return fail(409, 40902, "学号已被占用");
+  // Recover-only submission failures — the backend answers both with plain
+  // 40000, distinguished by the fixed message text, which the form keys off.
+  if (body.intent === "recover" && note.includes("!recover-none")) {
+    return fail(400, 40000, "该学号尚无账号，如需新开账号请使用普通申请");
+  }
+  if (body.intent === "recover" && note.includes("!recover-mismatch")) {
+    return fail(400, 40000, "login_email 与该学号登记的登录邮箱不一致");
+  }
   if (note.includes("!limit")) return fail(429, 42900, "请求过于频繁");
   return undefined;
 }
@@ -68,6 +76,17 @@ export const alumniHandlers = [
     ) {
       return fail(409, 40906, "该学号已有待审申请");
     }
+    // 40906 also guards the personal mailbox: an address with an open ticket
+    // cannot be filed under again, whichever intent the new one carries.
+    if (
+      alumniMockRequests.some(
+        (item) =>
+          item.status === "pending" &&
+          item.personal_email.toLowerCase() === body.personal_email.trim().toLowerCase(),
+      )
+    ) {
+      return fail(409, 40906, "该邮箱已有待审申请，请等待处理");
+    }
     const now = new Date().toISOString();
     const created = {
       id: Math.max(0, ...alumniMockRequests.map((item) => item.id)) + 1,
@@ -75,6 +94,7 @@ export const alumniHandlers = [
       student_id: body.student_id,
       login_email: body.login_email,
       personal_email: body.personal_email,
+      intent: body.intent ?? "provision",
       phone_number: body.phone_number,
       qq_number: body.qq_number,
       college: body.college,
@@ -153,6 +173,26 @@ export const alumniHandlers = [
     const target = alumniMockRequests.find((item) => item.id === Number(params.id));
     if (!target) return fail(404, 40403, "建号申请不存在");
     if (target.status !== "pending") return fail(422, 42204, "申请已被处理");
+
+    // Recover approval failure branches, injected via the ticket's note so a
+    // reviewer test can exercise each without a backend. The note also serves
+    // as the trigger for the real submit endpoint's injection, so keep the two
+    // spellings distinct.
+    if (target.intent === "recover") {
+      const trigger = target.note ?? "";
+      if (trigger.includes("!approve-no-account")) {
+        return fail(409, 40900, "该学号当前没有对应账号，请刷新后核对工单");
+      }
+      if (trigger.includes("!approve-deleted")) {
+        return fail(422, 42200, "该学号的账号已注销，无法恢复访问方式");
+      }
+      if (trigger.includes("!approve-mismatch")) {
+        return fail(422, 42200, "工单中的 login_email 与该学号现有账号的登录邮箱不一致，请驳回后由申请人重新提交");
+      }
+      if (trigger.includes("!approve-bind-limit")) {
+        return fail(409, 40905, "该账号的邮箱绑定数量已达上限");
+      }
+    }
 
     target.status = "approved";
     target.created_user_id = 9000 + target.id;

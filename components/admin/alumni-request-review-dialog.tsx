@@ -10,7 +10,11 @@ import {
   type AlumniRejectFormValues,
 } from "@/lib/validations/alumni";
 import { toApiError } from "@/lib/api/errors";
-import { CODE_ALUMNI_REQUEST_REVIEWED } from "@/lib/api/error-codes";
+import {
+  CODE_ALUMNI_ACCOUNT_MISSING,
+  CODE_ALUMNI_BOUND_EMAIL_LIMIT,
+  CODE_ALUMNI_REQUEST_REVIEWED,
+} from "@/lib/api/error-codes";
 import { message } from "@/lib/message";
 import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
@@ -33,7 +37,7 @@ interface AlumniRequestReviewDialogProps {
   onReject: (id: number, reason: string) => Promise<void>;
 }
 
-type Mode = "review" | "reject" | "approved";
+type Mode = "review" | "confirm-approve" | "reject" | "approved";
 
 /** Review a pending request.
  *
@@ -61,6 +65,11 @@ export function AlumniRequestReviewDialog({
     defaultValues: { reject_reason: "" },
   });
 
+  // A recover approval binds a receivable mailbox onto a live account, so it
+  // is deliberately two steps: the backlog UX and the consent wording differ
+  // enough from provision that the extra click buys a real pause.
+  const isRecover = request?.intent === "recover";
+
   const reset = () => {
     setMode("review");
     setLoading(false);
@@ -87,7 +96,24 @@ export function AlumniRequestReviewDialog({
         onOpenChange(false);
         return;
       }
-      setError(apiError.message);
+      // Recover approval failures — the backend answers with two flavours of
+      // 42200 and a 40900/40905, distinguished by its fixed message text while
+      // the copy shown stays ours. Each names what the reviewer should do next
+      // (refresh / reject), so act on the account is never silently repeated.
+      if (apiError.code === CODE_ALUMNI_ACCOUNT_MISSING) {
+        message.warning("该学号当前没有对应账号，数据可能已变化，请刷新后重新核对");
+        onOpenChange(false);
+        return;
+      }
+      if (apiError.code === CODE_ALUMNI_BOUND_EMAIL_LIMIT) {
+        setError("该账号的邮箱绑定数量已达上限（2 个），无法再绑定，建议驳回该申请");
+      } else if (apiError.message.includes("已注销")) {
+        setError("该学号的账号已注销，无法恢复访问方式，建议驳回该申请");
+      } else if (apiError.message.includes("登录邮箱不一致")) {
+        setError("工单中的学号邮箱与该学号现有账号登记的不一致，请驳回后由申请人重新提交");
+      } else {
+        setError(apiError.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -148,6 +174,64 @@ export function AlumniRequestReviewDialog({
             <DialogFooter>
               <Button type="button" className="w-full" onClick={() => onOpenChange(false)}>
                 我知道了
+              </Button>
+            </DialogFooter>
+          </>
+        ) : mode === "confirm-approve" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="type-title3">
+                {isRecover ? "确认通过并绑定邮箱" : "确认通过"}
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                {isRecover
+                  ? "批准后，申请中的常用邮箱将直接绑定为该学号账号的登录身份，可凭其登录与重置密码。此操作会改变账号的登录方式，请确认已与档案核对。"
+                  : "确认后系统将直接建号并邮件通知申请人设置密码。"}
+              </DialogDescription>
+            </DialogHeader>
+            {request && (
+              <dl className="flex flex-col gap-2 rounded-lg border border-hairline bg-card p-3 text-sm">
+                {isRecover
+                  ? [
+                      ["学号", request.student_id],
+                      ["学号邮箱（账号标识）", request.login_email],
+                      ["将绑定的常用邮箱", request.personal_email],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex gap-3">
+                        <dt className="w-36 shrink-0 text-tertiary">{label}</dt>
+                        <dd className="min-w-0 break-all">{value}</dd>
+                      </div>
+                    ))
+                  : [
+                      ["姓名", request.name],
+                      ["学号", request.student_id],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex gap-3">
+                        <dt className="w-36 shrink-0 text-tertiary">{label}</dt>
+                        <dd className="min-w-0 break-all">{value}</dd>
+                      </div>
+                    ))}
+              </dl>
+            )}
+            <FormError message={error} />
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading}
+                onClick={() => {
+                  setError(undefined);
+                  setMode("review");
+                }}
+              >
+                返回
+              </Button>
+              <Button
+                type="button"
+                disabled={loading}
+                onClick={() => void handleApprove()}
+              >
+                {loading ? <DotLoading /> : isRecover ? "确认通过并绑定" : "确认通过"}
               </Button>
             </DialogFooter>
           </>
@@ -212,11 +296,22 @@ export function AlumniRequestReviewDialog({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle className="type-title3">审核建号申请</DialogTitle>
+              <DialogTitle className="type-title3">
+                {isRecover ? "审核恢复访问申请" : "审核建号申请"}
+              </DialogTitle>
               <DialogDescription className="text-muted-foreground">
-                请与既有成员档案交叉核对身份。通过后系统将直接建号并邮件通知申请人。
+                {isRecover
+                  ? "请与既有成员档案交叉核对身份，尤其是学号邮箱与账号登记是否一致。通过后不新建账号，申请中的常用邮箱将直接绑定为该学号的现有账号登录身份。"
+                  : "请与既有成员档案交叉核对身份。通过后系统将直接建号并邮件通知申请人。"}
               </DialogDescription>
             </DialogHeader>
+            {isRecover && (
+              <p className="rounded-sm border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs leading-5 text-destructive">
+                高危操作：此申请不创建新账号，批准会把<strong className="font-semibold">常用邮箱</strong>
+                直接绑定为该学号账号的登录身份，可凭其登录与重置密码。
+                请核验下方学号邮箱与该学号账号登记一致后再操作。
+              </p>
+            )}
             {request && (
               <dl className="flex flex-col gap-2 py-2 text-sm">
                 {[
@@ -252,8 +347,15 @@ export function AlumniRequestReviewDialog({
               >
                 驳回
               </Button>
-              <Button type="button" disabled={loading} onClick={() => void handleApprove()}>
-                {loading ? <DotLoading /> : "通过并建号"}
+              <Button
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  setError(undefined);
+                  setMode("confirm-approve");
+                }}
+              >
+                {isRecover ? "通过并绑定邮箱" : "通过并建号"}
               </Button>
             </DialogFooter>
           </>

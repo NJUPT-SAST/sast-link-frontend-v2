@@ -176,19 +176,41 @@ describe("AlumniRequestForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "提交申请" }));
 
     expect(
-      await screen.findByText("该学号已有待审核的申请，请等待处理，无需重复提交"),
+      await screen.findByText(
+        "该学号或常用邮箱已有待审核的申请，请等待处理；如被驳回，可修改后重新提交",
+      ),
     ).toBeInTheDocument();
   });
 
-  it("reports an occupied student id separately", async () => {
+  // 40902 means the student id already has an account, so the copy invites the
+  // applicant to switch to the recover intent rather than telling them to log
+  // in (they are here precisely because they cannot).
+  it("reports an occupied student id and offers the recover switch", async () => {
     mockSubmit.mockRejectedValueOnce(apiFailure(409, 40902, "学号已被占用"));
     render(<AlumniRequestForm />);
     await fillForm();
     await userEvent.click(screen.getByRole("button", { name: "提交申请" }));
 
     expect(
-      await screen.findByText("该学号已有账号，请直接登录或找回密码"),
+      await screen.findByText(/该学号已有账号。若这是您本人且无法登录/),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "切换为「恢复已有账号访问」" }),
+    ).toBeInTheDocument();
+
+    // The banner's action actually switches the intent for the next submit.
+    await userEvent.click(
+      screen.getByRole("button", { name: "切换为「恢复已有账号访问」" }),
+    );
+    expect(
+      screen.getByRole("radio", { name: /恢复已有账号访问/ }),
+    ).toBeChecked();
+    await userEvent.click(screen.getByRole("button", { name: "提交申请" }));
+
+    await waitFor(() => expect(mockSubmit).toHaveBeenCalledTimes(2));
+    expect(mockSubmit).toHaveBeenLastCalledWith(
+      expect.objectContaining({ intent: "recover" }),
+    );
   });
 
   // The backend uses one code for both mailboxes, so the copy must not claim to
@@ -230,5 +252,96 @@ describe("AlumniRequestForm", () => {
 
     expect(await screen.findByText("常用邮箱不能与学号邮箱相同")).toBeInTheDocument();
     expect(mockSubmit).not.toHaveBeenCalled();
+  });
+
+  describe("intent switch", () => {
+    it("carries intent only for recover, and swaps the mailbox copy", async () => {
+      render(<AlumniRequestForm />);
+      await userEvent.click(
+        screen.getByRole("radio", { name: /恢复已有账号访问/ }),
+      );
+
+      // The school mailbox description now explains the backend re-check.
+      expect(
+        screen.getByText(/填写你账号原先登记的学校邮箱/),
+      ).toBeInTheDocument();
+
+      await fillForm();
+      await userEvent.click(screen.getByRole("button", { name: "提交申请" }));
+
+      await waitFor(() => expect(mockSubmit).toHaveBeenCalledTimes(1));
+      expect(mockSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ intent: "recover" }),
+      );
+    });
+
+    // Omission means provision: leaving the form untouched submits a request
+    // byte-for-byte identical to the historical one.
+    it("omits intent for the default provision intent", async () => {
+      render(<AlumniRequestForm />);
+      await fillForm();
+      await userEvent.click(screen.getByRole("button", { name: "提交申请" }));
+
+      await waitFor(() => expect(mockSubmit).toHaveBeenCalledTimes(1));
+      expect(mockSubmit).toHaveBeenCalledWith(
+        expect.not.objectContaining({ intent: expect.anything() }),
+      );
+    });
+
+    // Recover is refused with plain 40000 and two fixed messages: no account
+    // for the student id, or a school mailbox that does not match the account.
+    // The frontend cannot tell them apart by code, so it keys off the message.
+    it("offers a switch back to provision when recover finds no account", async () => {
+      mockSubmit.mockRejectedValueOnce(
+        apiFailure(400, 40000, "该学号尚无账号，如需新开账号请使用普通申请"),
+      );
+      render(<AlumniRequestForm />);
+      await userEvent.click(
+        screen.getByRole("radio", { name: /恢复已有账号访问/ }),
+      );
+      await fillForm();
+      await userEvent.click(screen.getByRole("button", { name: "提交申请" }));
+
+      expect(
+        await screen.findByText(/该学号下暂无账号，没有可恢复的账号/),
+      ).toBeInTheDocument();
+      await userEvent.click(
+        screen.getByRole("button", { name: "切换为「新开账号」" }),
+      );
+      expect(screen.getByRole("radio", { name: /新开账号/ })).toBeChecked();
+    });
+
+    it("points at the school mailbox when it mismatches the account", async () => {
+      mockSubmit.mockRejectedValueOnce(
+        apiFailure(400, 40000, "login_email 与该学号登记的登录邮箱不一致"),
+      );
+      render(<AlumniRequestForm />);
+      await userEvent.click(
+        screen.getByRole("radio", { name: /恢复已有账号访问/ }),
+      );
+      await fillForm();
+      await userEvent.click(screen.getByRole("button", { name: "提交申请" }));
+
+      expect(
+        await screen.findByText("原学号邮箱与该学号账号登记的不一致，请核对后重试"),
+      ).toBeInTheDocument();
+    });
+
+    // 40906 also guards the personal mailbox now; the code-level handling is
+    // unchanged, so the same copy applies whichever address collided.
+    it("reports a personal mailbox with an open ticket as pending", async () => {
+      mockSubmit.mockRejectedValueOnce(
+        apiFailure(409, 40906, "该邮箱已有待审申请，请等待处理"),
+      );
+      render(<AlumniRequestForm />);
+      await fillForm();
+      await userEvent.click(screen.getByRole("button", { name: "提交申请" }));
+
+      expect(
+        await screen.findByText(
+          "该学号或常用邮箱已有待审核的申请，请等待处理；如被驳回，可修改后重新提交",
+        ),
+      ).toBeInTheDocument();
+    });
   });
 });

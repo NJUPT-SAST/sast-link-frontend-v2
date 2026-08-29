@@ -167,6 +167,41 @@ describe("adminUpdateUserSchema", () => {
   it("still allows omitting phone_number/qq_number for a partial update", () => {
     expect(adminUpdateUserSchema.safeParse({ name: "李四" }).success).toBe(true);
   });
+
+  it("accepts a personal_email bind as its own partial update", () => {
+    const result = adminUpdateUserSchema.safeParse({
+      personal_email: "alumni@gmail.com",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("treats an empty personal_email as no bind", () => {
+    const result = adminUpdateUserSchema.safeParse({ personal_email: "" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a malformed personal_email", () => {
+    const result = adminUpdateUserSchema.safeParse({ personal_email: "not-an-email" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === "personal_email");
+      expect(issue?.message).toBe("请输入有效的个人邮箱");
+    }
+  });
+
+  // Backend refuses a bind equal to the login email — current, or the newly
+  // set one when both change together.
+  it("rejects a personal_email identical to the login email", () => {
+    const result = adminUpdateUserSchema.safeParse({
+      login_email: "b18040101@njupt.edu.cn",
+      personal_email: "b18040101@njupt.edu.cn",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === "personal_email");
+      expect(issue?.message).toBe("个人邮箱不能与登录邮箱相同");
+    }
+  });
 });
 
 describe("adminCreateUserSchema", () => {

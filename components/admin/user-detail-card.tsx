@@ -83,6 +83,17 @@ export function UserDetailCard({ user }: UserDetailCardProps) {
       <section aria-label="联系方式">
         <h2 className="type-tech mb-3 text-tertiary">联系方式</h2>
         <Field label="登录邮箱" value={user.login_email} />
+        <Field
+          label="绑定邮箱"
+          wrap
+          value={
+            user.identities
+              .filter((identity) => identity.provider === "other_mail")
+              .map((identity) => identity.provider_id)
+              .join("、") || null
+          }
+          empty="未绑定"
+        />
         <Field label="手机号" value={user.phone_number} />
         <Field label="QQ" value={user.qq_number} />
         <Field label="博客" value={user.profile?.blog_url} wrap />

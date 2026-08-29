@@ -28,7 +28,9 @@ export default function AlumniRegisterPage() {
           </h2>
           <ul className="flex list-disc flex-col gap-2 pl-5 text-[15px] leading-7">
             <li>你曾是 SAST 成员，且已经毕业；</li>
-            <li>你的 @njupt.edu.cn 学生邮箱已停用，收不到注册验证码。</li>
+            <li>你的 @njupt.edu.cn 学生邮箱已停用，收不到注册验证码；</li>
+            <li>如果你此前开通过账号、但从未绑定过常用邮箱，现在登录不进去
+              （可选择下方「恢复已有账号访问」，把常用邮箱绑定回原账号，无需另开新号）。</li>
           </ul>
           <p className="text-sm leading-6 text-muted-foreground">
             如果学生邮箱仍可收信，请直接
