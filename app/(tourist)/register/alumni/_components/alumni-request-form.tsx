@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
+import { KeyRound, UserPlus } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
 import { submitAlumniRequest } from "@/lib/api/alumni";
 import { toApiError } from "@/lib/api/errors";
 import {
@@ -44,21 +47,21 @@ const selectClass =
 
 const INTENT_OPTIONS: {
   value: AlumniIntent;
+  icon: LucideIcon;
   title: string;
   description: string;
-  hint: string;
 }[] = [
   {
     value: "provision",
+    icon: UserPlus,
     title: "新开账号",
-    description: "我还没有可用账号，申请开通一个新的。",
-    hint: "核验通过后为你新建账号，常用邮箱作为登录身份。",
+    description: "我还没有可用账号，申请创建新账号。",
   },
   {
     value: "recover",
+    icon: KeyRound,
     title: "恢复已有账号访问",
-    description: "我此前开通过账号，但学校邮箱停用、从未绑定过常用邮箱，登录不进去了。",
-    hint: "不创建新账号。核验通过后，常用邮箱将直接绑定为原账号的登录身份，之后用它与密码登录、重置密码。",
+    description: "我此前注册过账号，但学校邮箱停用，需要绑定第三方邮箱。",
   },
 ];
 
@@ -304,6 +307,7 @@ export default function AlumniRequestForm() {
           <div role="radiogroup" aria-label="申请类型" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {INTENT_OPTIONS.map((option) => {
               const selected = intent === option.value;
+              const Icon = option.icon;
               return (
                 <button
                   key={option.value}
@@ -315,27 +319,49 @@ export default function AlumniRequestForm() {
                     // A stale conflict banner belongs to the previous intent.
                     setSwitchHint(null);
                   }}
-                  className={[
-                    "flex flex-col gap-1 rounded-lg border p-3.5 text-left",
+                  className={cn(
+                    "group flex flex-col gap-3 rounded-xl border p-4 text-left transition-colors",
                     selected
-                      ? "border-ring bg-card ring-2 ring-ring/25"
-                      : "border-hairline bg-card hover:border-input",
-                  ].join(" ")}
-                >
-                  <span
-                    className={cn(
-                      "type-tech text-sm",
-                      selected ? "text-foreground" : "text-tertiary",
-                    )}
-                  >
-                    {option.title}
-                  </span>
-                  <span className="text-[13px] leading-5 text-muted-foreground">
-                    {option.description}
-                  </span>
-                  {selected && (
-                    <span className="text-xs leading-5 text-tertiary">{option.hint}</span>
+                      ? "border-primary/60 bg-accent/50 ring-1 ring-primary/10"
+                      : "border-hairline bg-card hover:border-input hover:bg-accent/30",
                   )}
+                >
+                  <span className="flex items-start gap-3">
+                    <span
+                      className={cn(
+                        "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-colors",
+                        selected
+                          ? "border-primary/20 bg-primary/5 text-foreground"
+                          : "border-hairline bg-muted/50 text-tertiary group-hover:text-muted-foreground",
+                      )}
+                    >
+                      <Icon className="h-5 w-5" strokeWidth={1.75} />
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col gap-1">
+                      <span
+                        className={cn(
+                          "type-tech text-sm transition-colors",
+                          selected
+                            ? "text-foreground"
+                            : "text-muted-foreground group-hover:text-foreground",
+                        )}
+                      >
+                        {option.title}
+                      </span>
+                      <span className="text-[13px] leading-5 text-tertiary">
+                        {option.description}
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors",
+                        selected ? "border-success" : "border-input",
+                      )}
+                    >
+                      {selected && <span className="h-2 w-2 rounded-full bg-success" />}
+                    </span>
+                  </span>
                 </button>
               );
             })}
@@ -399,8 +425,8 @@ export default function AlumniRequestForm() {
                 error={fieldState.error?.message}
                 description={
                   intent === "recover"
-                    ? "填写你账号原先登记的学校邮箱（仅支持 @njupt.edu.cn）。提交时后端会校验它与该学号账号的登记一致。"
-                    : "仅支持 @njupt.edu.cn。它只作为账号标识，无需还能收信。"
+                    ? "填写旧账号注册时使用的学校邮箱（仅支持 @njupt.edu.cn）。"
+                    : "仅支持 @njupt.edu.cn。仅作为账号标识，无需接收邮件。"
                 }
               />
             </FormItem>

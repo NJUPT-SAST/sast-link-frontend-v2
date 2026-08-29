@@ -263,7 +263,7 @@ describe("AlumniRequestForm", () => {
 
       // The school mailbox description now explains the backend re-check.
       expect(
-        screen.getByText(/填写你账号原先登记的学校邮箱/),
+        screen.getByText(/填写旧账号注册时使用的学校邮箱/),
       ).toBeInTheDocument();
 
       await fillForm();
