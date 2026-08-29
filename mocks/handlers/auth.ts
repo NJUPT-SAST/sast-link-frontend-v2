@@ -64,8 +64,11 @@ export const authHandlers = [
   http.post(`${API_BASE_URL}/user/login`, async ({ request }) => {
     const { login_email, password } = await request.json() as { login_email: string; password: string };
     const user = findUserByEmail(login_email);
-    if (!user) return fail(401, 40106, "登录邮箱不存在");
-    if (password !== user.password) return fail(401, 40105, "密码错误");
+    // One indistinguishable 40105 for email-not-found, wrong password, and
+    // deleted accounts (backend PR #73): clients must not be able to tell
+    // whether an email is registered. The real reason stays in the audit log;
+    // forgot-password/send-code below still returns 40106 for a missing email.
+    if (!user || password !== user.password) return fail(401, 40105, "邮箱或密码错误");
     const pair = issueTokens(user);
     return cookieOk({ ...pair, user: authUser(user) }, pair.refresh_token);
   }),
