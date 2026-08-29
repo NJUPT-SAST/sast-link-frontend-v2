@@ -11,8 +11,6 @@ import { useAlumniRequests, buildAlumniRequestsKey } from "@/hooks/use-alumni-re
 import { useAlumniRequestListParams } from "@/hooks/use-admin-list-params";
 import { ALUMNI_REQUEST_STATUS_LABELS } from "@/lib/constants/admin";
 import { DEFAULT_PAGE_SIZE } from "@/lib/admin/list-query";
-import { useUserProfileStore } from "@/store/use-user-profile-store";
-import { canManageUsers } from "@/components/admin/permissions";
 import { AlumniRequestList } from "@/components/admin/alumni-request-list";
 import { AlumniRequestReviewDialog } from "@/components/admin/alumni-request-review-dialog";
 import { Pagination } from "@/components/admin/pagination";
@@ -39,10 +37,6 @@ const NOTIFIED_OPTIONS = [
 
 function AdminAlumniRequestsContent() {
   const { mutate } = useSWRConfig();
-  const role = useUserProfileStore((state) => state.profile.role);
-  // Listing is open to lecturers (backend RequireReader); approving/rejecting is
-  // admin-only, so the review affordance is withheld rather than failing on click.
-  const canReview = canManageUsers(role);
   const [filters, setFilters] = useAlumniRequestListParams();
   const { data, isLoading, error } = useAlumniRequests(filters);
 
@@ -205,15 +199,11 @@ function AdminAlumniRequestsContent() {
           <AlumniRequestList
             requests={data?.requests ?? []}
             resendingId={resendingId}
-            onReview={
-              canReview
-                ? (request) => {
-                    setReviewing(request);
-                    setReviewOpen(true);
-                  }
-                : undefined
-            }
-            onResend={canReview ? (request) => void handleResend(request) : undefined}
+            onReview={(request) => {
+              setReviewing(request);
+              setReviewOpen(true);
+            }}
+            onResend={(request) => void handleResend(request)}
           />
           <Pagination
             page={data?.page ?? 1}

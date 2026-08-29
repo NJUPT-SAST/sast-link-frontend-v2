@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, Settings, User } from "lucide-react";
 
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { ADMIN_NAV_ITEMS } from "@/lib/constants/admin";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import {
   Tooltip,
@@ -16,6 +17,9 @@ import {
 export function TopBar() {
   const pathname = usePathname();
   const role = useUserProfileStore((state) => state.profile.role);
+  // First admin-surface entry the role may open — admin lands on the overview,
+  // lecturer on its read-only /admin/users. Keeps the entry and the nav in sync.
+  const adminHref = ADMIN_NAV_ITEMS.find((item) => item.roles.includes(role))?.href;
   const homeLabel = pathname === "/home" ? "首页" : "返回首页";
 
   return (
@@ -47,11 +51,11 @@ export function TopBar() {
             </TooltipTrigger>
             <TooltipContent>个人资料</TooltipContent>
           </Tooltip>
-          {role === "admin" && (
+          {adminHref && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/admin"
+                  href={adminHref}
                   aria-label="管理面板"
                   className="grid size-10 place-items-center text-foreground/70 transition-[opacity,transform] hover:-translate-y-px hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
                 >

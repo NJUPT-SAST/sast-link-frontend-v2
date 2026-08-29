@@ -9,9 +9,8 @@ export interface AdminNavItem {
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: "概览", href: "/admin", roles: ["admin"] },
   { label: "用户管理", href: "/admin/users", roles: ["admin", "lecturer"] },
-  // Listing is RequireReader (admin + lecturer) on the backend; approve/reject
-  // are admin-only and the review dialog hides those actions for a lecturer.
-  { label: "建号申请", href: "/admin/alumni-requests", roles: ["admin", "lecturer"] },
+  // The backend gates the whole surface (listing included) on the admin role.
+  { label: "建号申请", href: "/admin/alumni-requests", roles: ["admin"] },
   { label: "OAuth 客户端", href: "/admin/oauth-clients", roles: ["admin"] },
   { label: "审计日志", href: "/admin/audit-logs", roles: ["admin"] },
 ];

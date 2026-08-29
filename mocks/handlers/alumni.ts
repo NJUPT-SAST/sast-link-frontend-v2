@@ -17,14 +17,13 @@ function fail(status: number, code: number, message: string) {
   return HttpResponse.json({ code, message, data: null }, { status });
 }
 
-/** Mirrors the backend split: listing and detail admit lecturers, every write is
- *  admin-only. */
-function authenticate(request: Request, allowLecturer: boolean) {
+/** The whole admin surface is admin-only (backend gates listing and writes on
+ *  the admin role alike). */
+function authenticate(request: Request) {
   const value = request.headers.get("Authorization");
   const user = value?.startsWith("Bearer ") ? findUserByAccessToken(value.slice(7)) : undefined;
   if (!user) return { response: fail(401, 40100, "未登录") };
-  const role = user.profile.role;
-  if (role !== "admin" && !(allowLecturer && role === "lecturer")) {
+  if (user.profile.role !== "admin") {
     return { response: fail(403, 40300, "无权限") };
   }
   return { user };
@@ -117,7 +116,7 @@ export const alumniHandlers = [
   }),
 
   http.get(`${API_BASE_URL}/admin/alumni-requests`, ({ request }) => {
-    const auth = authenticate(request, true);
+    const auth = authenticate(request);
     if (auth.response) return auth.response;
 
     const url = new URL(request.url);
@@ -158,7 +157,7 @@ export const alumniHandlers = [
   }),
 
   http.get(`${API_BASE_URL}/admin/alumni-requests/:id`, ({ request, params }) => {
-    const auth = authenticate(request, true);
+    const auth = authenticate(request);
     if (auth.response) return auth.response;
 
     const target = alumniMockRequests.find((item) => item.id === Number(params.id));
@@ -167,7 +166,7 @@ export const alumniHandlers = [
   }),
 
   http.post(`${API_BASE_URL}/admin/alumni-requests/:id/approve`, ({ request, params }) => {
-    const auth = authenticate(request, false);
+    const auth = authenticate(request);
     if (auth.response) return auth.response;
 
     const target = alumniMockRequests.find((item) => item.id === Number(params.id));
@@ -210,7 +209,7 @@ export const alumniHandlers = [
   }),
 
   http.post(`${API_BASE_URL}/admin/alumni-requests/:id/reject`, async ({ request, params }) => {
-    const auth = authenticate(request, false);
+    const auth = authenticate(request);
     if (auth.response) return auth.response;
 
     const target = alumniMockRequests.find((item) => item.id === Number(params.id));
@@ -234,7 +233,7 @@ export const alumniHandlers = [
   http.post(
     `${API_BASE_URL}/admin/alumni-requests/:id/resend-notification`,
     ({ request, params }) => {
-      const auth = authenticate(request, false);
+      const auth = authenticate(request);
       if (auth.response) return auth.response;
 
       const target = alumniMockRequests.find((item) => item.id === Number(params.id));

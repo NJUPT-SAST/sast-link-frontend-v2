@@ -56,8 +56,8 @@ describe("AlumniRequestList", () => {
     expect(onReview).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
   });
 
-  // A lecturer may list requests but not act on them (backend gates approve and
-  // reject on the admin role), so the affordance is withheld rather than failing.
+  // The review affordance is withheld when no handler is supplied (backend
+  // gates approve/reject on the admin role), rather than failing on click.
   it("hides the review button when no handler is supplied", () => {
     render(<AlumniRequestList requests={[makeRequest()]} />);
     expect(screen.queryByRole("button", { name: "审核" })).not.toBeInTheDocument();

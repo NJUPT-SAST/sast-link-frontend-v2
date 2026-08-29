@@ -34,12 +34,21 @@ describe("TopBar", () => {
     expect(screen.queryByLabelText("Open profile")).not.toBeInTheDocument();
   });
 
-  it("shows the admin entry only for admins", () => {
+  it("shows the admin entry for admins, pointing at the overview", () => {
     mockRole.mockReturnValue("admin");
     render(<TopBar />);
     expect(screen.getByRole("link", { name: "管理面板" })).toHaveAttribute(
       "href",
       "/admin",
+    );
+  });
+
+  it("routes a lecturer to the read-only user management", () => {
+    mockRole.mockReturnValue("lecturer");
+    render(<TopBar />);
+    expect(screen.getByRole("link", { name: "管理面板" })).toHaveAttribute(
+      "href",
+      "/admin/users",
     );
   });
 

@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 interface AlumniRequestListProps {
   requests: AlumniRequest[];
   loading?: boolean;
-  /** Absent for a lecturer: listing is read-only for that role, matching the
-   *  backend where approve/reject are admin-only. */
+  /** Review affordance, supplied by the page when the viewer may act; the
+   *  backend gates approve/reject on the admin role. */
   onReview?: (request: AlumniRequest) => void;
-  /** Absent for a lecturer, same reason as onReview. */
+  /** Kept in lockstep with onReview: only an acting viewer gets a resend. */
   onResend?: (request: AlumniRequest) => void;
   /** Id currently being re-sent, so only that row shows a busy button. */
   resendingId?: number | null;
