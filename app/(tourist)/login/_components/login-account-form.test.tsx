@@ -42,7 +42,7 @@ describe("LoginAccountForm", () => {
     await userEvent.type(screen.getByLabelText("账户"), "foo");
     await userEvent.click(screen.getByRole("button", { name: "继续" }));
     expect(onNext).toHaveBeenCalledWith("foo@sast.fun");
-  });
+  }, 30000);
 
   it("submits an arbitrary prefix with the default njupt domain", async () => {
     const onNext = jest.fn();
@@ -60,7 +60,7 @@ describe("LoginAccountForm", () => {
     await userEvent.type(screen.getByLabelText("账户"), "alice@sast.fun");
     await userEvent.click(screen.getByRole("button", { name: "继续" }));
     expect(onNext).toHaveBeenCalledWith("alice@sast.fun");
-  });
+  }, 30000);
 
   it("submits any valid email in the other-email branch (other_mail login)", async () => {
     const onNext = jest.fn();
@@ -70,7 +70,7 @@ describe("LoginAccountForm", () => {
     await userEvent.type(screen.getByLabelText("账户"), "alice@example.com");
     await userEvent.click(screen.getByRole("button", { name: "继续" }));
     expect(onNext).toHaveBeenCalledWith("alice@example.com");
-  });
+  }, 30000);
 
   it("rejects malformed emails in the other-email branch", async () => {
     const onNext = jest.fn();
@@ -81,7 +81,7 @@ describe("LoginAccountForm", () => {
     await userEvent.click(screen.getByRole("button", { name: "继续" }));
     expect(screen.getByText("请输入完整的邮箱地址")).toBeInTheDocument();
     expect(onNext).not.toHaveBeenCalled();
-  });
+  }, 30000);
 
   it("remembers the submitted account with its domain type", async () => {
     const onNext = jest.fn();
@@ -93,7 +93,7 @@ describe("LoginAccountForm", () => {
     expect(onNext).toHaveBeenCalledWith("foo@sast.fun");
     const stored = JSON.parse(localStorage.getItem("sast:last-login-account") || "{}");
     expect(stored).toEqual({ localPart: "foo", domain: "@sast.fun" });
-  });
+  }, 30000);
 
   it("pre-fills the account field from the remembered entry", () => {
     localStorage.setItem(

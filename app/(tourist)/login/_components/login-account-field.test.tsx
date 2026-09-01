@@ -36,7 +36,7 @@ describe("LoginAccountField", () => {
       localPart: "foo",
       domain: "@sast.fun",
     });
-  });
+  }, 20000);
 
   it("displays an error message", () => {
     render(

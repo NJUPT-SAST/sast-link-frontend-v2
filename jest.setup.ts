@@ -6,6 +6,29 @@
 import '@testing-library/jest-dom';
 import React from 'react';
 
+// Disable CSS animations and transitions in tests to speed up Radix UI interactions
+Object.defineProperty(globalThis, 'CSS', {
+  writable: true,
+  value: {
+    ...globalThis.CSS,
+    supports: () => false,
+  },
+});
+
+// Mock getComputedStyle to return instant transitions
+const originalGetComputedStyle = window.getComputedStyle;
+window.getComputedStyle = function(element) {
+  const styles = originalGetComputedStyle(element);
+  return new Proxy(styles, {
+    get(target, prop) {
+      if (prop === 'animationDuration' || prop === 'transitionDuration') {
+        return '0s';
+      }
+      return target[prop as keyof CSSStyleDeclaration];
+    },
+  });
+};
+
 if (!HTMLElement.prototype.hasPointerCapture) {
   HTMLElement.prototype.hasPointerCapture = () => false;
 }

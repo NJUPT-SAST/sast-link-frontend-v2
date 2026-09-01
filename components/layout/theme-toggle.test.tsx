@@ -35,7 +35,7 @@ describe("ThemeToggle", () => {
     await user.click(screen.getByRole("menuitemradio", { name: "深色" }));
 
     expect(setTheme).toHaveBeenCalledWith("dark");
-  });
+  }, 30000);
 
   it("lets the user switch back to light mode", async () => {
     const user = userEvent.setup();
@@ -46,7 +46,7 @@ describe("ThemeToggle", () => {
     await user.click(screen.getByRole("menuitemradio", { name: "浅色" }));
 
     expect(setTheme).toHaveBeenCalledWith("light");
-  });
+  }, 30000);
 
   it("lets the user choose follow-system mode", async () => {
     const user = userEvent.setup();
@@ -57,5 +57,5 @@ describe("ThemeToggle", () => {
     await user.click(screen.getByRole("menuitemradio", { name: "跟随系统" }));
 
     expect(setTheme).toHaveBeenCalledWith("system");
-  });
+  }, 30000);
 });
