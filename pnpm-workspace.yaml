@@ -1,4 +1,5 @@
 allowBuilds:
+  '@parcel/watcher': true
   msw: true
   unrs-resolver: true
 
