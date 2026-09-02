@@ -123,6 +123,9 @@ export interface UserProfileData {
    *  reads and the admin user list/detail. */
   profile_needs_completion: boolean;
   incomplete_fields: IncompleteProfileField[];
+  /** Backend V014: whether state was manually set (pinned) or derived from
+   *  role + student_id. Readable wherever state is (list/detail/batch). */
+  state_manual: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -236,6 +239,10 @@ export interface AdminUpdateUserRequest {
   login_email?: string;
   role?: UserRole;
   state?: UserState;
+  /** Backend V014: when true, re-derives state from role + student_id and
+   *  unpins (removes manual override). Mutually exclusive with `state` — sending
+   *  both returns 400. This is the undo for a manual pin. */
+  state_auto?: boolean;
   email_type?: EmailType;
   department?: Department;
   /** Optional. When supplied, bound as an `other_mail` login identity in the

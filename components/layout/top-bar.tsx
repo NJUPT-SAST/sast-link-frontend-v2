@@ -7,6 +7,7 @@ import { LayoutDashboard, Settings, User } from "lucide-react";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ADMIN_NAV_ITEMS } from "@/lib/constants/admin";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
+import { useScrollDirection } from "@/hooks/use-scroll-direction";
 import {
   Tooltip,
   TooltipContent,
@@ -17,14 +18,20 @@ import {
 export function TopBar() {
   const pathname = usePathname();
   const role = useUserProfileStore((state) => state.profile.role);
+  const scrollDirection = useScrollDirection();
   // First admin-surface entry the role may open — admin lands on the overview,
   // lecturer on its read-only /admin/users. Keeps the entry and the nav in sync.
   const adminHref = ADMIN_NAV_ITEMS.find((item) => item.roles.includes(role))?.href;
   const homeLabel = pathname === "/home" ? "首页" : "返回首页";
 
+  const isHidden = scrollDirection === "down";
+
   return (
     <TooltipProvider delayDuration={500}>
-      <header className="fixed inset-x-0 top-0 z-10 flex h-16 items-center justify-between px-5 sm:px-8">
+      <header
+        className="fixed inset-x-0 top-0 z-10 flex h-16 items-center justify-between px-5 transition-transform duration-300 sm:px-8"
+        style={{ transform: isHidden ? "translateY(-100%)" : "translateY(0)" }}
+      >
         <Tooltip>
           <TooltipTrigger asChild>
             <Link

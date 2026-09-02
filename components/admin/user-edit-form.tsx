@@ -136,6 +136,15 @@ export function UserEditForm({
     }
   };
 
+  const handleRederiveState = async () => {
+    try {
+      await onSubmit({ state_auto: true });
+    } catch (error) {
+      const apiError = toApiError(error);
+      form.setError("root", { message: apiError.message });
+    }
+  };
+
   const handleInvalid = () => {
     scrollToFirstError(form.formState.errors, FIELD_ORDER);
   };
@@ -248,9 +257,23 @@ export function UserEditForm({
               name="state"
               render={({ field }) => (
                 <FormItem>
-                  <label htmlFor="state" className="mb-2 block text-[13px] text-muted-foreground">
-                    状态
-                  </label>
+                  <div className="mb-2 flex items-center justify-between">
+                    <label htmlFor="state" className="text-[13px] text-muted-foreground">
+                      状态
+                    </label>
+                    {user.state_manual && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRederiveState}
+                        disabled={loading}
+                        className="h-auto px-2 py-1 text-xs"
+                      >
+                        重新派生
+                      </Button>
+                    )}
+                  </div>
                   <Select id="state" {...field} className={selectClass}>
                     {STATE_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -259,6 +282,11 @@ export function UserEditForm({
                   <div className="min-h-4 text-xs">
                     <FormMessage />
                   </div>
+                  {user.state_manual && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      ⚙️ 当前为手动设置的状态
+                    </p>
+                  )}
                 </FormItem>
               )}
             />

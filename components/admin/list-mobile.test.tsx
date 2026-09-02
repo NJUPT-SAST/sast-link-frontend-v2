@@ -39,6 +39,7 @@ function user(overrides: Partial<UserProfileData> = {}): UserProfileData {
     },
     identities: [],
     profile_needs_completion: false,
+    state_manual: false,
     incomplete_fields: [],
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",

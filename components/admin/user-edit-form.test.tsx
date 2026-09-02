@@ -25,6 +25,7 @@ function makeUser(overrides: Partial<UserProfileData> = {}): UserProfileData {
     profile: null,
     identities: [],
     profile_needs_completion: false,
+    state_manual: false,
     incomplete_fields: [],
     created_at: createdAt,
     updated_at: createdAt,

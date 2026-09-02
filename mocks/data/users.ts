@@ -47,6 +47,7 @@ export const mockUsers: MockUser[] = [
       },
       identities: [identity(1, "github", "alice")],
       profile_needs_completion: false,
+      state_manual: false,
       incomplete_fields: [],
       created_at: createdAt,
       updated_at: createdAt,
@@ -80,6 +81,7 @@ export const mockUsers: MockUser[] = [
       },
       identities: [],
       profile_needs_completion: false,
+      state_manual: false,
       incomplete_fields: [],
       created_at: createdAt,
       updated_at: createdAt,
@@ -113,6 +115,7 @@ export const mockUsers: MockUser[] = [
       },
       identities: [],
       profile_needs_completion: false,
+      state_manual: false,
       incomplete_fields: [],
       created_at: createdAt,
       updated_at: createdAt,
@@ -146,6 +149,7 @@ export const mockUsers: MockUser[] = [
       },
       identities: [identity(4, "github", "bob")],
       profile_needs_completion: false,
+      state_manual: false,
       incomplete_fields: [],
       created_at: createdAt,
       updated_at: createdAt,
@@ -185,6 +189,7 @@ export const mockUsers: MockUser[] = [
       profile_needs_completion: true,
       incomplete_fields: ["name", "phone_number", "qq_number", "major"],
       created_at: createdAt,
+      state_manual: false,
       updated_at: createdAt,
     },
   },
@@ -309,6 +314,7 @@ function seedUser(index: number, spec: SeedSpec): MockUser {
       incomplete_fields: spec.incomplete
         ? ["name", "phone_number", "qq_number", "major"]
         : [],
+      state_manual: false,
       created_at: createdAt,
       updated_at: createdAt,
     },
@@ -345,7 +351,7 @@ export function createMockUser(input: { loginEmail: string; password: string; na
   const id = Math.max(0, ...mockUsers.map((user) => user.id)) + 1;
   const user: MockUser = {
     id, loginEmail: input.loginEmail, password: input.password, refreshToken: "",
-    profile: { id, name: input.name, login_email: input.loginEmail, role: "freshman", state: "njupter", email_type: input.loginEmail.endsWith("@sast.fun") ? "sast_email" : "njupt_email", phone_number: input.phoneNumber, qq_number: input.qqNumber, student_id: input.studentId, college: input.college, major: input.major, profile: { nickname: input.name, department: null, intro: null, email: input.loginEmail, avatar: null, blog_url: null, github_url: null }, identities: [], profile_needs_completion: false, incomplete_fields: [], created_at: createdAt, updated_at: createdAt },
+    profile: { id, name: input.name, login_email: input.loginEmail, role: "freshman", state: "njupter", email_type: input.loginEmail.endsWith("@sast.fun") ? "sast_email" : "njupt_email", phone_number: input.phoneNumber, qq_number: input.qqNumber, student_id: input.studentId, college: input.college, major: input.major, profile: { nickname: input.name, department: null, intro: null, email: input.loginEmail, avatar: null, blog_url: null, github_url: null }, identities: [], profile_needs_completion: false, incomplete_fields: [], state_manual: false, created_at: createdAt, updated_at: createdAt },
   };
   mockUsers.push(user);
   return user;

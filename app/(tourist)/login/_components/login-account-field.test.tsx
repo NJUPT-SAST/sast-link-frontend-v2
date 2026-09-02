@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { LoginAccountField } from "./login-account-field";
@@ -31,7 +31,8 @@ describe("LoginAccountField", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: "选择邮箱域名" }));
-    await userEvent.click(screen.getByRole("menuitem", { name: "@sast.fun" }));
+    const menuItem = await screen.findByRole("menuitem", { name: "@sast.fun" }, { timeout: 3000 });
+    await userEvent.click(menuItem);
     expect(onChange).toHaveBeenLastCalledWith({
       localPart: "foo",
       domain: "@sast.fun",
