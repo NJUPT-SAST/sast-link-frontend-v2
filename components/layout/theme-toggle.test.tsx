@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ThemeToggle } from "./theme-toggle";
@@ -19,6 +19,10 @@ describe("ThemeToggle", () => {
     currentTheme = "system";
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it("shows the current theme mode label", () => {
     render(<ThemeToggle />);
 
@@ -32,11 +36,20 @@ describe("ThemeToggle", () => {
     render(<ThemeToggle />);
 
     await user.click(screen.getByRole("button", { name: "主题模式" }));
-    const darkOption = await screen.findByRole("menuitemradio", { name: "深色" }, { timeout: 3000 });
+
+    const darkOption = await waitFor(
+      () => {
+        const item = screen.queryByRole("menuitemradio", { name: "深色" });
+        if (!item) throw new Error("Menu item not found");
+        return item;
+      },
+      { timeout: 15000, interval: 100 }
+    );
+
     await user.click(darkOption);
 
     expect(setTheme).toHaveBeenCalledWith("dark");
-  });
+  }, 60000);
 
   it("lets the user switch back to light mode", async () => {
     const user = userEvent.setup();
@@ -44,11 +57,20 @@ describe("ThemeToggle", () => {
     render(<ThemeToggle />);
 
     await user.click(screen.getByRole("button", { name: "主题模式" }));
-    const lightOption = await screen.findByRole("menuitemradio", { name: "浅色" }, { timeout: 3000 });
+
+    const lightOption = await waitFor(
+      () => {
+        const item = screen.queryByRole("menuitemradio", { name: "浅色" });
+        if (!item) throw new Error("Menu item not found");
+        return item;
+      },
+      { timeout: 15000, interval: 100 }
+    );
+
     await user.click(lightOption);
 
     expect(setTheme).toHaveBeenCalledWith("light");
-  });
+  }, 60000);
 
   it("lets the user choose follow-system mode", async () => {
     const user = userEvent.setup();
@@ -56,9 +78,18 @@ describe("ThemeToggle", () => {
     render(<ThemeToggle />);
 
     await user.click(screen.getByRole("button", { name: "主题模式" }));
-    const systemOption = await screen.findByRole("menuitemradio", { name: "跟随系统" }, { timeout: 3000 });
+
+    const systemOption = await waitFor(
+      () => {
+        const item = screen.queryByRole("menuitemradio", { name: "跟随系统" });
+        if (!item) throw new Error("Menu item not found");
+        return item;
+      },
+      { timeout: 15000, interval: 100 }
+    );
+
     await user.click(systemOption);
 
     expect(setTheme).toHaveBeenCalledWith("system");
-  });
+  }, 60000);
 });

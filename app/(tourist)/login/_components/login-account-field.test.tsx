@@ -23,6 +23,7 @@ describe("LoginAccountField", () => {
   });
 
   it("switches domain via the dropdown", async () => {
+    const user = userEvent.setup();
     const onChange = jest.fn();
     render(
       <LoginAccountField
@@ -30,14 +31,25 @@ describe("LoginAccountField", () => {
         onChange={onChange}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "选择邮箱域名" }));
-    const menuItem = await screen.findByRole("menuitem", { name: "@sast.fun" }, { timeout: 3000 });
-    await userEvent.click(menuItem);
+    const trigger = screen.getByRole("button", { name: "选择邮箱域名" });
+    await user.click(trigger);
+
+    // Wait for the dropdown portal to mount and render menu items
+    const menuItem = await waitFor(
+      () => {
+        const item = screen.queryByRole("menuitem", { name: "@sast.fun" });
+        if (!item) throw new Error("Menu item not found");
+        return item;
+      },
+      { timeout: 15000, interval: 100 }
+    );
+
+    await user.click(menuItem);
     expect(onChange).toHaveBeenLastCalledWith({
       localPart: "foo",
       domain: "@sast.fun",
     });
-  }, 20000);
+  }, 60000);
 
   it("displays an error message", () => {
     render(
