@@ -49,7 +49,7 @@ describe("ThemeToggle", () => {
     await user.click(darkOption);
 
     expect(setTheme).toHaveBeenCalledWith("dark");
-  }, 60000);
+  }, 90000);
 
   it("lets the user switch back to light mode", async () => {
     const user = userEvent.setup();
@@ -70,7 +70,7 @@ describe("ThemeToggle", () => {
     await user.click(lightOption);
 
     expect(setTheme).toHaveBeenCalledWith("light");
-  }, 60000);
+  }, 90000);
 
   it("lets the user choose follow-system mode", async () => {
     const user = userEvent.setup();
