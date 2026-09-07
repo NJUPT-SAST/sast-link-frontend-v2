@@ -110,4 +110,40 @@ describe("ProfileCompletePage", () => {
     });
     expect(screen.getByText("资料已完整")).toBeInTheDocument();
   });
+
+  it("refuses a major carrying an invisible control character before sending", async () => {
+    // Backend flags control-character values as incomplete (V015) and would
+    // reject the same value on PUT /user/profile. The page must refuse it on
+    // the field, not round-trip to a 400 whose cause the user cannot see.
+    render(<ProfileCompletePage />);
+
+    fireEvent.change(screen.getByLabelText(/真实姓名/), { target: { value: "张三" } });
+    fireEvent.change(screen.getByLabelText(/手机号/), { target: { value: "13800138000" } });
+    fireEvent.change(screen.getByLabelText(/QQ 号/), { target: { value: "12345" } });
+    fireEvent.change(screen.getByLabelText(/专业/), {
+      target: { value: "软件工程\u0001" },
+    });
+    fireEvent.click(screen.getByText("保存并继续"));
+
+    expect(await screen.findByText(/专业包含不可见字符/)).toBeInTheDocument();
+    expect(mockUpdateUserProfile).not.toHaveBeenCalled();
+  });
+
+  it("refuses a name still holding legacy control-character debris", async () => {
+    // name pre-filled with binary debris ("B24040525\x01"): the Han-only
+    // realNameSchema refuses it, so the user is told to replace the value
+    // instead of submitting a value the backend rejects.
+    render(<ProfileCompletePage />);
+
+    fireEvent.change(screen.getByLabelText(/真实姓名/), {
+      target: { value: "B24040525\u0001" },
+    });
+    fireEvent.change(screen.getByLabelText(/手机号/), { target: { value: "13800138000" } });
+    fireEvent.change(screen.getByLabelText(/QQ 号/), { target: { value: "12345" } });
+    fireEvent.change(screen.getByLabelText(/专业/), { target: { value: "软件工程" } });
+    fireEvent.click(screen.getByText("保存并继续"));
+
+    expect(await screen.findByText(/姓名仅限中文与间隔号/)).toBeInTheDocument();
+    expect(mockUpdateUserProfile).not.toHaveBeenCalled();
+  });
 });

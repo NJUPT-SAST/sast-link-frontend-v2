@@ -2,6 +2,7 @@ import { z } from "zod/v3";
 import type { RegisterOptions } from "react-hook-form";
 
 import { realNameSchema } from "@/lib/validations/name";
+import { majorSchema } from "@/lib/validations/major";
 
 import { COLLEGES } from "@/lib/api/types";
 
@@ -66,7 +67,7 @@ export const profileEditSchema = z.object({
   // college may be empty until the user picks one — "其他" as a default would
   // silently overwrite a blank value on save.
   college: z.enum(COLLEGES).or(z.literal("")),
-  major: z.string().trim().min(1, "专业不能为空").max(50),
+  major: majorSchema,
   // department is shown read-only — managed by admin / recruitment, not edited here
   department: z.enum([
     "",
