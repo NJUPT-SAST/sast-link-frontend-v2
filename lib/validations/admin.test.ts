@@ -109,6 +109,19 @@ describe("adminOAuthClientSchema", () => {
 describe("adminUpdateUserSchema", () => {
   const base = { name: "张三" };
 
+  it("rejects a latin name outside the Chinese-name rule", () => {
+    // The backend now refuses out-of-set names on every write path and flags
+    // them as incomplete (V016); the console form must refuse them before the
+    // request, or the admin would save a value that instantly lands the
+    // account in the completion loop.
+    const result = adminUpdateUserSchema.safeParse({ ...base, name: "John" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === "name");
+      expect(issue?.message).toContain("姓名");
+    }
+  });
+
   it("rejects a blank phone_number like other required fields", () => {
     const result = adminUpdateUserSchema.safeParse({ ...base, phone_number: "" });
     expect(result.success).toBe(false);
@@ -255,6 +268,10 @@ describe("adminCreateUserSchema", () => {
 
   it("rejects a malformed personal_email", () => {
     expect(adminCreateUserSchema.safeParse({ ...base, personal_email: "not-an-email" }).success).toBe(false);
+  });
+
+  it("rejects a latin name outside the Chinese-name rule", () => {
+    expect(adminCreateUserSchema.safeParse({ ...base, name: "AAA" }).success).toBe(false);
   });
 
   it("requires the mandatory provisioning fields", () => {
