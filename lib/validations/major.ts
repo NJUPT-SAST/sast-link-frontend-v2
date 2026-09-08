@@ -20,5 +20,5 @@ export const majorSchema = z
   .min(1, "专业不能为空")
   .max(50, "专业最多 50 个字符")
   .refine((value) => !/[\u0000-\u001f\u007f\u0080-\u009f]/.test(value), {
-    message: "专业包含不可见字符，请重新输入",
+    message: "输入值非法",
   });

@@ -125,7 +125,7 @@ describe("ProfileCompletePage", () => {
     });
     fireEvent.click(screen.getByText("保存并继续"));
 
-    expect(await screen.findByText(/专业包含不可见字符/)).toBeInTheDocument();
+    expect(await screen.findByText("输入值非法")).toBeInTheDocument();
     expect(mockUpdateUserProfile).not.toHaveBeenCalled();
   });
 
@@ -143,7 +143,7 @@ describe("ProfileCompletePage", () => {
     fireEvent.change(screen.getByLabelText(/专业/), { target: { value: "软件工程" } });
     fireEvent.click(screen.getByText("保存并继续"));
 
-    expect(await screen.findByText(/姓名仅限中文与间隔号/)).toBeInTheDocument();
+    expect(await screen.findByText("输入值非法")).toBeInTheDocument();
     expect(mockUpdateUserProfile).not.toHaveBeenCalled();
   });
 });
