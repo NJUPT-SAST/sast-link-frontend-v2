@@ -24,6 +24,8 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Changed
 
+- Profile completion and edit forms refuse control-character majors before submitting (shared `majorSchema`; the backend V015 rule reports such values as incomplete, and a value slipping through would come back as a 400 whose cause is invisible in the input)
+- The admin console's user create/update forms now validate `name` with `realNameSchema` (Han + interpunct only), matching the user-facing registration/completion forms and the backend V016 rule that refuses out-of-set names on every write path — an admin can no longer provision an account that is flagged incomplete the moment it exists
 - Profile signature editing uses a single-line input; line breaks are stripped before submit (the backend rejects control characters, which surfaced as a generic 参数错误 when a mobile keyboard or pasted text introduced a newline)
 - The profile-card signature edit affordance is now an always-visible pencil icon instead of a hover-only text hint, so touch devices can find the entry point
 - Documentation has been rewritten to match the current repository implementation rather than the original generic starter-template description
