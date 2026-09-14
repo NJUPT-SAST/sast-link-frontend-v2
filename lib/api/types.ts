@@ -58,10 +58,12 @@ interface AuthUser {
   email_type: EmailType;
   created_at: string;
   /**
-   * Flag from backend V010: the account still carries required profile fields
-   * left blank by the legacy import, or a name equal to its student_id. A pure
-   * display hint — no request is ever refused on account of it. The client
-   * decides whether to route the user to the completion page.
+   * Flag from backend V010 (rebuilt as V015): the account still carries
+   * required profile fields that are blank, over-long or bear a C0/C1 control
+   * character, or a name equal to its student_id — the exact shapes
+   * `PUT /user/profile` refuses. A pure display hint — no request is ever
+   * refused on account of it. The client decides whether to route the user to
+   * the completion page.
    */
   profile_needs_completion: boolean;
   /** Field names still to be completed (PUT /user/profile keys). Empty array,
@@ -180,7 +182,8 @@ export interface UserProfileType {
   githubUrl: string | null;
   identities: Identity[];
   /** Whether the account still carries incomplete required profile fields
-   *  (backend V010 flag). Drives the completion-page routing. */
+   *  (backend V010/V015 flag: blank, over-long or control-character values,
+   *  or name duplicating the student_id). Drives the completion-page routing. */
   profileNeedsCompletion: boolean;
   incompleteFields: IncompleteProfileField[];
 }
@@ -403,9 +406,9 @@ export type AlumniIntent = (typeof ALUMNI_INTENTS)[number];
  *  an `other_mail` identity — the address the alumnus can actually receive at and
  *  the one they use to set a password through `/reset`.
  *
- *  `major` is required even though `POST /admin/users` allows it empty: V010's
- *  generated `profile_needs_completion` column flags a blank major, which would
- *  divert the new account to `/profile/complete` on its first login.
+ *  `major` is required even though `POST /admin/users` allows it empty: the
+ *  `profile_needs_completion` generated column (V010/V015) flags a blank major,
+ *  which would divert the new account to `/profile/complete` on its first login.
  *
  *  `intent` is optional and defaults to `provision`: an omission is exactly the
  *  historical request. `recover` skips account creation and asks approval to bind

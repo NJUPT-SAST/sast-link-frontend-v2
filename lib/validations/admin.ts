@@ -1,5 +1,6 @@
 import { z } from "zod/v3";
 
+import { realNameSchema } from "@/lib/validations/name";
 import { COLLEGES, CREATE_USER_STATES } from "@/lib/api/types";
 
 function isValidRedirectUri(value: string): boolean {
@@ -57,7 +58,7 @@ export type AdminUserFiltersFormValues = z.infer<typeof adminUserFiltersSchema>;
 
 export const adminUpdateUserSchema = z
   .object({
-    name: z.string().trim().min(1, "姓名不可为空").max(255).optional(),
+    name: realNameSchema.optional(),
     phone_number: z
       .string()
       .trim()
@@ -113,7 +114,7 @@ export type AdminUpdateUserFormValues = z.infer<typeof adminUpdateUserSchema>;
  *  stay empty (no bound identity), and never accepts `state: is_deleted`. */
 export const adminCreateUserSchema = z
   .object({
-    name: z.string().trim().min(1, "姓名不可为空").max(255, "姓名最多 255 字符"),
+    name: realNameSchema,
     student_id: z
       .string()
       .trim()

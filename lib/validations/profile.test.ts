@@ -136,4 +136,15 @@ describe("profileEditSchema", () => {
       expect(r.error.issues.some((i) => i.path.includes("major"))).toBe(true);
     }
   });
+
+  it("rejects a major carrying an invisible control character", () => {
+    // The backend refuses control characters on PUT /user/profile; the edit
+    // form must refuse them before sending, or the 400 arrives with a cause
+    // the user cannot see in the input.
+    const r = profileEditSchema.safeParse({ ...valid, major: "软件工程\u0001" });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.issues.some((i) => i.path.includes("major"))).toBe(true);
+    }
+  });
 });
