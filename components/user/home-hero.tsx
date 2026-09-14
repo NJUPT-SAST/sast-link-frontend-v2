@@ -4,8 +4,16 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 
 import { useUserProfileStore } from "@/store/use-user-profile-store";
+import type { UserRole } from "@/lib/api/types";
 import { getGreeting } from "@/lib/greeting";
 import { Button } from "@/components/ui/button";
+
+/** Recruitment lives on a separate site; the home hero's cross-site exit is
+ *  for freshmen and members. The id gate keeps the store's initial profile
+ *  (id 0, role "freshman") from flashing the button before the real profile
+ *  lands. */
+const RECRUITMENT_ROLES: ReadonlySet<UserRole> = new Set(["freshman", "member"]);
+const RECRUITMENT_SITE_URL = "https://people.sast.fun";
 
 export function HomeHero() {
   const profile = useUserProfileStore((state) => state.profile);
@@ -26,10 +34,17 @@ export function HomeHero() {
         <h1 className="type-title1" data-cursor-target>
           {greeting}，{displayName}
         </h1>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-4 flex flex-col items-center gap-3">
           <Button variant="ghost" asChild>
             <Link href="/profile">个人资料</Link>
           </Button>
+          {profile.id !== 0 && RECRUITMENT_ROLES.has(profile.role) && (
+            <Button variant="outline" asChild>
+              <a href={RECRUITMENT_SITE_URL} target="_blank" rel="noreferrer">
+                进入招新平台
+              </a>
+            </Button>
+          )}
         </div>
       </div>
 
