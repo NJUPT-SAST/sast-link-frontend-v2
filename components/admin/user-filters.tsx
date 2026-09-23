@@ -58,13 +58,14 @@ const labelClass = "mb-1.5 block text-xs text-muted-foreground";
 const buttonRowClass = "h-11 flex-1 xl:mt-[22px] xl:flex-none";
 
 // Below xl the secondary filters collapse into FilterDrawer, so the row is a
-// simple column; from xl it becomes one grid row where the six filters share what
-// is left after the two auto-sized buttons, keeping 搜索/重置 on the same line.
-// Track count must match the children present at xl: 关键词 (always visible) + the
-// five collapsible fields + two buttons. The toggle is xl:hidden (display:none, so
-// it leaves the grid flow) and the panel/actions wrappers are xl:contents.
+// simple column; from xl it becomes one grid row where the five filters share
+// what is left after the two auto-sized buttons, keeping 搜索/重置 on the same
+// line. Track count must match the children present at xl: 关键词 (always
+// visible) + the four collapsible fields + two buttons. The toggle is xl:hidden
+// (display:none, so it leaves the grid flow) and the panel/actions wrappers are
+// xl:contents.
 const rowClass =
-  "xl:grid xl:items-start xl:gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.25fr)_minmax(0,1fr)_auto_auto]";
+  "xl:grid xl:items-start xl:gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.25fr)_auto_auto]";
 // Fixed widths would fight the flex column on mobile and the tracks at xl, so the
 // fields are full-width and let the layout decide.
 const fieldClass = "w-full";
@@ -76,7 +77,6 @@ function toFormValues(params: AdminUserListParams): AdminUserFiltersFormValues {
     role: (params.role ?? "") as AdminUserFiltersFormValues["role"],
     state: (params.state ?? "") as AdminUserFiltersFormValues["state"],
     department: (params.department ?? "") as AdminUserFiltersFormValues["department"],
-    student_id: params.student_id ?? "",
     keyword: params.keyword ?? "",
     needs_completion:
       params.needs_completion === undefined
@@ -94,7 +94,6 @@ function toParams(values: AdminUserFiltersFormValues): AdminUserListParams {
     role: values.role ? (values.role as Exclude<typeof values.role, "">) : undefined,
     state: values.state ? (values.state as Exclude<typeof values.state, "">) : undefined,
     department: values.department ? (values.department as Exclude<typeof values.department, "">) : undefined,
-    student_id: values.student_id?.trim() || undefined,
     keyword: values.keyword?.trim() || undefined,
     needs_completion:
       values.needs_completion === "" ? undefined : values.needs_completion === "true",
@@ -132,7 +131,6 @@ export function UserFilters({ value, onChange }: UserFiltersProps) {
     collapsed?.state,
     collapsed?.department,
     collapsed?.needs_completion,
-    collapsed?.student_id?.trim(),
   ].filter(Boolean).length;
 
   return (
@@ -200,18 +198,6 @@ export function UserFilters({ value, onChange }: UserFiltersProps) {
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </Select>
-        </div>
-        <div className={fieldClass}>
-          <label htmlFor="student_id" className={labelClass}>
-            学号
-          </label>
-          <input
-            id="student_id"
-            type="text"
-            placeholder="精确匹配"
-            className={controlClass}
-            {...form.register("student_id")}
-          />
         </div>
       </FilterDrawer>
     </form>
