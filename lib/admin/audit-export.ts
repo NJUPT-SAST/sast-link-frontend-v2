@@ -5,8 +5,10 @@ import type {
 } from "@/lib/api/types";
 import { pad2 } from "@/lib/admin/date-time";
 
-/** 导出时单页拉取条数（分批翻页，避免单次请求过大）。 */
-export const AUDIT_EXPORT_PAGE_SIZE = 500;
+/** 导出时单页拉取条数（分批翻页）。等于后端 validate.MaxPageSize：
+ * ParsePaging 对超过上限的 page_size 是 400 拒绝而非钳制，此前取 500
+ * 导致导出对真实后端必败、只在 mock 里存活。 */
+export const AUDIT_EXPORT_PAGE_SIZE = 100;
 
 /** 单次导出的最大条数，超出由页面层拦截提示。 */
 export const AUDIT_EXPORT_MAX_ROWS = 10_000;

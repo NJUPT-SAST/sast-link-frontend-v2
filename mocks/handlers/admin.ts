@@ -55,6 +55,42 @@ function parseSearchParams(request: Request): Record<string, string> {
   return Object.fromEntries(url.searchParams.entries());
 }
 
+// Mirrors the backend's web.ParsePaging so the mock cannot silently accept a
+// request the real API rejects: absent → endpoint default, present-but-invalid
+// or ≤0 → 400, page_size above validate.MaxPageSize → 400 (refuse, not clamp —
+// clamping here once let the audit export's page_size=500 work only in mocks).
+// Defaults differ per endpoint (20 users / 50 audit), so callers pass theirs.
+const MAX_PAGE_SIZE = 100;
+const MAX_PAGE_NUMBER = 2 ** 30;
+
+function parsePaging(
+  params: Record<string, string>,
+  defaultPageSize: number,
+): { page: number; pageSize: number; response?: ReturnType<typeof fail> } {
+  // undefined = absent (fall back to the default), null = present but
+  // unparsable or ≤0 — the backend's parseOptionalPositiveInt rejects both
+  // with 400, so an explicit page_size=0 must not masquerade as "absent".
+  const readPagingInt = (raw: string | undefined): number | null | undefined => {
+    const trimmed = raw?.trim();
+    if (trimmed === undefined || trimmed === "") return undefined;
+    if (!/^\d+$/.test(trimmed)) return null;
+    const value = Number(trimmed);
+    return value > 0 ? value : null;
+  };
+
+  const page = readPagingInt(params.page);
+  const pageSize = readPagingInt(params.page_size);
+  if (
+    page === null ||
+    pageSize === null ||
+    (page !== undefined && page > MAX_PAGE_NUMBER) ||
+    (pageSize !== undefined && pageSize > MAX_PAGE_SIZE)
+  ) {
+    return { page: 0, pageSize: 0, response: fail(400, 40000, "请求参数错误") };
+  }
+  return { page: page ?? 1, pageSize: pageSize ?? defaultPageSize };
+}
+
 function normalizeString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
@@ -223,8 +259,9 @@ export const adminHandlers = [
     if (auth.response) return auth.response;
 
     const params = parseSearchParams(request);
-    const page = Math.max(1, Number(params.page) || 1);
-    const pageSize = Math.min(100, Math.max(1, Number(params.page_size) || 20));
+    const paging = parsePaging(params, 20);
+    if (paging.response) return paging.response;
+    const { page, pageSize } = paging;
     const filters: AdminUserListParams = {
       page,
       page_size: pageSize,
@@ -452,8 +489,10 @@ export const adminHandlers = [
     if (auth.response) return auth.response;
 
     const params = parseSearchParams(request);
-    const page = Math.max(1, Number(params.page) || 1);
-    const pageSize = Math.min(100, Math.max(1, Number(params.page_size) || 20));
+    // The audit list defaults to 50/page server-side (defaultAuditPageSize).
+    const paging = parsePaging(params, 50);
+    if (paging.response) return paging.response;
+    const { page, pageSize } = paging;
     const filters: AdminAuditLogListParams = {
       page,
       page_size: pageSize,
