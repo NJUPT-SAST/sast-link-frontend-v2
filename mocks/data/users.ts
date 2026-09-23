@@ -274,10 +274,14 @@ const SEED_GIVEN_NAMES = [
   "云帆", "嘉宁", "致远", "依依", "俊辉", "若殷", "子涵", "雨轩",
 ];
 
+// Enrollment years cycled across the seed so the overview's 年级分布 has
+// several buckets instead of one uniform year.
+const SEED_GRADE_YEARS = ["21", "22", "23", "24", "25"];
+
 function seedUser(index: number, spec: SeedSpec): MockUser {
   // Ids continue after the hand-written fixtures so login tokens stay stable.
   const id = 100 + index;
-  const studentId = `B240${String(41000 + index)}`;
+  const studentId = `B2${SEED_GRADE_YEARS[index % SEED_GRADE_YEARS.length]}${String(41000 + index)}`;
   const loginEmail = `${studentId.toLowerCase()}@njupt.edu.cn`;
   const name = spec.incomplete
     ? studentId // V010 flags name === student_id as debris

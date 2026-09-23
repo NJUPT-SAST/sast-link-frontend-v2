@@ -47,7 +47,6 @@ export const adminUserFiltersSchema = z.object({
   role: userRoleSchema.optional().or(z.literal("")),
   state: userStateSchema.optional().or(z.literal("")),
   department: departmentSchema.optional().or(z.literal("")),
-  student_id: z.string().trim().optional(),
   keyword: z.string().trim().optional(),
   /** Tri-state: "" = no filter (all), "true" = only accounts still needing
    *  completion, "false" = only complete accounts. */

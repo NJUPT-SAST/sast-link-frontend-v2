@@ -68,7 +68,6 @@ export function parseAdminUserListParams(
     role: parseEnum(searchParams.get("role"), USER_ROLES),
     state: parseEnum(searchParams.get("state"), USER_STATES),
     department: parseEnum(searchParams.get("department"), DEPARTMENTS),
-    student_id: parseText(searchParams.get("student_id")),
     keyword: parseText(searchParams.get("keyword")),
     needs_completion: parseBool(searchParams.get("needs_completion")),
   };
@@ -82,7 +81,6 @@ export function serializeAdminUserListParams(params: AdminUserListParams): strin
   if (params.role) search.set("role", params.role);
   if (params.state) search.set("state", params.state);
   if (params.department) search.set("department", params.department);
-  if (params.student_id) search.set("student_id", params.student_id);
   if (params.keyword) search.set("keyword", params.keyword);
   if (params.needs_completion !== undefined)
     search.set("needs_completion", String(params.needs_completion));

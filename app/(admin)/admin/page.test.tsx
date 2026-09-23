@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { SWRConfig } from "swr";
 
 import AdminOverviewPage from "./page";
@@ -15,9 +15,11 @@ function renderPage() {
 }
 
 const mockGetAdminStats = jest.fn();
+const mockGetAdminUsers = jest.fn();
 
 jest.mock("@/lib/api/admin", () => ({
   getAdminStats: (...args: unknown[]) => mockGetAdminStats(...args),
+  getAdminUsers: (...args: unknown[]) => mockGetAdminUsers(...args),
 }));
 
 // Role total 100 (freshman 50 + member 30 + lecturer 20) folds 5 incomplete
@@ -42,6 +44,12 @@ describe("AdminOverviewPage", () => {
   beforeEach(() => {
     mockGetAdminStats.mockReset();
     mockGetAdminStats.mockResolvedValue({ data: { data: statsData } });
+    // One empty page by default: the grade donut has no buckets and the
+    // stats-focused tests stay about their own fixtures.
+    mockGetAdminUsers.mockReset();
+    mockGetAdminUsers.mockResolvedValue({
+      data: { data: { users: [], total: 0, page: 1, page_size: 100 } },
+    });
   });
 
   it("folds incomplete counts out of the role and state donuts into 未补全", async () => {
@@ -143,5 +151,113 @@ describe("AdminOverviewPage", () => {
     await waitFor(() => expect(screen.getByText("角色分布")).toBeInTheDocument());
     expect(screen.queryByText("未补全")).not.toBeInTheDocument();
     expect(screen.getAllByText("50")).toHaveLength(3);
+  });
+
+  // One page of users: two 22级 students, one 21级, one non-student mailbox,
+  // and one deleted 23级 account that must drop out of the buckets.
+  const gradeUsers = [
+    { login_email: "b21123456@njupt.edu.cn", state: "njupter" },
+    { login_email: "B22040101@njupt.edu.cn", state: "on_sast" },
+    { login_email: "b22040102@njupt.edu.cn", state: "on_sast" },
+    { login_email: "admin@njupt.edu.cn", state: "on_sast" },
+    { login_email: "B23999999@njupt.edu.cn", state: "is_deleted" },
+  ];
+
+  it("replaces 部门分布 with 年级分布 bucketed from login emails", async () => {
+    mockGetAdminUsers.mockResolvedValue({
+      data: { data: { users: gradeUsers, total: 5, page: 1, page_size: 100 } },
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("年级分布")).toBeInTheDocument());
+    // The department donut is retired from the overview; its slot now renders
+    // the grade donut.
+    expect(screen.queryByText("部门分布")).not.toBeInTheDocument();
+
+    const gradeSection = screen.getByText("年级分布").closest("section")!;
+    expect(gradeSection).toHaveTextContent("21级");
+    expect(gradeSection).toHaveTextContent("22级");
+    expect(gradeSection).toHaveTextContent("其他");
+    // Deleted accounts are skipped, so their grade never appears.
+    expect(gradeSection).not.toHaveTextContent("23级");
+    // Legend rows read "<label><count>": 21级×1, 22级×2, 其他×1.
+    const legendRow = (label: string) =>
+      within(gradeSection).getByText(label).closest("div")!.textContent;
+    expect(legendRow("21级")).toBe("21级1");
+    expect(legendRow("22级")).toBe("22级2");
+    expect(legendRow("其他")).toBe("其他1");
+  });
+
+  it("pages through /admin/users until the roster is exhausted", async () => {
+    mockGetAdminUsers.mockImplementation(async (_args?: { page?: number }) => {
+      const page = _args?.page ?? 1;
+      if (page === 1) {
+        return {
+          data: {
+            data: {
+              users: gradeUsers.slice(0, 2),
+              total: 5,
+              page: 1,
+              page_size: 100,
+            },
+          },
+        };
+      }
+      return {
+        data: {
+          data: { users: gradeUsers.slice(2), total: 5, page: 2, page_size: 100 },
+        },
+      };
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("年级分布")).toBeInTheDocument());
+    await waitFor(() => expect(mockGetAdminUsers).toHaveBeenCalledTimes(2));
+    expect(mockGetAdminUsers).toHaveBeenLastCalledWith({ page: 2, page_size: 100 });
+    // Buckets aggregate across both pages: 21级×1, 22级×2, 其他×1.
+    const gradeSection = screen.getByText("年级分布").closest("section")!;
+    const legendRow = (label: string) =>
+      within(gradeSection).getByText(label).closest("div")!.textContent;
+    expect(legendRow("21级")).toBe("21级1");
+    expect(legendRow("22级")).toBe("22级2");
+    expect(legendRow("其他")).toBe("其他1");
+  });
+
+  it("paints the folded 未补全 slice in the muted color, not the palette", async () => {
+    // 未补全 50 is the largest slice, so it lands where the saturated palette
+    // slot 0 used to sit.
+    mockGetAdminStats.mockResolvedValue({
+      data: {
+        data: {
+          ...statsData,
+          users: {
+            ...statsData.users,
+            by_role: { freshman: 50, member: 10 },
+            incomplete_by_role: { freshman: 50 },
+          },
+        },
+      },
+    });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("角色分布")).toBeInTheDocument());
+
+    const roleSection = screen.getByText("角色分布").closest("section")!;
+    const segments = Array.from(
+      roleSection.querySelectorAll<SVGCircleElement>("circle[stroke-dasharray]"),
+    );
+    // Sorted largest-first: the folded slice is segment 0.
+    expect(segments[0].getAttribute("stroke")).toBe("#94a3b8");
+    expect(segments[1].getAttribute("stroke")).toBe("#60a5fa");
+
+    // The legend dot shares the muted color (jsdom normalizes the inline
+    // background to rgb).
+    const legendDot = roleSection.querySelector<HTMLSpanElement>(
+      'span[class~="size-2.5"]',
+    );
+    expect(legendDot?.style.background).toBe("rgb(148, 163, 184)");
   });
 });

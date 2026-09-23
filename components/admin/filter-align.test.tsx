@@ -6,8 +6,8 @@ import { AuditLogFilters } from "./audit-log-filters";
 /**
  * The filter rows lay every control out side by side at xl, so a single field with
  * a different input height or label size visibly breaks the row. This locks the
- * shared rhythm in place: 学号/关键词 previously came from AuthFormField (h-12,
- * mb-2 text-[13px]) and sat 4px taller than their neighbours.
+ * shared rhythm in place: 关键词 previously came from AuthFormField (h-12,
+ * mb-2 text-[13px]) and sat 4px taller than its neighbours.
  *
  * Below xl the secondary filters collapse behind a 筛选 toggle (FilterDrawer), so
  * these tests also pin the drawer contract: fields stay mounted while collapsed and
@@ -20,7 +20,6 @@ const USER_FIELDS = [
   "state",
   "department",
   "needs_completion",
-  "student_id",
   "keyword",
 ];
 const AUDIT_FIELDS = ["user_id", "action", "resource", "success", "start_time", "end_time"];
@@ -61,9 +60,8 @@ describe("admin filter row alignment", () => {
 
     expectUniformRow(USER_FIELDS);
 
-    // Both text inputs are still reachable by their labels after moving off
+    // The text input is still reachable by its label after moving off
     // AuthFormField.
-    expect(screen.getByLabelText("学号")).toBeInTheDocument();
     expect(screen.getByLabelText("关键词")).toBeInTheDocument();
   });
 
@@ -122,10 +120,10 @@ describe("admin filter drawer", () => {
     // A filter that arrived from the URL lives inside the collapsed panel; if the
     // drawer unmounted it, react-hook-form would lose the value and the next
     // 搜索 would silently widen the query.
-    renderUserFilters({ page: 1, page_size: 20, role: "admin", student_id: "B24040001" });
+    renderUserFilters({ page: 1, page_size: 20, role: "admin", department: "software" });
 
     expect(screen.getByLabelText("角色")).toHaveValue("admin");
-    expect(screen.getByLabelText("学号")).toHaveValue("B24040001");
+    expect(screen.getByLabelText("部门")).toHaveValue("software");
   });
 
   it("counts the active collapsed filters on the toggle badge", () => {

@@ -16,7 +16,6 @@ describe("admin user list query", () => {
       role: undefined,
       state: undefined,
       department: undefined,
-      student_id: undefined,
       keyword: undefined,
       needs_completion: undefined,
     });
@@ -25,7 +24,7 @@ describe("admin user list query", () => {
   it("parses a full query", () => {
     const params = parseAdminUserListParams(
       new URLSearchParams(
-        "page=3&page_size=50&role=admin&state=on_sast&department=software&student_id=B2100&keyword=%E5%BC%A0&needs_completion=true",
+        "page=3&page_size=50&role=admin&state=on_sast&department=software&keyword=%E5%BC%A0&needs_completion=true",
       ),
     );
     expect(params).toEqual({
@@ -34,7 +33,6 @@ describe("admin user list query", () => {
       role: "admin",
       state: "on_sast",
       department: "software",
-      student_id: "B2100",
       keyword: "张",
       needs_completion: true,
     });
@@ -52,7 +50,6 @@ describe("admin user list query", () => {
       role: undefined,
       state: undefined,
       department: undefined,
-      student_id: undefined,
       keyword: undefined,
       needs_completion: undefined,
     });
@@ -71,7 +68,6 @@ describe("admin user list query", () => {
       role: "lecturer" as const,
       state: "is_deleted" as const,
       department: "media" as const,
-      student_id: "B21001",
       keyword: "李",
       needs_completion: false,
     };
