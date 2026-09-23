@@ -4,7 +4,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { Activity, KeyRound, Users } from "lucide-react";
 
-import { getAdminStats } from "@/lib/api/admin";
+import { getAdminStats, getAdminUsers } from "@/lib/api/admin";
 import { ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
 import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
 import { AdminErrorState } from "@/components/admin/error-state";
@@ -14,6 +14,8 @@ import {
   INCOMPLETE_BUCKET_KEY,
   INCOMPLETE_BUCKET_LABEL,
 } from "@/lib/admin/stats-incomplete";
+import { computeGradeDistribution } from "@/lib/admin/stats-grade";
+import type { UserProfileData } from "@/lib/api/types";
 
 // A restrained categorical palette that reads on both light and dark.
 const PALETTE = [
@@ -26,6 +28,32 @@ const PALETTE = [
   "#4ade80",
   "#facc15",
 ];
+
+// 未补全 is bookkeeping, not a category the admin browses, and it is usually
+// the largest slice — palette slot 0's saturated blue outshouted the real
+// roles/states. A quiet slate reads on both light and dark.
+const INCOMPLETE_SLICE_COLOR = "#94a3b8";
+
+// 部门分布 is retired from the overview in favour of 年级分布. The donut and
+// its data plumbing stay wired behind this flag so flipping it restores the
+// card without reconstructing the call site.
+const SHOW_DEPARTMENT_DONUT = false;
+
+// /admin/stats carries no grade dimension, so the overview pages through the
+// full user list and buckets login emails client-side. 100 is the backend's
+// validate.MaxPageSize; the page cap bounds the loop against a lying total.
+const GRADE_PAGE_SIZE = 100;
+const GRADE_FETCH_PAGE_CAP = 50;
+
+async function fetchGradeDistribution(): Promise<[string, number][]> {
+  const users: Pick<UserProfileData, "login_email" | "state">[] = [];
+  for (let page = 1; page <= GRADE_FETCH_PAGE_CAP; page++) {
+    const { data } = await getAdminUsers({ page, page_size: GRADE_PAGE_SIZE });
+    users.push(...data.data.users);
+    if (users.length >= data.data.total || data.data.users.length === 0) break;
+  }
+  return computeGradeDistribution(users);
+}
 
 function pickLabel(map: Record<string, string>, key: string): string {
   return map[key] ?? key;
@@ -89,6 +117,14 @@ function Donut({
   // live accounts only, so sharing total would push that ring past 100% and
   // wrap the arc back over itself.
   const total = sorted.reduce((sum, [, count]) => sum + count, 0);
+  // Palette assignment skips the muted incomplete slice, so the real buckets
+  // keep stable colors wherever 未补全 lands after sorting.
+  let paletteIndex = 0;
+  const colors = sorted.map(([key]) =>
+    key === INCOMPLETE_BUCKET_KEY
+      ? INCOMPLETE_SLICE_COLOR
+      : PALETTE[paletteIndex++ % PALETTE.length],
+  );
   const r = 40;
   const circumference = 2 * Math.PI * r;
 
@@ -120,7 +156,7 @@ function Donut({
                     cy="50"
                     r={r}
                     fill="none"
-                    stroke={PALETTE[index % PALETTE.length]}
+                    stroke={colors[index]}
                     strokeWidth="12"
                     strokeDasharray={`${dash} ${circumference - dash}`}
                     strokeDashoffset={-offset}
@@ -137,7 +173,7 @@ function Donut({
               <div key={key} className="flex items-center gap-2 text-xs">
                 <span
                   className="size-2.5 shrink-0 rounded-full"
-                  style={{ background: PALETTE[index % PALETTE.length] }}
+                  style={{ background: colors[index] }}
                 />
                 <span className="truncate text-muted-foreground">
                   {pickLabel(labelMap, key)}
@@ -158,6 +194,16 @@ export default function AdminOverviewPage() {
     () => getAdminStats().then((r) => r.data.data),
     { refreshInterval: 60000 },
   );
+  // Grade buckets come from login emails, not /admin/stats, so this fetch
+  // pages the whole user list once per mount; no 60s refresh — the roster
+  // shifts far slower than the stats counters.
+  const {
+    data: gradeItems,
+    isLoading: gradeLoading,
+    error: gradeError,
+  } = useSWR("admin:grade-distribution", fetchGradeDistribution, {
+    revalidateOnFocus: false,
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -209,17 +255,28 @@ export default function AdminOverviewPage() {
               )}
               labelMap={STATE_DONUT_LABELS}
             />
-            <Donut
-              title="部门分布"
-              items={(() => {
-                const items = Object.entries(data.users.by_department);
-                if (data.users.no_department > 0) {
-                  items.push(["未分配", data.users.no_department]);
-                }
-                return items;
-              })()}
-              labelMap={DEPARTMENT_LABELS}
-            />
+            {SHOW_DEPARTMENT_DONUT ? (
+              <Donut
+                title="部门分布"
+                items={(() => {
+                  const items = Object.entries(data.users.by_department);
+                  if (data.users.no_department > 0) {
+                    items.push(["未分配", data.users.no_department]);
+                  }
+                  return items;
+                })()}
+                labelMap={DEPARTMENT_LABELS}
+              />
+            ) : gradeLoading ? (
+              <section className="rounded-xl border border-hairline bg-card p-5">
+                <h3 className="type-tech mb-4 text-xs text-tertiary">年级分布</h3>
+                <div className="flex h-28 items-center justify-center">
+                  <DotLoading />
+                </div>
+              </section>
+            ) : gradeError ? null : (
+              <Donut title="年级分布" items={gradeItems ?? []} labelMap={{}} />
+            )}
           </div>
         </>
       )}
