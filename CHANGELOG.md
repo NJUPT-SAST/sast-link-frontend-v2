@@ -39,3 +39,7 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - `CONTRIBUTING.md` now reflects the actual contribution and validation expectations for this repo
 - `CLAUDE.md` route map and module inventory synced with the current implementation: adds the OAuth consent/error/alumni/profile-completion routes and the fourth admin console route, corrects profile editing to `/profile/edit`, drops the removed auth/panel stores and non-existent `tests/` directory in favor of the session-based auth model, and refreshes the `NEXT_PUBLIC_API_BASE_URL` guidance for the `/v2` dev proxy; it now also points at `CONTRIBUTING.md` and states the mandatory validation, atomic Conventional Commits, and CHANGELOG-sync discipline
 - `CLAUDE.md` contribution discipline now explicitly forbids developing on `master`: every change is made on a feature branch and lands only through a reviewed pull request
+
+### Added
+
+- **个人徽标分享**（feat/card-badge）：设置页新增「个人徽标」区块——开启后生成可嵌入任意网页（GitHub README、友链列表）的 SVG 身份卡片，链接即凭证（后端随机 capability key，不可枚举）。尺寸（紧凑/标准/大图）与主题（自动跟随系统/亮色/暗色）选择器 + 实时预览（直连公开渲染端点），一键复制 Markdown / HTML / 纯链接；关闭需确认弹窗（警示所有嵌入链接立即失效）。配套 `lib/api/badge.ts`、`use-badge` SWR hook 与 MSW mock（同步删除了镜像后端已废弃 `/card/:id` 契约的过期 mock）

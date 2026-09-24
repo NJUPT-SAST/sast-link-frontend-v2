@@ -30,7 +30,7 @@ This repository is the current SAST Link Frontend V2 implementation, not a gener
 
 - `/home` user homepage overview
 - `/profile` profile overview; `/profile/edit` profile editing and avatar upload/cropping; `/profile/complete` guided profile completion
-- `/settings` account settings — password change, third-party identity bind/unbind, and authorized-app (OAuth grants) management
+- `/settings` account settings — password change, third-party identity bind/unbind, personal-badge sharing (opt-in capability-URL SVG embed), and authorized-app (OAuth grants) management
 - `/oauth/bind/lark` / `/oauth/bind/github` third-party bind callbacks (frontend assembles the authorize URL with a CSRF `state`; the provider bounces back here)
 - `/oauth/consent` authorization consent page — this app acting as the OAuth **server** for third-party clients (e.g. Evento): verifies client metadata from the backend, never from the URL
 
