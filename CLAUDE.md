@@ -122,6 +122,7 @@ import { useUserListStore } from "@/store/use-user-list-store";
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before making changes — it is the source of truth for branching, PR expectations, and documentation responsibilities. The rules below are non-negotiable:
 
+- **Never develop on `master`.** Every change — feature, fix, docs, or chore, however small — is made on a descriptive branch cut from `master` (`feat/…`, `fix/…`, `docs/…`, `test/…`, `refactor/…`, `chore/…`) and lands exclusively through a reviewed pull request. Direct commits on `master` and direct pushes to `master` are forbidden.
 - **Every modification must be tested before it is considered done.** At minimum run `pnpm lint` and `pnpm test`; run `pnpm build` (and `pnpm exec tsc --noEmit`) for anything touching routes, config, or build behavior. When changing runtime behavior, update or add the closest colocated test.
 - **Commits must be atomic.** One commit per logical change — a refactor, its tests, and its docs belong together, but two unrelated changes never share a commit.
 - **Commit messages follow Conventional Commits** (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `ci:`, `chore:`), scoped when helpful, e.g. `fix(auth): handle oauth callback retry`.
