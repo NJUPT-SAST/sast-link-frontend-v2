@@ -48,6 +48,11 @@ next-env.d.ts
 .windsurfrules
 .ace-tool/
 
+# local agent/tool artifacts
+cache/
+.cache/
+.playwright-mcp/
+
 openspec
 .claude
 .codex
