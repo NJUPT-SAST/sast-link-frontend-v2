@@ -19,25 +19,29 @@ This repository is the current SAST Link Frontend V2 implementation, not a gener
 ### Tourist flows
 
 - `/` account switcher and quick-login entry
-- `/login` two-step login
-- `/register` three-step registration
+- `/login` two-step login (account step + password step)
+- `/register` three-step registration; `/register/alumni` alumni account-request flow (Turnstile-gated)
 - `/reset` password reset
 - `/oauth/callback` third-party OAuth login landing page (exchanges the login code, or forwards new accounts to register)
+- `/oauth/error` third-party login error page (retryable vs terminal error codes)
+- `/terms`, `/privacy` user agreement and privacy policy
 
 ### Authenticated flows
 
 - `/home` user homepage overview
-- `/settings` account settings and profile overview
-- `/settings/edit` profile editing and avatar upload/cropping
-- `/oauth/bind/lark` / `/oauth/bind/github` third-party bind callbacks (frontend assembles the authorize URL; the provider bounces back here)
+- `/profile` profile overview; `/profile/edit` profile editing and avatar upload/cropping; `/profile/complete` guided profile completion
+- `/settings` account settings — password change, third-party identity bind/unbind, and authorized-app (OAuth grants) management
+- `/oauth/bind/lark` / `/oauth/bind/github` third-party bind callbacks (frontend assembles the authorize URL with a CSRF `state`; the provider bounces back here)
+- `/oauth/consent` authorization consent page — this app acting as the OAuth **server** for third-party clients (e.g. Evento): verifies client metadata from the backend, never from the URL
 
 ### Admin flows
 
 - `/admin/users` user search, filtering, editing, deletion, and restoration
 - `/admin/oauth-clients` OAuth client registration and status management
 - `/admin/audit-logs` audit log filtering and pagination
+- `/admin/alumni-requests` alumni account-request review and approval
 
-`admin` can access all three routes. `lecturer` has read-only access to user management.
+`admin` can access all four routes. `lecturer` has read-only access to user management.
 
 ## Runtime Model
 
@@ -64,16 +68,18 @@ pnpm dlx shadcn@latest add <component-name>
 
 - `app/` App Router routes, layouts, providers, and page tests
 - `components/` shared UI and feature-oriented components
-- `hooks/` shared hooks such as `use-fetch-profile`
+- `hooks/` shared hooks such as `use-auth-session` (session bootstrap), `use-identities` (third-party binds), and the admin hook family
 - `lib/api/` Axios client plus auth/user/oauth wrappers
 - `lib/validations/` form validation rules
-- `store/` Zustand stores for auth, accounts, panels, and profile state
+- `store/` Zustand stores for the account list and user profile
 - `mocks/` MSW bootstrap
-- `tests/` shared test helpers and higher-level tests
+
+Authentication is session-based, not store-based: the access token lives in memory + `sessionStorage` via `lib/token.ts`, and the refresh token never enters JS-readable storage (httpOnly cookie only).
 
 ### Build integration
 
 - `next.config.ts` uses `output: "export"`
+- Dev-only rewrite proxies `/v2/*` to the production backend (same-origin cookie sessions)
 
 ### Styling system
 
@@ -109,14 +115,23 @@ Common imports:
 ```tsx
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/store/use-auth-store";
+import { useUserListStore } from "@/store/use-user-list-store";
 ```
+
+## Contribution Discipline
+
+Read [CONTRIBUTING.md](./CONTRIBUTING.md) before making changes — it is the source of truth for branching, PR expectations, and documentation responsibilities. The rules below are non-negotiable:
+
+- **Every modification must be tested before it is considered done.** At minimum run `pnpm lint` and `pnpm test`; run `pnpm build` (and `pnpm exec tsc --noEmit`) for anything touching routes, config, or build behavior. When changing runtime behavior, update or add the closest colocated test.
+- **Commits must be atomic.** One commit per logical change — a refactor, its tests, and its docs belong together, but two unrelated changes never share a commit.
+- **Commit messages follow Conventional Commits** (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `ci:`, `chore:`), scoped when helpful, e.g. `fix(auth): handle oauth callback retry`.
+- **Keep `CHANGELOG.md` in sync.** User-visible changes (features, fixes, behavior changes) get an entry under `[Unreleased]` in the same commit that introduces them.
 
 ## Critical Notes
 
 - Always use `pnpm`.
 - Do not assume this repo is still a starter; inspect the real route groups and state/API modules first.
-- `NEXT_PUBLIC_API_BASE_URL` is the backend base URL — local dev points straight at the backend (e.g. `http://localhost:8080`), no `/apis` prefix.
+- `NEXT_PUBLIC_API_BASE_URL` selects the backend base. In dev, `/v2` routes through the same-origin rewrite proxy (recommended — cookie sessions and the OAuth flow work); `http://localhost:8080` connects directly to a local backend (cross-origin; cookie-session features are unavailable). See `.env.example` for the full set of public variables, including OAuth bind client ids/redirects and the Turnstile site key.
 - The npm package name still uses starter-style naming; treat current code/config as source of truth rather than marketing labels.
 
 <!-- BEGIN:nextjs-agent-rules -->

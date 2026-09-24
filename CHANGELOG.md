@@ -37,3 +37,4 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - `CI_CD.md` now reflects the actual workflow files and their enabled/disabled state
 - `TESTING.md` now reflects the active Jest configuration and current test coverage layout
 - `CONTRIBUTING.md` now reflects the actual contribution and validation expectations for this repo
+- `CLAUDE.md` route map and module inventory synced with the current implementation: adds the OAuth consent/error/alumni/profile-completion routes and the fourth admin console route, corrects profile editing to `/profile/edit`, drops the removed auth/panel stores and non-existent `tests/` directory in favor of the session-based auth model, and refreshes the `NEXT_PUBLIC_API_BASE_URL` guidance for the `/v2` dev proxy; it now also points at `CONTRIBUTING.md` and states the mandatory validation, atomic Conventional Commits, and CHANGELOG-sync discipline
