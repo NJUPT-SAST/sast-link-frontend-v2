@@ -119,12 +119,14 @@ jest.mock('next/navigation', () => ({
 import { server } from "@/mocks/server";
 import { resetTickets } from "@/mocks/data/tickets";
 import { resetUsers } from "@/mocks/data/users";
+import { resetBadgeState } from "@/mocks/data/badge";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => {
   server.resetHandlers();
   resetTickets();
   resetUsers();
+  resetBadgeState();
 });
 afterAll(() => server.close());
 
