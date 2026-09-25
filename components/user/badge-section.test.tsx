@@ -28,8 +28,8 @@ const enableBadge = jest.fn();
 const disableBadge = jest.fn();
 
 jest.mock("@/lib/api/badge", () => ({
-  badgeUrl: (key: string, size: string, theme: string) =>
-    `/v2/badge/${key}.svg?size=${size}&theme=${theme}`,
+  badgeUrl: (key: string, size: string, theme: string, target: string) =>
+    `/v2/badge/${key}.svg?size=${size}&theme=${theme}&target=${target}`,
   enableBadge: (...args: unknown[]) => enableBadge(...args),
   disableBadge: (...args: unknown[]) => disableBadge(...args),
 }));
@@ -134,14 +134,14 @@ describe("BadgeSection", () => {
     const preview = screen.getByTestId("badge-preview");
     expect(preview).toHaveAttribute(
       "src",
-      "http://localhost/v2/badge/abc.svg?size=sm&theme=auto",
+      "http://localhost/v2/badge/abc.svg?size=sm&theme=auto&target=blog",
     );
 
     const user = setupUserWithClipboard();
     await user.click(screen.getByRole("button", { name: "暗色" }));
     expect(screen.getByTestId("badge-preview")).toHaveAttribute(
       "src",
-      "http://localhost/v2/badge/abc.svg?size=sm&theme=dark",
+      "http://localhost/v2/badge/abc.svg?size=sm&theme=dark&target=blog",
     );
   });
 
@@ -157,16 +157,66 @@ describe("BadgeSection", () => {
     expect(link).toHaveAttribute("target", "_blank");
   });
 
-  it("falls back to the github link when no blog is set", () => {
+  it("caps the preview link with the chosen target and states it in the caption", async () => {
     mockIsLoading = false;
     mockBadge = { enabled: true, key: "abc" };
-    mockProfile = { blogUrl: null, githubUrl: "https://github.com/a" };
+    mockProfile = { blogUrl: "https://blog.example.com", githubUrl: "https://github.com/a" };
 
     render(<BadgeSection />);
+
+    // Default target is the blog — the caption names the destination.
+    expect(screen.getByTestId("badge-preview").closest("a")).toHaveAttribute(
+      "href",
+      "https://blog.example.com",
+    );
+    expect(screen.getByTestId("badge-caption")).toHaveTextContent(
+      "点击徽标将跳转到你的博客 · blog.example.com",
+    );
+
+    const user = setupUserWithClipboard();
+    await user.click(screen.getByRole("button", { name: "GitHub" }));
 
     expect(screen.getByTestId("badge-preview").closest("a")).toHaveAttribute(
       "href",
       "https://github.com/a",
+    );
+    expect(screen.getByTestId("badge-caption")).toHaveTextContent(
+      "点击徽标将跳转到你的 GitHub 主页",
+    );
+  });
+
+  it("refuses to fall back: a missing chosen target leaves the badge inert with guidance", () => {
+    mockIsLoading = false;
+    mockBadge = { enabled: true, key: "abc" };
+    // Blog is the chosen target but only GitHub is configured — no silent
+    // redirect, the gap is stated instead.
+    mockProfile = { blogUrl: null, githubUrl: "https://github.com/a" };
+
+    render(<BadgeSection />);
+
+    expect(screen.getByTestId("badge-preview").closest("a")).toBeNull();
+    expect(screen.getByTestId("badge-caption")).toHaveTextContent(
+      "未设置博客链接，徽标嵌入后不可点击",
+    );
+    expect(screen.getByRole("link", { name: "去资料页设置" })).toHaveAttribute(
+      "href",
+      "/profile/edit",
+    );
+  });
+
+  it("reports the github gap when github is the chosen target and unset", async () => {
+    mockIsLoading = false;
+    mockBadge = { enabled: true, key: "abc" };
+    mockProfile = { blogUrl: "https://blog.example.com", githubUrl: null };
+
+    render(<BadgeSection />);
+
+    const user = setupUserWithClipboard();
+    await user.click(screen.getByRole("button", { name: "GitHub" }));
+
+    expect(screen.getByTestId("badge-preview").closest("a")).toBeNull();
+    expect(screen.getByTestId("badge-caption")).toHaveTextContent(
+      "未设置GitHub链接，徽标嵌入后不可点击",
     );
   });
 
@@ -190,7 +240,7 @@ describe("BadgeSection", () => {
 
     await waitFor(() => {
       expect(clipboardWrite).toHaveBeenCalledWith(
-        "http://localhost/v2/badge/abc.svg?size=sm&theme=auto",
+        "http://localhost/v2/badge/abc.svg?size=sm&theme=auto&target=blog",
       );
     });
   });

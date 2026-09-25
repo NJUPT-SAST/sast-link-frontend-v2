@@ -22,17 +22,19 @@ describe("lib/api/badge", () => {
     expect(apiClient.delete).toHaveBeenCalledWith("/user/badge");
   });
 
-  it("builds the public embed url from size and theme", () => {
-    const url = badgeUrl("abc", "lg", "dark");
+  it("builds the public embed url from size, theme and target", () => {
+    const url = badgeUrl("abc", "lg", "dark", "github");
     expect(url).toContain("/badge/abc.svg");
     expect(url).toContain("size=lg");
     expect(url).toContain("theme=dark");
+    expect(url).toContain("target=github");
   });
 
-  it("defaults to the shipped sm size and auto theme", () => {
+  it("defaults to the shipped sm size, auto theme and blog target", () => {
     const url = badgeUrl("abc");
     expect(url).toContain("/badge/abc.svg");
     expect(url).toContain("size=sm");
     expect(url).toContain("theme=auto");
+    expect(url).toContain("target=blog");
   });
 });

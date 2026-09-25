@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ShieldQuestion } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -8,6 +9,7 @@ import { useBadge } from "@/hooks/use-badge";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import {
   type BadgeSize,
+  type BadgeTarget,
   type BadgeTheme,
   badgeUrl,
   disableBadge,
@@ -41,12 +43,28 @@ const THEMES: { value: BadgeTheme; label: string }[] = [
   { value: "dark", label: "暗色" },
 ];
 
+const TARGETS: { value: BadgeTarget; label: string }[] = [
+  { value: "blog", label: "博客" },
+  { value: "github", label: "GitHub" },
+];
+
 async function copyText(text: string) {
   try {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
     return false;
+  }
+}
+
+/** Best-effort host display for the caption. The profile validation accepts
+ * scheme-less URLs, so pad a scheme before parsing; anything unparsable falls
+ * back to the raw value. */
+function displayHost(raw: string) {
+  try {
+    return new URL(raw.includes("://") ? raw : `https://${raw}`).host;
+  } catch {
+    return raw;
   }
 }
 
@@ -118,9 +136,10 @@ export function BadgeSection() {
   const [confirmingDisable, setConfirmingDisable] = useState(false);
   const [size] = useState<BadgeSize>("sm");
   const [theme, setTheme] = useState<BadgeTheme>("auto");
+  const [target, setTarget] = useState<BadgeTarget>("blog");
 
   const enabled = badge?.enabled ?? false;
-  const url = enabled && badge?.key ? badgeUrl(badge.key, size, theme) : null;
+  const url = enabled && badge?.key ? badgeUrl(badge.key, size, theme, target) : null;
   // Guarded for SSR: the static export prerenders this component once on the
   // server, where window does not exist. The guarded branch only matters
   // after the client-side fetch resolves, so behaviour is unchanged.
@@ -129,9 +148,12 @@ export function BadgeSection() {
       ? new URL(url, window.location.origin).toString()
       : null;
 
-  // The preview and the rendered SVG both link to the member's own page:
-  // blog first, GitHub as the fallback, no link when neither exists.
-  const clickTarget = profile.blogUrl || profile.githubUrl || null;
+  // The preview click-through lands on the member's own page — which one is
+  // the member's explicit choice, not a silent fallback: choosing a target
+  // they never configured shows the gap instead of quietly redirecting
+  // somewhere else.
+  const targetUrl = target === "blog" ? profile.blogUrl : profile.githubUrl;
+  const clickTarget = targetUrl || null;
 
   const handleToggle = async (checked: boolean) => {
     if (!checked) {
@@ -219,6 +241,13 @@ export function BadgeSection() {
               disabled={!enabled}
               onChange={setTheme}
             />
+            <OptionGroup
+              label="跳转"
+              value={target}
+              options={TARGETS}
+              disabled={!enabled}
+              onChange={setTarget}
+            />
             <Button
               size="sm"
               variant="outline"
@@ -232,28 +261,51 @@ export function BadgeSection() {
         </div>
 
         {/* Right: the preview, borderless — what you see is exactly what an
-            embedder gets. It links to the member's own page when one exists. */}
-        <div className="flex min-w-0 flex-1 items-center justify-center">
+            embedder gets. It links to the member's own page when the chosen
+            target is configured; the caption states where a click lands so
+            the member is never surprised by their own badge. */}
+        <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-2">
           {absoluteUrl ? (
-            clickTarget ? (
-              <a href={clickTarget} target="_blank" rel="noopener noreferrer">
-                {/* eslint-disable-next-line @next/next/no-img-element -- live remote SVG preview, not a build asset */}
+            <>
+              {clickTarget ? (
+                <a href={clickTarget} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- live remote SVG preview, not a build asset */}
+                  <img
+                    src={absoluteUrl}
+                    alt="个人徽标预览"
+                    className="max-w-full"
+                    data-testid="badge-preview"
+                  />
+                </a>
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element -- live remote SVG preview, not a build asset */
                 <img
                   src={absoluteUrl}
                   alt="个人徽标预览"
                   className="max-w-full"
                   data-testid="badge-preview"
                 />
-              </a>
-            ) : (
-              /* eslint-disable-next-line @next/next/no-img-element -- live remote SVG preview, not a build asset */
-              <img
-                src={absoluteUrl}
-                alt="个人徽标预览"
-                className="max-w-full"
-                data-testid="badge-preview"
-              />
-            )
+              )}
+              <p className="text-xs text-tertiary" data-testid="badge-caption">
+                {clickTarget ? (
+                  target === "blog" ? (
+                    <>点击徽标将跳转到你的博客 · {displayHost(clickTarget)}</>
+                  ) : (
+                    <>点击徽标将跳转到你的 GitHub 主页</>
+                  )
+                ) : (
+                  <>
+                    未设置{target === "blog" ? "博客" : "GitHub"}链接，徽标嵌入后不可点击。
+                    <Link
+                      href="/profile/edit"
+                      className="ml-1 underline underline-offset-2 hover:text-foreground"
+                    >
+                      去资料页设置
+                    </Link>
+                  </>
+                )}
+              </p>
+            </>
           ) : (
             <span className="text-sm text-tertiary">开启后这里会显示你的徽标预览</span>
           )}
