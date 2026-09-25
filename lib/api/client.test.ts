@@ -114,6 +114,110 @@ describe("lib/api/client", () => {
     expect(result).toEqual({ data: "retried" });
   });
 
+  it("sends the refresh under the cross-tab refresh lock when navigator.locks exists", async () => {
+    const events: string[] = [];
+    const originalDescriptor = Object.getOwnPropertyDescriptor(window.navigator, "locks");
+    const request = jest.fn(async (
+      _name: string,
+      _options: unknown,
+      callback: (lock: unknown) => Promise<unknown>,
+    ) => {
+      events.push("lock-acquired");
+      const result = await callback({});
+      events.push("lock-released");
+      return result;
+    });
+    Object.defineProperty(window.navigator, "locks", {
+      configurable: true,
+      value: { request },
+    });
+
+    const requestUse = jest.fn();
+    const responseUse = jest.fn();
+    const instances: Array<{ post: jest.Mock; (config: unknown): unknown }> = [];
+    const create = jest.fn(() => {
+      const instance = Object.assign(jest.fn(() => ({ data: "retried" })), {
+        interceptors: {
+          request: { use: requestUse },
+          response: { use: responseUse },
+        },
+        post: jest.fn(),
+      });
+      instances.push(instance);
+      return instance;
+    });
+
+    jest.doMock("axios", () => ({
+      __esModule: true,
+      AxiosHeaders: {
+        from: (headers: Record<string, string>) => ({
+          ...headers,
+          set(key: string, value: string) {
+            Object.assign(this, { [key]: value });
+          },
+        }),
+      },
+      default: { create, isAxiosError: jest.fn(() => false) },
+    }));
+    jest.doMock("@/lib/token", () => ({
+      clearSession: jest.fn(),
+      getSession: jest.fn(() => ({
+        accessToken: "expired-access-token",
+        expiresAt: 0,
+      })),
+      setSession: jest.fn(),
+      createSession: jest.fn((accessToken: string, expiresIn: number) => ({
+        accessToken,
+        expiresAt: expiresIn,
+      })),
+    }));
+
+    try {
+      await import("./client");
+      const responseInterceptor = responseUse.mock.calls[0][1];
+
+      const refreshPost = instances[1].post;
+      refreshPost.mockImplementationOnce(async () => {
+        events.push("refresh-called");
+        return {
+          data: {
+            code: 0,
+            message: "ok",
+            data: {
+              access_token: "new-access-token",
+              refresh_token: "new-refresh-token",
+              expires_in: 3600,
+            },
+          },
+        };
+      });
+
+      const retryConfig = { headers: {} as Record<string, string>, url: "/user/profile" };
+      const result = await responseInterceptor({
+        response: { status: 401 },
+        config: retryConfig,
+      });
+
+      expect(request).toHaveBeenCalledTimes(1);
+      expect(request).toHaveBeenCalledWith(
+        "sast-link:auth-refresh",
+        { mode: "exclusive" },
+        expect.any(Function),
+      );
+      // The HTTP call happens strictly inside the held lock: a sibling tab
+      // queued on the same lock therefore always sends with the rotated cookie.
+      expect(events).toEqual(["lock-acquired", "refresh-called", "lock-released"]);
+      expect(retryConfig.headers.Authorization).toBe("Bearer new-access-token");
+      expect(result).toEqual({ data: "retried" });
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(window.navigator, "locks", originalDescriptor);
+      } else {
+        delete (window.navigator as { locks?: unknown }).locks;
+      }
+    }
+  });
+
   it("clears session and redirects to login when refresh fails", async () => {
     jest.useFakeTimers();
     try {

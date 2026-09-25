@@ -9,6 +9,7 @@ import { API_BASE_URL } from "@/lib/config/public";
 import { clearSession, createSession, getSession, setSession } from "@/lib/token";
 import { redirectToLogin } from "./redirect";
 import { isConcurrentRefresh } from "./errors";
+import { withRefreshLock } from "./refresh-lock";
 import type { ApiEnvelope, TokenData } from "./types";
 
 interface RetryableConfig extends InternalAxiosRequestConfig {
@@ -48,29 +49,34 @@ async function refreshAccessToken(): Promise<string> {
   // The refresh token lives only in the httpOnly session cookie, so this
   // carries it with an empty body and the response rotates it (re-setting the
   // cookie) and returns a fresh access token. No stored refresh token exists.
+  // The lock serializes sibling tabs so each refresh sends with the latest
+  // rotated cookie; the 40108 retry below then only covers lock-less browsers
+  // and stray races.
   const attempt = () =>
     refreshClient.post<ApiEnvelope<TokenData>>("/auth/refresh", {}, { timeout: 10_000 });
 
-  let response: AxiosResponse<ApiEnvelope<TokenData>>;
-  try {
-    response = await attempt();
-  } catch (error) {
-    // 40108 = a multi-tab cold-start race: the winner rotated the cookie's
-    // refresh token and this call lost on the revoked token within the 30s
-    // grace window. Retry once — the shared cookie jar now carries the winner's
-    // token. A plain 401 (dead session) or a transient failure ends here.
-    if (isConcurrentRefresh(error)) {
-      await new Promise((resolve) => setTimeout(resolve, 600));
+  return withRefreshLock(async () => {
+    let response: AxiosResponse<ApiEnvelope<TokenData>>;
+    try {
       response = await attempt();
-    } else {
-      throw error;
+    } catch (error) {
+      // 40108 = a multi-tab cold-start race: the winner rotated the cookie's
+      // refresh token and this call lost on the revoked token within the 30s
+      // grace window. Retry once — the shared cookie jar now carries the winner's
+      // token. A plain 401 (dead session) or a transient failure ends here.
+      if (isConcurrentRefresh(error)) {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        response = await attempt();
+      } else {
+        throw error;
+      }
     }
-  }
 
-  const data = response.data.data;
-  const nextSession = createSession(data.access_token, data.expires_in);
-  setSession(nextSession);
-  return nextSession.accessToken;
+    const data = response.data.data;
+    const nextSession = createSession(data.access_token, data.expires_in);
+    setSession(nextSession);
+    return nextSession.accessToken;
+  });
 }
 
 apiClient.interceptors.response.use(

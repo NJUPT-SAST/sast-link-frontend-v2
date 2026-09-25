@@ -4,6 +4,7 @@ import type {
   RegisterRequest,
   TokenData,
 } from "./types";
+import { withRefreshLock } from "./refresh-lock";
 import { apiClient } from "./client";
 
 export function registerSendCode(loginEmail: string) {
@@ -37,12 +38,15 @@ export function passwordLogin(loginEmail: string, password: string) {
  * refresh credential and rotates it — 200 returns a fresh token pair the
  * frontend rebuilds its session from; 401 means no (or dead) cookie, so the
  * visitor is genuinely signed out. A POST keeps it side-effect-free of the
- * GET-CSRF class, and the existing 30s refresh-grace window absorbs concurrent
- * cold starts from several tabs. The short timeout bounds how long a dead
+ * GET-CSRF class, and the cross-tab refresh lock serializes concurrent cold
+ * starts from several tabs (the backend's 30s grace window stays as the
+ * backstop for lock-less browsers). The short timeout bounds how long a dead
  * backend can leave a page on its loading state.
  */
 export function refreshFromCookie() {
-  return apiClient.post<ApiEnvelope<TokenData>>("/auth/refresh", {}, { timeout: 5_000 });
+  return withRefreshLock(() =>
+    apiClient.post<ApiEnvelope<TokenData>>("/auth/refresh", {}, { timeout: 5_000 }),
+  );
 }
 
 export function logout() {
