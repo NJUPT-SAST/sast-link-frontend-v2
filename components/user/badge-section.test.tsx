@@ -6,6 +6,10 @@ import { BadgeSection } from "./badge-section";
 const mockMutate = jest.fn();
 let mockBadge: unknown = undefined;
 let mockIsLoading = true;
+let mockProfile: { blogUrl: string | null; githubUrl: string | null } = {
+  blogUrl: null,
+  githubUrl: null,
+};
 
 jest.mock("@/hooks/use-badge", () => ({
   useBadge: () => ({
@@ -13,6 +17,11 @@ jest.mock("@/hooks/use-badge", () => ({
     isLoading: mockIsLoading,
     mutate: mockMutate,
   }),
+}));
+
+jest.mock("@/store/use-user-profile-store", () => ({
+  useUserProfileStore: (selector: (state: { profile: typeof mockProfile }) => unknown) =>
+    selector({ profile: mockProfile }),
 }));
 
 const enableBadge = jest.fn();
@@ -35,19 +44,27 @@ jest.mock("@/lib/message", () => ({
 
 const clipboardWrite = jest.fn();
 
-// navigator.clipboard is a getter-only property in jsdom; redefine it on the
-// prototype so the component's navigator.clipboard.writeText lands on the mock.
-beforeAll(() => {
-  Object.defineProperty(Navigator.prototype, "clipboard", {
+// userEvent.setup() installs its own clipboard stub, shadowing the prototype
+// mock; re-stub on the navigator instance after setup so copy assertions see
+// our recorder.
+function setupUserWithClipboard() {
+  const user = userEvent.setup();
+  Object.defineProperty(window.navigator, "clipboard", {
     value: { writeText: clipboardWrite },
     configurable: true,
   });
-});
+  return user;
+}
+
+function switchRole() {
+  return screen.getByRole("switch", { name: "分享个人徽标" });
+}
 
 describe("BadgeSection", () => {
   beforeEach(() => {
     mockBadge = undefined;
     mockIsLoading = true;
+    mockProfile = { blogUrl: null, githubUrl: null };
     mockMutate.mockClear();
     enableBadge.mockReset();
     disableBadge.mockReset();
@@ -60,7 +77,39 @@ describe("BadgeSection", () => {
     expect(screen.getByText("正在加载徽标状态…")).toBeInTheDocument();
   });
 
-  it("offers enablement while disabled and calls the API", async () => {
+  it("shows the closed state with inert controls and no preview", () => {
+    mockIsLoading = false;
+    mockBadge = { enabled: false };
+
+    render(<BadgeSection />);
+
+    expect(screen.getByText("已关闭")).toBeInTheDocument();
+    expect(switchRole()).toHaveAttribute("data-state", "unchecked");
+    expect(screen.getByText("开启后这里会显示你的徽标预览")).toBeInTheDocument();
+
+    // The selectors and copy button render but refuse interaction.
+    expect(screen.getByRole("button", { name: "紧凑" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "亮色" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "复制链接" })).toBeDisabled();
+  });
+
+  it("enables through the switch and surfaces the failure message", async () => {
+    mockIsLoading = false;
+    mockBadge = { enabled: false };
+    enableBadge.mockRejectedValue({ message: "请先设置昵称再开启徽标" });
+    const { message } = jest.requireMock("@/lib/message");
+
+    render(<BadgeSection />);
+
+    const user = setupUserWithClipboard();
+    await user.click(switchRole());
+
+    await waitFor(() => {
+      expect(message.error).toHaveBeenCalledWith("请先设置昵称再开启徽标");
+    });
+  });
+
+  it("enables successfully through the switch", async () => {
     mockIsLoading = false;
     mockBadge = { enabled: false };
     enableBadge.mockResolvedValue({});
@@ -68,7 +117,7 @@ describe("BadgeSection", () => {
     render(<BadgeSection />);
 
     const user = setupUserWithClipboard();
-    await user.click(screen.getByRole("button", { name: "开启徽标" }));
+    await user.click(switchRole());
 
     await waitFor(() => {
       expect(enableBadge).toHaveBeenCalledTimes(1);
@@ -76,23 +125,7 @@ describe("BadgeSection", () => {
     });
   });
 
-  it("surfaces the enable failure message", async () => {
-    mockIsLoading = false;
-    mockBadge = { enabled: false };
-    const { message } = jest.requireMock("@/lib/message");
-    enableBadge.mockRejectedValue({ message: "请先设置昵称再开启徽标" });
-
-    render(<BadgeSection />);
-
-    const user = setupUserWithClipboard();
-    await user.click(screen.getByRole("button", { name: "开启徽标" }));
-
-    await waitFor(() => {
-      expect(message.error).toHaveBeenCalledWith("请先设置昵称再开启徽标");
-    });
-  });
-
-  it("previews the badge and copies share snippets when enabled", async () => {
+  it("previews on the right and retargets on size and theme change", async () => {
     mockIsLoading = false;
     mockBadge = { enabled: true, key: "abc" };
 
@@ -104,7 +137,6 @@ describe("BadgeSection", () => {
       "http://localhost/v2/badge/abc.svg?size=md&theme=auto",
     );
 
-    // Size and theme selectors retarget the preview.
     const user = setupUserWithClipboard();
     await user.click(screen.getByRole("button", { name: "大图" }));
     await user.click(screen.getByRole("button", { name: "暗色" }));
@@ -112,16 +144,60 @@ describe("BadgeSection", () => {
       "src",
       "http://localhost/v2/badge/abc.svg?size=lg&theme=dark",
     );
+  });
 
-    await user.click(screen.getByRole("button", { name: "复制 Markdown" }));
+  it("wraps the preview in the member's own link, blog first", () => {
+    mockIsLoading = false;
+    mockBadge = { enabled: true, key: "abc" };
+    mockProfile = { blogUrl: "https://blog.example.com", githubUrl: "https://github.com/a" };
+
+    render(<BadgeSection />);
+
+    const link = screen.getByTestId("badge-preview").closest("a");
+    expect(link).toHaveAttribute("href", "https://blog.example.com");
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+
+  it("falls back to the github link when no blog is set", () => {
+    mockIsLoading = false;
+    mockBadge = { enabled: true, key: "abc" };
+    mockProfile = { blogUrl: null, githubUrl: "https://github.com/a" };
+
+    render(<BadgeSection />);
+
+    expect(screen.getByTestId("badge-preview").closest("a")).toHaveAttribute(
+      "href",
+      "https://github.com/a",
+    );
+  });
+
+  it("renders the preview without a link when neither exists", () => {
+    mockIsLoading = false;
+    mockBadge = { enabled: true, key: "abc" };
+
+    render(<BadgeSection />);
+
+    expect(screen.getByTestId("badge-preview").closest("a")).toBeNull();
+  });
+
+  it("copies only the plain link", async () => {
+    mockIsLoading = false;
+    mockBadge = { enabled: true, key: "abc" };
+
+    render(<BadgeSection />);
+
+    const user = setupUserWithClipboard();
+    await user.click(screen.getByRole("button", { name: "大图" }));
+    await user.click(screen.getByRole("button", { name: "复制链接" }));
+
     await waitFor(() => {
       expect(clipboardWrite).toHaveBeenCalledWith(
-        expect.stringContaining("/badge/abc.svg?size=lg&theme=dark"),
+        "http://localhost/v2/badge/abc.svg?size=lg&theme=auto",
       );
     });
   });
 
-  it("requires confirmation to disable and warns about broken links", async () => {
+  it("requires confirmation to switch off and warns about broken links", async () => {
     mockIsLoading = false;
     mockBadge = { enabled: true, key: "abc" };
     disableBadge.mockResolvedValue({});
@@ -129,13 +205,11 @@ describe("BadgeSection", () => {
     render(<BadgeSection />);
 
     const user = setupUserWithClipboard();
-    await user.click(screen.getByRole("button", { name: "关闭徽标" }));
+    await user.click(switchRole());
 
     // The confirmation dialog states the consequence before the call fires.
     expect(screen.getByText("关闭个人徽标？")).toBeInTheDocument();
-    expect(
-      screen.getByText(/所有已嵌入的链接将立即失效/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/所有已嵌入的链接将立即失效/)).toBeInTheDocument();
     expect(disableBadge).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "确认关闭" }));
@@ -145,15 +219,3 @@ describe("BadgeSection", () => {
     });
   });
 });
-
-/** userEvent.setup() installs its own clipboard stub, shadowing the prototype
- * mock; re-stub on the navigator instance after setup so copy assertions see
- * our recorder. */
-function setupUserWithClipboard() {
-  const user = userEvent.setup();
-  Object.defineProperty(window.navigator, "clipboard", {
-    value: { writeText: clipboardWrite },
-    configurable: true,
-  });
-  return user;
-}
