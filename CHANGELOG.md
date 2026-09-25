@@ -42,4 +42,4 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Added
 
-- **个人徽标分享**（feat/card-badge）：设置页新增「个人徽标」区块——开启后生成可嵌入任意网页（GitHub README、友链列表）的 SVG 身份卡片，链接即凭证（后端随机 capability key，不可枚举）。尺寸（紧凑/标准/大图）与主题（自动跟随系统/亮色/暗色）选择器 + 实时预览（直连公开渲染端点），一键复制 Markdown / HTML / 纯链接；关闭需确认弹窗（警示所有嵌入链接立即失效）。配套 `lib/api/badge.ts`、`use-badge` SWR hook 与 MSW mock（同步删除了镜像后端已废弃 `/card/:id` 契约的过期 mock）
+- **个人徽标分享**（feat/card-badge）：设置页新增「个人徽标」区块——开关式分享一枚可嵌入任意网页（GitHub README、友链列表）的 SVG 身份卡片，链接即凭证（后端随机 capability key，不可枚举）。尺寸/主题分段式选择器 + 实时预览（直连公开渲染端点，可点击跳转个人主页：blog 优先、github 兜底），一键复制链接；关闭需确认弹窗（警示嵌入链接立即失效，重新开启后原链接恢复可用——开关不轮换 key）。配套 `lib/api/badge.ts`、`use-badge` SWR hook 与 MSW mock（同步删除了镜像后端已废弃 `/card/:id` 契约的过期 mock）

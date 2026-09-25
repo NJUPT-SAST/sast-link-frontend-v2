@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ShieldQuestion } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { useBadge } from "@/hooks/use-badge";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import {
@@ -45,6 +46,54 @@ async function copyText(text: string) {
   } catch {
     return false;
   }
+}
+
+/** One flush-together option group: the segments share borders and only the
+ * ends are rounded, so the row reads as one control rather than a row of
+ * separate buttons. */
+function OptionGroup<T extends string>({
+  label,
+  value,
+  options,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  disabled?: boolean;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="type-tech shrink-0 text-tertiary">{label}</span>
+      <div
+        role="group"
+        aria-label={label}
+        className="inline-flex overflow-hidden rounded-md border border-hairline"
+      >
+        {options.map((option, index) => (
+          <button
+            key={option.value}
+            type="button"
+            disabled={disabled}
+            aria-pressed={value === option.value}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "px-3.5 py-1.5 text-sm transition-colors",
+              index > 0 && "border-l border-hairline",
+              value === option.value
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-accent",
+              disabled && "cursor-not-allowed opacity-60",
+            )}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 /** Settings section for the personal badge: an opt-in switch on the left with
@@ -121,13 +170,14 @@ export function BadgeSection() {
 
   return (
     <>
-      <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
+      <div className="flex flex-col gap-6 pt-4 sm:flex-row sm:gap-8">
         {/* Left: the sharing switch above the preview controls. While the
             badge is off, the controls stay visible but inert — the shape of
             the section stays stable instead of collapsing. */}
-        <div className="flex w-full shrink-0 flex-col gap-5 sm:w-[260px]">
+        <div className="flex w-full shrink-0 flex-col gap-5 sm:w-[300px]">
           <div className="flex items-center gap-3">
             <Switch
+              size="lg"
               checked={enabled}
               onCheckedChange={handleToggle}
               disabled={busy}
@@ -139,36 +189,20 @@ export function BadgeSection() {
           </div>
 
           <div className={enabled ? "flex flex-col gap-4" : "flex flex-col gap-4 opacity-50"}>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="type-tech text-tertiary">尺寸</span>
-              {SIZES.map((option) => (
-                <Button
-                  key={option.value}
-                  type="button"
-                  variant={size === option.value ? "default" : "outline"}
-                  size="sm"
-                  disabled={!enabled}
-                  onClick={() => setSize(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="type-tech text-tertiary">主题</span>
-              {THEMES.map((option) => (
-                <Button
-                  key={option.value}
-                  type="button"
-                  variant={theme === option.value ? "default" : "outline"}
-                  size="sm"
-                  disabled={!enabled}
-                  onClick={() => setTheme(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </div>
+            <OptionGroup
+              label="尺寸"
+              value={size}
+              options={SIZES}
+              disabled={!enabled}
+              onChange={setSize}
+            />
+            <OptionGroup
+              label="主题"
+              value={theme}
+              options={THEMES}
+              disabled={!enabled}
+              onChange={setTheme}
+            />
             <Button size="sm" variant="outline" disabled={!enabled} onClick={handleCopy}>
               复制链接
             </Button>
@@ -209,7 +243,7 @@ export function BadgeSection() {
           <DialogHeader>
             <DialogTitle>关闭个人徽标？</DialogTitle>
             <DialogDescription>
-              关闭后所有已嵌入的链接将立即失效（显示「徽标不存在或已关闭」）。重新开启会生成新链接。
+              关闭后所有已嵌入的链接将立即失效（显示「徽标不存在或已关闭」）。重新开启后，原链接会恢复可用。
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-start gap-3 rounded-lg border border-hairline bg-card p-3 text-sm text-muted-foreground">
