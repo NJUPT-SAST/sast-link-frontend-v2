@@ -69,7 +69,7 @@ export const passwordSchema = z
 
 export const registerDetailsSchema = z
   .object({
-    nickname: z.string().trim().min(1, "别名不可为空").max(255, "别名最多 255 个字符"),
+    nickname: z.string().trim().min(1, "昵称不可为空").max(255, "昵称最多 255 个字符"),
     password: passwordSchema,
     confirmPassword: z.string().min(1, "请确认密码"),
     name: realNameSchema,

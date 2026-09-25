@@ -102,9 +102,6 @@ function AdminAlumniRequestsContent() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="type-title2">建号申请</h1>
-        {data && (
-          <span className="type-tech text-xs text-tertiary">共 {data.total} 条</span>
-        )}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -185,8 +182,8 @@ function AdminAlumniRequestsContent() {
           combination instead of silently returning an inflated set. */}
       {filters.notified === false && filters.status === undefined && (
         <p className="text-xs leading-5 text-tertiary">
-          “未送达”也包含尚未审核的申请（它们还没有结果可通知）。要只看真正需要补发的，
-          请同时把状态选为“已通过”或“已驳回”；列表中带“通知未送达”标记的才是待处理项。
+          “未送达”也包含尚未审核的申请。要只看待补发的，请把状态选为
+          “已通过”或“已驳回”，带“通知未送达”标记的行即待处理项。
         </p>
       )}
 

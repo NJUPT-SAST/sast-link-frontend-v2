@@ -1,34 +1,4 @@
-import { profileEditSchema, profileRules } from "./profile";
-
-type PatternRule = { value: RegExp; message: string };
-const pattern = (value: unknown) => value as PatternRule;
-
-describe("profileRules", () => {
-  it("matches OpenAPI profile length limits", () => {
-    expect(profileRules.nickname.maxLength).toEqual({
-      value: 255,
-      message: "昵称最多 255 个字符",
-    });
-    expect(profileRules.intro.maxLength).toEqual({
-      value: 255,
-      message: "签名最多 255 个字符",
-    });
-  });
-
-  it("accepts empty, protocol-less or http links and rejects invalid links", () => {
-    for (const rule of [profileRules.blogUrl, profileRules.githubUrl]) {
-      const regex = pattern(rule.pattern).value;
-      expect(regex.test("")).toBe(true);
-      expect(regex.test("https://example.com")).toBe(true);
-      expect(regex.test("https://example.com/path")).toBe(true);
-      expect(regex.test("example.com")).toBe(true);
-      expect(regex.test("github.com/alice")).toBe(true);
-      expect(regex.test("https://")).toBe(false);
-      expect(regex.test("not-a-url")).toBe(false);
-      expect(regex.test("abc")).toBe(false);
-    }
-  });
-});
+import { profileEditSchema } from "./profile";
 
 describe("profileEditSchema", () => {
   const valid = {

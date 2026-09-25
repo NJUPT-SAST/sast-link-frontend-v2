@@ -42,7 +42,7 @@ async function fillRequiredFields() {
   await userEvent.type(screen.getByLabelText("密码"), "Passw0rd!");
   await userEvent.type(screen.getByLabelText("确认密码"), "Passw0rd!");
   await userEvent.type(screen.getByLabelText("真实姓名"), "张三");
-  await userEvent.type(screen.getByLabelText("别名"), "zsan");
+  await userEvent.type(screen.getByLabelText("昵称"), "zsan");
   await userEvent.type(screen.getByLabelText("专业"), "软件工程");
   await userEvent.type(screen.getByLabelText("手机号"), "13800138000");
   await userEvent.type(screen.getByLabelText("QQ 号"), "123456789");

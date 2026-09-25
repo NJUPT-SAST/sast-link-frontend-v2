@@ -143,7 +143,7 @@ export default function RegisterDetailsForm({
       try {
         await updateUserProfile({ nickname: values.nickname });
       } catch {
-        message.error("别名保存失败，稍后可在个人资料中修改");
+        message.error("昵称保存失败，稍后可在个人资料中修改");
       }
       // A successful signup is a finished flow: clear the stored ticket/email so
       // a later /register starts at the email step instead of resurrecting this
@@ -258,7 +258,7 @@ export default function RegisterDetailsForm({
                 <AuthFormField
                   {...field}
                   ref={field.ref}
-                  label="别名"
+                  label="昵称"
                   required
                   description="其他用户将看到此名称"
                   invalid={fieldState.invalid}

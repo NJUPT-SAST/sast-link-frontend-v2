@@ -114,7 +114,6 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
                   ref={field.ref}
                   label="密码"
                   type="password"
-                  placeholder="密码"
                   autoComplete="current-password"
                   invalid={!!fieldState.error}
                 />

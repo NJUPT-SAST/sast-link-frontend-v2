@@ -187,7 +187,7 @@ export default function EditPage() {
   const submit = form.handleSubmit(onValid, onInvalid);
 
   const textFields = [
-    { name: "nickname" as const, label: "别名", required: true },
+    { name: "nickname" as const, label: "昵称", required: true },
     { name: "name" as const, label: "真实姓名", required: true },
   ];
 

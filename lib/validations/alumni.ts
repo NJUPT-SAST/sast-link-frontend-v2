@@ -22,12 +22,12 @@ export const alumniRequestSchema = z
       .string()
       .trim()
       .min(1, "学号不可为空")
-      .max(50, "学号最多 50 字符"),
+      .max(50, "学号最多 50 个字符"),
     login_email: z
       .string()
       .trim()
       .email("请输入有效的邮箱")
-      .max(255, "邮箱最多 255 字符")
+      .max(255, "邮箱最多 255 个字符")
       // Narrower than the backend on purpose. `validate.IsLoginEmailDomain` also
       // admits @sast.fun, but this channel exists for graduated members whose
       // *school* mailbox died, and the account identifier we want on file is the
@@ -40,7 +40,7 @@ export const alumniRequestSchema = z
       .trim()
       .min(1, "常用邮箱不可为空")
       .email("请输入有效的邮箱")
-      .max(255, "邮箱最多 255 字符"),
+      .max(255, "邮箱最多 255 个字符"),
     phone_number: z
       .string()
       .trim()
@@ -51,7 +51,7 @@ export const alumniRequestSchema = z
       .regex(/^\d{5,20}$/, "请输入正确的 QQ 号"),
     college: z.enum(COLLEGES),
     // Required here, optional on POST /admin/users — see the V010 note above.
-    major: z.string().trim().min(1, "专业不可为空").max(50, "专业最多 50 字符"),
+    major: z.string().trim().min(1, "专业不可为空").max(50, "专业最多 50 个字符"),
     join_year: z
       .string()
       .trim()
@@ -60,8 +60,8 @@ export const alumniRequestSchema = z
       // (≤32 chars) and does not check the shape. A four-digit year is a
       // reasonable UI constraint; it just is not a server-side guarantee.
       .regex(/^(19|20)\d{2}$/, "请输入 4 位年份，如 2020"),
-    department_note: z.string().trim().max(255, "最多 255 字符"),
-    note: z.string().trim().max(1000, "最多 1000 字符"),
+    department_note: z.string().trim().max(255, "最多 255 个字符"),
+    note: z.string().trim().max(1000, "最多 1000 个字符"),
   })
   .superRefine((values, ctx) => {
     if (
@@ -95,7 +95,7 @@ export const alumniRejectSchema = z.object({
     .string()
     .trim()
     .min(1, "请填写驳回理由")
-    .max(500, "最多 500 字符"),
+    .max(500, "最多 500 个字符"),
 });
 
 export type AlumniRejectFormValues = z.infer<typeof alumniRejectSchema>;

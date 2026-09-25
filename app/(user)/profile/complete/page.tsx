@@ -144,7 +144,7 @@ export default function ProfileCompletePage() {
       <header>
         <h1 className="type-title3">完善你的资料</h1>
         <p className="mt-2 text-[15px] leading-[22px] text-muted-foreground">
-          你的账号还有几项必填资料待补充，完成后即可正常使用。
+          补全以下资料后即可正常使用。
         </p>
       </header>
 

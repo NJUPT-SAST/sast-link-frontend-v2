@@ -121,7 +121,7 @@ describe("EditPage", () => {
   it("pre-fills nickname from profile", () => {
     render(<EditPage />);
 
-    const input = screen.getByLabelText("别名") as HTMLInputElement;
+    const input = screen.getByLabelText("昵称") as HTMLInputElement;
     expect(input.value).toBe("Alice");
   });
 
@@ -177,12 +177,12 @@ describe("EditPage", () => {
   it("shows validation error when nickname is cleared", async () => {
     render(<EditPage />);
 
-    const input = screen.getByLabelText("别名");
+    const input = screen.getByLabelText("昵称");
     fireEvent.change(input, { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
 
     await waitFor(() => {
-      expect(screen.getByText("别名不能为空")).toBeInTheDocument();
+      expect(screen.getByText("昵称不能为空")).toBeInTheDocument();
     });
 
     expect(mockUpdateUserProfile).not.toHaveBeenCalled();
@@ -275,7 +275,7 @@ describe("EditPage", () => {
   it("prompts beforeunload while the form is dirty", () => {
     render(<EditPage />);
 
-    const input = screen.getByLabelText("别名");
+    const input = screen.getByLabelText("昵称");
     fireEvent.change(input, { target: { value: "Bob" } });
 
     const event = new Event("beforeunload", { cancelable: true });
@@ -295,7 +295,7 @@ describe("EditPage", () => {
     const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(false);
     render(<EditPage />);
 
-    fireEvent.change(screen.getByLabelText("别名"), { target: { value: "Bob" } });
+    fireEvent.change(screen.getByLabelText("昵称"), { target: { value: "Bob" } });
     fireEvent.click(screen.getByRole("button", { name: "返回" }));
 
     expect(window.confirm).toHaveBeenCalledWith("有未保存的修改，确定要离开吗？");
@@ -322,7 +322,7 @@ describe("EditPage", () => {
 
     render(<EditPage />);
 
-    fireEvent.change(screen.getByLabelText("别名"), { target: { value: "Bob" } });
+    fireEvent.change(screen.getByLabelText("昵称"), { target: { value: "Bob" } });
     fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
 
     await waitFor(() => {
@@ -337,12 +337,12 @@ describe("EditPage", () => {
   it("calls scrollToFirstError when validation fails", async () => {
     render(<EditPage />);
 
-    const input = screen.getByLabelText("别名");
+    const input = screen.getByLabelText("昵称");
     fireEvent.change(input, { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
 
     await waitFor(() => {
-      expect(screen.getByText("别名不能为空")).toBeInTheDocument();
+      expect(screen.getByText("昵称不能为空")).toBeInTheDocument();
     });
 
     expect(mockScrollToFirstError).toHaveBeenCalled();

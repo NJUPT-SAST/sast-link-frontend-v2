@@ -89,7 +89,7 @@ export default function ProfilePage() {
       <section aria-label="个人信息">
         <h2 className="type-tech mb-3 text-tertiary">个人信息</h2>
         <Field label="真实姓名" value={profile.name} />
-        <Field label="别名" value={profile.nickname} />
+        <Field label="昵称" value={profile.nickname} />
         <Field label="学号" value={profile.studentId} />
         <Field label="学院" value={profile.college} wrap />
         <Field label="专业" value={profile.major} wrap />

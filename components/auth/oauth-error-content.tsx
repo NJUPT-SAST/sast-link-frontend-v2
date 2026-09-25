@@ -20,9 +20,9 @@ export function OAuthErrorContent() {
 
   // The backend owns the copy: error_description is this deployment's fixed
   // string (never provider text), so it is displayed verbatim. A missing
-  // description means the link was hand-edited or truncated, which the generic
-  // line covers — the advice below it carries the action.
-  const reason = description?.trim() || "第三方登录未能完成";
+  // description means the link was hand-edited or truncated — render only the
+  // advice line, which carries the action; repeating the h1 would be noise.
+  const reason = description?.trim() || null;
   // An empty ?error= is the same degraded link shape as a missing one and
   // should follow the same retryable path, not the terminal one.
   const retryable = code === null || code.trim() === "" || RETRYABLE_CODES.has(code);
@@ -31,8 +31,8 @@ export function OAuthErrorContent() {
     <div className="flex flex-col items-center gap-4 text-center">
       <h1 className="type-title3">第三方登录失败</h1>
       <p className="max-w-[360px] text-[15px] leading-[22px] text-muted-foreground">
-        {reason}
-        {retryable ? "。请稍后重试或换用其他登录方式。" : "。请联系管理员。"}
+        {reason ? `${reason}。` : ""}
+        {retryable ? "请稍后重试或换用其他登录方式。" : "请联系管理员。"}
       </p>
       {code && (
         <p className="type-tech text-tertiary" data-testid="oauth-error-code">
