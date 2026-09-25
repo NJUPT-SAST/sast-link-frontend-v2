@@ -174,7 +174,7 @@ export function BadgeSection() {
         {/* Left: the sharing switch above the preview controls. While the
             badge is off, the controls stay visible but inert — the shape of
             the section stays stable instead of collapsing. */}
-        <div className="flex w-full shrink-0 flex-col gap-5 sm:w-[300px]">
+        <div className="flex w-full shrink-0 flex-col gap-5 sm:w-fit">
           <div className="flex items-center gap-3">
             <Switch
               size="lg"
@@ -203,7 +203,13 @@ export function BadgeSection() {
               disabled={!enabled}
               onChange={setTheme}
             />
-            <Button size="sm" variant="outline" disabled={!enabled} onClick={handleCopy}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!enabled}
+              onClick={handleCopy}
+              className="w-full"
+            >
               复制链接
             </Button>
           </div>
