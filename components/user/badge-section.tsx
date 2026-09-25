@@ -27,10 +27,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const SIZES: { value: BadgeSize; label: string }[] = [
-  { value: "sm", label: "紧凑" },
-  { value: "md", label: "标准" },
-  { value: "lg", label: "大图" },
+const SIZES: { value: BadgeSize; label: string; available: boolean }[] = [
+  { value: "sm", label: "紧凑", available: true },
+  // 标准与大图是后续迭代的预留档位：展示但不可选，让用户知道还有更多
+  // 尺寸在路上。
+  { value: "md", label: "标准", available: false },
+  { value: "lg", label: "大图", available: false },
 ];
 
 const THEMES: { value: BadgeTheme; label: string }[] = [
@@ -50,7 +52,8 @@ async function copyText(text: string) {
 
 /** One flush-together option group: the segments share borders and only the
  * ends are rounded, so the row reads as one control rather than a row of
- * separate buttons. */
+ * separate buttons. An unavailable option renders disabled — visible but
+ * not selectable. */
 function OptionGroup<T extends string>({
   label,
   value,
@@ -60,9 +63,9 @@ function OptionGroup<T extends string>({
 }: {
   label: string;
   value: T;
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; available?: boolean }[];
   disabled?: boolean;
-  onChange: (value: T) => void;
+  onChange?: (value: T) => void;
 }) {
   return (
     <div className="flex items-center gap-3">
@@ -72,25 +75,30 @@ function OptionGroup<T extends string>({
         aria-label={label}
         className="inline-flex overflow-hidden rounded-md border border-hairline"
       >
-        {options.map((option, index) => (
-          <button
-            key={option.value}
-            type="button"
-            disabled={disabled}
-            aria-pressed={value === option.value}
-            onClick={() => onChange(option.value)}
-            className={cn(
-              "px-3.5 py-1.5 text-sm transition-colors",
-              index > 0 && "border-l border-hairline",
-              value === option.value
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-accent",
-              disabled && "cursor-not-allowed opacity-60",
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
+        {options.map((option, index) => {
+          const active = value === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              disabled={disabled || option.available === false}
+              aria-pressed={active}
+              title={option.available === false ? "后续开放" : undefined}
+              onClick={() => onChange?.(option.value)}
+              className={cn(
+                "px-3.5 py-1.5 text-sm transition-colors",
+                index > 0 && "border-l border-hairline",
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-accent",
+                (disabled || option.available === false) &&
+                  "cursor-not-allowed opacity-60",
+              )}
+            >
+              {option.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -105,7 +113,7 @@ export function BadgeSection() {
   const profile = useUserProfileStore((state) => state.profile);
   const [busy, setBusy] = useState(false);
   const [confirmingDisable, setConfirmingDisable] = useState(false);
-  const [size, setSize] = useState<BadgeSize>("md");
+  const [size] = useState<BadgeSize>("sm");
   const [theme, setTheme] = useState<BadgeTheme>("auto");
 
   const enabled = badge?.enabled ?? false;
@@ -194,7 +202,6 @@ export function BadgeSection() {
               value={size}
               options={SIZES}
               disabled={!enabled}
-              onChange={setSize}
             />
             <OptionGroup
               label="主题"

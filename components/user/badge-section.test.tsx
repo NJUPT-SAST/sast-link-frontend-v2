@@ -125,7 +125,7 @@ describe("BadgeSection", () => {
     });
   });
 
-  it("previews on the right and retargets on size and theme change", async () => {
+  it("previews on the right and retargets on theme change", async () => {
     mockIsLoading = false;
     mockBadge = { enabled: true, key: "abc" };
 
@@ -134,15 +134,14 @@ describe("BadgeSection", () => {
     const preview = screen.getByTestId("badge-preview");
     expect(preview).toHaveAttribute(
       "src",
-      "http://localhost/v2/badge/abc.svg?size=md&theme=auto",
+      "http://localhost/v2/badge/abc.svg?size=sm&theme=auto",
     );
 
     const user = setupUserWithClipboard();
-    await user.click(screen.getByRole("button", { name: "大图" }));
     await user.click(screen.getByRole("button", { name: "暗色" }));
     expect(screen.getByTestId("badge-preview")).toHaveAttribute(
       "src",
-      "http://localhost/v2/badge/abc.svg?size=lg&theme=dark",
+      "http://localhost/v2/badge/abc.svg?size=sm&theme=dark",
     );
   });
 
@@ -187,12 +186,11 @@ describe("BadgeSection", () => {
     render(<BadgeSection />);
 
     const user = setupUserWithClipboard();
-    await user.click(screen.getByRole("button", { name: "大图" }));
     await user.click(screen.getByRole("button", { name: "复制链接" }));
 
     await waitFor(() => {
       expect(clipboardWrite).toHaveBeenCalledWith(
-        "http://localhost/v2/badge/abc.svg?size=lg&theme=auto",
+        "http://localhost/v2/badge/abc.svg?size=sm&theme=auto",
       );
     });
   });
