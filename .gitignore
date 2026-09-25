@@ -53,4 +53,7 @@ openspec
 .codex
 .pi/
 
+# local scratch dumps (browser profile copies etc.) — also ignored by jest
+tmp/
+
 docs/superpowers/
