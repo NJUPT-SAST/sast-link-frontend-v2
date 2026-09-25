@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { IdentityList } from "@/components/user/identity-list";
 import { BoundEmailSection } from "@/components/user/bound-email-section";
+import { BadgeSection } from "@/components/user/badge-section";
 
 export default function SettingsPage() {
   const profile = useUserProfileStore((state) => state.profile);
@@ -96,6 +97,11 @@ export default function SettingsPage() {
           <h3 className="type-tech mb-3 mt-8 text-tertiary">绑定邮箱</h3>
           <div className="border-t border-hairline">
             <BoundEmailSection />
+          </div>
+
+          <h3 className="type-tech mb-3 mt-8 text-tertiary">个人徽标</h3>
+          <div className="border-t border-hairline">
+            <BadgeSection />
           </div>
         </section>
 
