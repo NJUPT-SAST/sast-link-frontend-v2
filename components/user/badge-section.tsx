@@ -93,6 +93,9 @@ function OptionGroup<T extends string>({
                   : "hover:bg-accent",
                 (disabled || option.available === false) &&
                   "cursor-not-allowed opacity-60",
+                // A permanently reserved option wears a strikethrough: it is
+                // not merely disabled right now, it does not exist yet.
+                option.available === false && "line-through",
               )}
             >
               {option.label}
