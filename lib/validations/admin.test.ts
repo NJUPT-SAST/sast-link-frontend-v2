@@ -118,7 +118,7 @@ describe("adminUpdateUserSchema", () => {
     expect(result.success).toBe(false);
     if (!result.success) {
       const issue = result.error.issues.find((i) => i.path[0] === "name");
-      expect(issue?.message).toBe("输入值非法");
+      expect(issue?.message).toBe("姓名仅支持汉字");
     }
   });
 

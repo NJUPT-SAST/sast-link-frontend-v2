@@ -52,8 +52,8 @@ export const profileEditSchema = z.object({
   nickname: z
     .string()
     .trim()
-    .min(1, "别名不能为空")
-    .max(255, "别名最多 255 个字符"),
+    .min(1, "昵称不能为空")
+    .max(255, "昵称最多 255 个字符"),
   name: realNameSchema,
   intro: z.string().trim().max(255, "签名最多 255 个字符"),
   phoneNumber: z

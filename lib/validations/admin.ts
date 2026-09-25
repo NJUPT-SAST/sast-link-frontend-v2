@@ -71,9 +71,9 @@ export const adminUpdateUserSchema = z
       .regex(/^\d{5,20}$/, "请输入正确的 QQ 号")
       .optional(),
     college: z.enum(COLLEGES).optional(),
-    major: z.string().trim().min(1, "专业不可为空").max(50).optional(),
-    student_id: z.string().trim().min(1, "学号不可为空").max(50).optional(),
-    login_email: z.string().trim().email("请输入有效的邮箱").max(255).optional(),
+    major: z.string().trim().min(1, "专业不可为空").max(50, "专业最多 50 个字符").optional(),
+    student_id: z.string().trim().min(1, "学号不可为空").max(50, "学号最多 50 个字符").optional(),
+    login_email: z.string().trim().email("请输入有效的邮箱").max(255, "邮箱最多 255 个字符").optional(),
     role: userRoleSchema.optional(),
     state: userStateSchema.optional(),
     email_type: emailTypeSchema.optional(),
@@ -82,7 +82,7 @@ export const adminUpdateUserSchema = z
     personal_email: z
       .string()
       .trim()
-      .max(255, "邮箱最多 255 字符")
+      .max(255, "邮箱最多 255 个字符")
       .refine(
         (value) => value === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
         "请输入有效的个人邮箱",
@@ -118,14 +118,14 @@ export const adminCreateUserSchema = z
       .string()
       .trim()
       .min(1, "学号不可为空")
-      .max(50, "学号最多 50 字符"),
+      .max(50, "学号最多 50 个字符"),
     college: z.enum(COLLEGES),
-    major: z.string().trim().max(50, "专业最多 50 字符"),
+    major: z.string().trim().max(50, "专业最多 50 个字符"),
     login_email: z
       .string()
       .trim()
       .email("请输入有效的邮箱")
-      .max(255, "邮箱最多 255 字符")
+      .max(255, "邮箱最多 255 个字符")
       .regex(
         /^[^\s@]+@(njupt\.edu\.cn|sast\.fun)$/i,
         "仅支持 @njupt.edu.cn 或 @sast.fun 邮箱",
@@ -143,7 +143,7 @@ export const adminCreateUserSchema = z
     personal_email: z
       .string()
       .trim()
-      .max(255, "邮箱最多 255 字符")
+      .max(255, "邮箱最多 255 个字符")
       .refine(
         (value) => value === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
         "请输入有效的个人邮箱",

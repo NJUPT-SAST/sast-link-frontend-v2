@@ -21,5 +21,5 @@ export const realNameSchema = z
   .trim()
   .min(1, "姓名不能为空")
   .max(255, "姓名最多 255 个字符")
-  .regex(realNamePattern, "输入值非法")
+  .regex(realNamePattern, "姓名仅支持汉字")
   .transform((name) => name.replace(INTERPUNCT_VARIANTS, "·"));
