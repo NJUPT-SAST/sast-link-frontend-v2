@@ -1,5 +1,4 @@
 import { z } from "zod/v3";
-import type { RegisterOptions } from "react-hook-form";
 
 import { realNameSchema } from "@/lib/validations/name";
 import { majorSchema } from "@/lib/validations/major";
@@ -25,28 +24,6 @@ export interface ProfileFormValues {
   blogUrl: string;
   githubUrl: string;
 }
-
-/** Legacy rules — kept for backward compatibility with tests. */
-export const profileRules: Record<
-  "nickname" | "intro" | "blogUrl" | "githubUrl",
-  RegisterOptions<ProfileFormValues>
-> = {
-  nickname: {
-    required: "昵称不能为空",
-    maxLength: { value: 255, message: "昵称最多 255 个字符" },
-  },
-  intro: {
-    maxLength: { value: 255, message: "签名最多 255 个字符" },
-  },
-  blogUrl: {
-    maxLength: { value: 512, message: "链接最多 512 个字符" },
-    pattern: { value: urlPattern, message: "请输入有效的 URL" },
-  },
-  githubUrl: {
-    maxLength: { value: 512, message: "链接最多 512 个字符" },
-    pattern: { value: urlPattern, message: "请输入有效的 URL" },
-  },
-};
 
 export const profileEditSchema = z.object({
   nickname: z
