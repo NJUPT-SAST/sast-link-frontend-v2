@@ -32,7 +32,6 @@ function previewSvg(size: string, theme: string) {
   const muted = dark ? "#9aa0a6" : "#6b7280";
   const detail = mockUsers[0]?.profile?.profile;
   const nickname = detail?.nickname ?? "SAST 成员";
-  const department = detail?.department ?? "software";
   const intro = size === "sm" ? "" : detail?.intro ?? "";
   const nameSize = size === "lg" ? 24 : size === "md" ? 20 : 17;
   const nameY = size === "lg" ? 88 : size === "md" ? 52 : 34;
@@ -43,7 +42,6 @@ function previewSvg(size: string, theme: string) {
 <circle class="muted" cx="${size === "lg" ? 92 : size === "md" ? 60 : 36}" cy="${canvas.h / 2}" r="${size === "lg" ? 64 : size === "md" ? 44 : 28}"/>
 <text class="bg" x="${size === "lg" ? 92 : size === "md" ? 60 : 36}" y="${canvas.h / 2 + (size === "lg" ? 22 : 15)}" text-anchor="middle" font-size="${size === "lg" ? 64 : 44}" font-family="${FONT_STACK}" font-weight="600">${nickname.slice(0, 1)}</text>
 <text class="fg" x="${size === "lg" ? 180 : size === "md" ? 122 : 78}" y="${nameY}" font-size="${nameSize}" font-family="${FONT_STACK}" font-weight="600">${nickname}</text>
-<text class="muted" x="${size === "lg" ? 180 : size === "md" ? 122 : 78}" y="${nameY + 24}" font-size="${size === "lg" ? 14 : 12}" font-family="${FONT_STACK}">${department === "software" ? "软件研发部" : "多媒体部"}</text>
 ${intro ? `<text class="muted" x="${size === "lg" ? 180 : 122}" y="${nameY + 50}" font-size="${size === "lg" ? 14 : 12}" font-family="${FONT_STACK}">${intro}</text>` : ""}
 <text class="muted" x="${canvas.w - 14}" y="20" text-anchor="end" font-size="9" font-family="${FONT_STACK}" letter-spacing="1">SAST Link</text>
 </svg>`;
