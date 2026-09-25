@@ -121,7 +121,13 @@ export function BadgeSection() {
 
   const enabled = badge?.enabled ?? false;
   const url = enabled && badge?.key ? badgeUrl(badge.key, size, theme) : null;
-  const absoluteUrl = url ? new URL(url, window.location.origin).toString() : null;
+  // Guarded for SSR: the static export prerenders this component once on the
+  // server, where window does not exist. The guarded branch only matters
+  // after the client-side fetch resolves, so behaviour is unchanged.
+  const absoluteUrl =
+    url && typeof window !== "undefined"
+      ? new URL(url, window.location.origin).toString()
+      : null;
 
   // The preview and the rendered SVG both link to the member's own page:
   // blog first, GitHub as the fallback, no link when neither exists.

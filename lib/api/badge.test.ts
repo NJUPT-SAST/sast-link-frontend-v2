@@ -29,10 +29,10 @@ describe("lib/api/badge", () => {
     expect(url).toContain("theme=dark");
   });
 
-  it("defaults to md/auto and keeps the svg suffix", () => {
+  it("defaults to the shipped sm size and auto theme", () => {
     const url = badgeUrl("abc");
     expect(url).toContain("/badge/abc.svg");
-    expect(url).toContain("size=md");
+    expect(url).toContain("size=sm");
     expect(url).toContain("theme=auto");
   });
 });

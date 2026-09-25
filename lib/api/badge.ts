@@ -33,7 +33,8 @@ export function disableBadge() {
 
 /** Builds the public embed URL for one badge key. The URL itself is the
  * credential — it is meant to be pasted into GitHub READMEs and friend-link
- * walls, so no secret ever rides beside it. */
-export function badgeUrl(key: string, size: BadgeSize = "md", theme: BadgeTheme = "auto") {
+ * walls, so no secret ever rides beside it. Defaults to the one shipped
+ * canvas size. */
+export function badgeUrl(key: string, size: BadgeSize = "sm", theme: BadgeTheme = "auto") {
   return `${API_BASE_URL}/badge/${key}.svg?size=${size}&theme=${theme}`;
 }
