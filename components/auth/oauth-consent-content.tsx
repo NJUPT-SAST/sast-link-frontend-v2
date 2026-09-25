@@ -111,7 +111,7 @@ export function OAuthConsentContent() {
     return (
       <EmptyState
         title="授权请求无效"
-        hint="授权请求无效或已过期，请返回原应用重新发起登录。"
+        hint="该请求已过期，请返回原应用重新发起登录。"
       />
     );
   }

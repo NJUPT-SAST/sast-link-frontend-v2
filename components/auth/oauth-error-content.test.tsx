@@ -27,13 +27,14 @@ describe("OAuthErrorContent", () => {
     );
   });
 
-  it("falls back to the generic line when only the code arrives, and keeps it", () => {
+  it("renders only the advice line when only the code arrives", () => {
     setup("error=40302");
     render(<OAuthErrorContent />);
 
     // The backend owns the copy; a code-only link (hand-edited or truncated)
-    // gets the generic reason plus the terminal advice for this code.
-    expect(screen.getByText(/第三方登录未能完成/)).toBeInTheDocument();
+    // gets just the terminal advice for this code — the h1 already says the
+    // login failed, so repeating it would be noise.
+    expect(screen.queryByText(/第三方登录未能完成/)).not.toBeInTheDocument();
     expect(screen.getByText(/请联系管理员/)).toBeInTheDocument();
     expect(screen.getByTestId("oauth-error-code")).toHaveTextContent("错误码 40302");
   });
@@ -53,7 +54,7 @@ describe("OAuthErrorContent", () => {
     setup("");
     render(<OAuthErrorContent />);
 
-    expect(screen.getByText(/第三方登录未能完成/)).toBeInTheDocument();
+    expect(screen.queryByText(/第三方登录未能完成/)).not.toBeInTheDocument();
     expect(screen.getByText(/请稍后重试或换用其他登录方式/)).toBeInTheDocument();
     expect(screen.queryByTestId("oauth-error-code")).not.toBeInTheDocument();
   });

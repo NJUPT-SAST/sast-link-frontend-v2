@@ -97,12 +97,9 @@ export function AuthorizedApps() {
       )}
 
       <Dialog open={detail !== null} onOpenChange={(open) => { if (!open) setDetail(null); }}>
-        <DialogContent className="border-border/60 bg-card/95 sm:max-w-md">
+        <DialogContent aria-describedby={undefined} className="border-border/60 bg-card/95 sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="type-title3">{detail?.client_name}</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              已授权应用信息
-            </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3 py-2">
             <Field
