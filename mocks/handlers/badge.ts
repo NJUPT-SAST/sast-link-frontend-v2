@@ -81,19 +81,31 @@ export const badgeHandlers = [
 
   http.get(`${API_BASE_URL}/badge/:key`, ({ params, request }) => {
     const key = String(params.key).replace(/\.svg$/, "");
+    const url = new URL(request.url);
+    const theme = url.searchParams.get("theme") ?? "auto";
     if (!badgeState.enabled || key !== badgeState.key) {
+      // Closed card mirrors the backend: compact canvas, class-based palette
+      // (theme-aware), contrast border, muted circle with a bg-colored ✕.
+      const dark = theme === "dark";
+      const bg = dark ? "#16181d" : "#ffffff";
+      const muted = dark ? "#9aa0a6" : "#6b7280";
+      const border = dark ? "#e8eaed" : "#1c1f23";
       return new HttpResponse(
         `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="460" height="120" viewBox="0 0 460 120" role="img" aria-label="徽标不存在">
-<rect width="460" height="120" rx="10" fill="#ffffff"/>
-<text x="110" y="66" font-size="16" font-family="${FONT_STACK}" fill="#6b7280">徽标不存在或已关闭</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="72" viewBox="0 0 320 72" role="img" aria-label="徽标不存在或已关闭">
+<style>.bg{fill:${bg}}.muted{fill:${muted}}.border{stroke:${border}}.mark{stroke:${bg}}${theme === "auto" ? `@media (prefers-color-scheme: dark){.bg{fill:#16181d}.muted{fill:#9aa0a6}.border{stroke:#e8eaed}.mark{stroke:#16181d}}` : ""}</style>
+<rect class="bg" width="320" height="72" rx="10"/>
+<rect x="0.5" y="0.5" width="319" height="71" rx="10" fill="none" class="border" stroke-width="1"/>
+<circle cx="36" cy="36" r="28" class="muted"/>
+<path d="M 26 26 L 46 46 M 46 26 L 26 46" class="mark" stroke-width="3" stroke-linecap="round"/>
+<text x="78" y="41" class="muted" font-size="14" font-family="${FONT_STACK}">徽标不存在或已关闭</text>
+<text x="312" y="16" text-anchor="end" class="muted" font-size="9" font-family="${FONT_STACK}" letter-spacing="1">SAST Link</text>
 </svg>`,
         { status: 404, headers: { "Content-Type": "image/svg+xml; charset=utf-8" } },
       );
     }
-    const url = new URL(request.url);
     return new HttpResponse(
-      previewSvg(url.searchParams.get("size") ?? "sm", url.searchParams.get("theme") ?? "auto"),
+      previewSvg(url.searchParams.get("size") ?? "sm", theme),
       { status: 200, headers: { "Content-Type": "image/svg+xml; charset=utf-8" } },
     );
   }),
