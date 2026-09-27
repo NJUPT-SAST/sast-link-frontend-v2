@@ -116,3 +116,53 @@ describe("mock badge contract", () => {
     await expect(response.text()).resolves.toContain("徽标不存在或已关闭");
   });
 });
+
+describe("mock badge renderer parity", () => {
+  it("carries the contrast border palette for every theme", async () => {
+    const enable = await fetch(`${API_BASE_URL}/user/badge`, {
+      method: "POST",
+      headers: auth,
+    });
+    await enable.json();
+
+    const render = async (theme: string) => {
+      const response = await fetch(`${API_BASE_URL}/badge/${badgeState.key}.svg?theme=${theme}`);
+      return response.text();
+    };
+
+    // Light card: dark line. Dark card: light line.
+    const light = await render("light");
+    expect(light).toContain(".border{stroke:#1c1f23}");
+    const dark = await render("dark");
+    expect(dark).toContain(".border{stroke:#e8eaed}");
+
+    // Auto carries both palettes behind the media query — a missing or
+    // reversed override would silently diverge from production.
+    const auto = await render("auto");
+    expect(auto).toContain(".border{stroke:#1c1f23}");
+    expect(auto).toContain("@media (prefers-color-scheme: dark)");
+    expect(auto).toContain(".border{stroke:#e8eaed}}");
+
+    // The closed card carries the same palette scheme per theme.
+    await fetch(`${API_BASE_URL}/user/badge`, { method: "DELETE", headers: auth });
+    const closedDark = await render("dark");
+    expect(closedDark).toContain(".border{stroke:#e8eaed}");
+    expect(closedDark).toContain("徽标不存在或已关闭");
+  });
+
+  it("normalizes unknown theme values to auto like the backend", async () => {
+    const enable = await fetch(`${API_BASE_URL}/user/badge`, {
+      method: "POST",
+      headers: auth,
+    });
+    await enable.json();
+
+    for (const bogus of ["", "neon", "AUTO"]) {
+      const response = await fetch(`${API_BASE_URL}/badge/${badgeState.key}.svg?theme=${encodeURIComponent(bogus)}`);
+      const svg = await response.text();
+      // The auto card embeds the media query; a pass-through mock would
+      // render a fixed light card without it for these values.
+      expect(svg).toContain("@media (prefers-color-scheme: dark)");
+    }
+  });
+});

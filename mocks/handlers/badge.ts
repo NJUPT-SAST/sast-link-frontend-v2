@@ -82,7 +82,11 @@ export const badgeHandlers = [
   http.get(`${API_BASE_URL}/badge/:key`, ({ params, request }) => {
     const key = String(params.key).replace(/\.svg$/, "");
     const url = new URL(request.url);
-    const theme = url.searchParams.get("theme") ?? "auto";
+    // The backend normalizes unknown/empty theme values to auto; the mock
+    // must do the same or a hand-edited ?theme=neon diverges from production
+    // (fixed light card here, auto card there).
+    const rawTheme = url.searchParams.get("theme");
+    const theme = rawTheme === "light" || rawTheme === "dark" ? rawTheme : "auto";
     if (!badgeState.enabled || key !== badgeState.key) {
       // Closed card mirrors the backend: compact canvas, class-based palette
       // (theme-aware), contrast border, muted circle with a bg-colored ✕.
