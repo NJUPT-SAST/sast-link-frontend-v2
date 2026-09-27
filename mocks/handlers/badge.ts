@@ -31,13 +31,18 @@ function previewSvg(size: string, theme: string) {
   const bg = dark ? "#16181d" : "#ffffff";
   const fg = dark ? "#e8eaed" : "#1c1f23";
   const muted = dark ? "#9aa0a6" : "#6b7280";
+  // Contrast border, mirroring the backend renderer: the light card carries
+  // a dark frame and the dark card a light one, class-based so the auto
+  // theme's media query flips it with everything else.
+  const border = dark ? "#e8eaed" : "#1c1f23";
   const detail = mockUsers[0]?.profile?.profile;
   const nickname = detail?.nickname ?? "SAST 成员";
   const intro = detail?.intro ?? "";
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${canvas.w}" height="${canvas.h}" viewBox="0 0 ${canvas.w} ${canvas.h}" role="img" aria-label="${nickname} 的 SAST Link 徽标（预览）">
-<style>.bg{fill:${bg}}.fg{fill:${fg}}.muted{fill:${muted}}${theme === "auto" ? `@media (prefers-color-scheme: dark){.bg{fill:#16181d}.fg{fill:#e8eaed}.muted{fill:#9aa0a6}}` : ""}</style>
+<style>.bg{fill:${bg}}.fg{fill:${fg}}.muted{fill:${muted}}.border{stroke:${border}}${theme === "auto" ? `@media (prefers-color-scheme: dark){.bg{fill:#16181d}.fg{fill:#e8eaed}.muted{fill:#9aa0a6}.border{stroke:#e8eaed}}` : ""}</style>
 <rect class="bg" width="${canvas.w}" height="${canvas.h}" rx="10"/>
+<rect x="0.5" y="0.5" width="${canvas.w - 1}" height="${canvas.h - 1}" rx="10" fill="none" class="border" stroke-width="1"/>
 <circle class="muted" cx="36" cy="${canvas.h / 2}" r="28"/>
 <text class="bg" x="36" y="${canvas.h / 2 + 10}" text-anchor="middle" font-size="28" font-family="${FONT_STACK}" font-weight="600">${nickname.slice(0, 1)}</text>
 <text class="fg" x="78" y="33" font-size="17" font-family="${FONT_STACK}" font-weight="600">${nickname}</text>
