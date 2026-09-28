@@ -31,7 +31,7 @@ export type Department =
   | "publicity"
   | "outreach";
 type LoginMethod = "github" | "lark" | "other_mail";
-export type UserRole = "freshman" | "member" | "lecturer" | "admin";
+export type UserRole = "freshman" | "member" | "manager" | "lecturer" | "admin";
 export type UserState = "njupter" | "on_sast" | "retired_sast" | "is_deleted";
 type EmailType = "njupt_email" | "sast_email";
 

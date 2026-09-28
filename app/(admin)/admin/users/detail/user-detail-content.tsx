@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { canManageUsers } from "@/components/admin/permissions";
+import { canManageUsers, canWriteTargetUser } from "@/components/admin/permissions";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { UserDetailCard } from "@/components/admin/user-detail-card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,7 +26,8 @@ export function AdminUserDetailContent() {
   const listHref = adminUsersListHref(listQuery);
   const { data: user, isLoading, error } = useAdminUser(id);
   const { deleteUser, restoreUser, isLoading: mutationLoading } = useAdminMutations();
-  const canManage = canManageUsers(useUserProfileStore((state) => state.profile.role));
+  const viewerRole = useUserProfileStore((state) => state.profile.role);
+  const canManage = canManageUsers(viewerRole);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleDelete = async () => {
@@ -82,7 +83,7 @@ export function AdminUserDetailContent() {
             </p>
           </div>
         </div>
-        {canManage && (
+        {canManage && canWriteTargetUser(viewerRole, user.role) && (
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Button variant="outline" asChild><Link href={adminUserEditHref(user.id, listQuery)}>编辑</Link></Button>
             <Button

@@ -40,9 +40,17 @@ const FIELD_ORDER = [
 const ROLE_OPTIONS = [
   { value: "freshman", label: "新生" },
   { value: "member", label: "成员" },
+  { value: "manager", label: "部长" },
   { value: "lecturer", label: "讲师" },
   { value: "admin", label: "管理员" },
 ];
+
+// A manager may not grant the admin role — the backend answers 403 — so the
+// option is withheld rather than offered and refused.
+const roleOptionsFor = (viewerRole: string) =>
+  viewerRole === "admin"
+    ? ROLE_OPTIONS
+    : ROLE_OPTIONS.filter((opt) => opt.value !== "admin");
 
 const STATE_OPTIONS = [
   { value: "njupter", label: "在校学生" },
@@ -88,6 +96,9 @@ interface UserEditFormProps {
   user: UserProfileData;
   onSubmit: (data: AdminUpdateUserRequest) => Promise<void>;
   loading?: boolean;
+  /** Role of the viewer; a manager's select hides the admin option (it would
+   *  only be refused). Defaults to admin — pre-manager behaviour. */
+  viewerRole?: string;
   /** Where 取消 goes when there is no history (direct visit / refresh). Carries
    *  the list's filters so cancelling returns to the page the admin came from. */
   cancelFallback?: string;
@@ -97,6 +108,7 @@ export function UserEditForm({
   user,
   onSubmit,
   loading = false,
+  viewerRole = "admin",
   cancelFallback = "/admin/users",
 }: UserEditFormProps) {
   const router = useRouter();
@@ -242,7 +254,7 @@ export function UserEditForm({
                     角色
                   </label>
                   <Select id="role" {...field} className={selectClass}>
-                    {ROLE_OPTIONS.map((opt) => (
+                    {roleOptionsFor(viewerRole).map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </Select>

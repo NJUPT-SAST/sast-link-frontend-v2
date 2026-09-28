@@ -259,6 +259,7 @@ function AdminUsersContent() {
             users={data.users}
             loading={mutationLoading}
             canManage={canManage}
+            viewerRole={role}
             listQuery={listQuery}
             onRestore={handleRestore}
             selectedIds={selectedIds}
@@ -298,12 +299,14 @@ function AdminUsersContent() {
         onOpenChange={setBatchOpen}
         count={selectedIds.size}
         loading={batchLoading}
+        viewerRole={role}
         onConfirm={handleBatchConfirm}
       />
 
       <UserCreateDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
+        viewerRole={role}
         onCreate={handleCreate}
       />
     </div>
