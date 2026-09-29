@@ -8,6 +8,7 @@ import type {
 } from "@/lib/api/types";
 import { alumniMockRequests } from "../data/alumni";
 import { findUserByAccessToken } from "../data/users";
+import { njuptLocalAllowed } from "./email-rule";
 
 function ok<T>(data: T, status = 200) {
   return HttpResponse.json({ code: 0, message: "ok", data }, { status });
@@ -65,6 +66,11 @@ export const alumniHandlers = [
     // tokenless submission is refused the same way.
     if (!body.captcha_token) {
       return fail(400, 40021, "人机校验未通过");
+    }
+    // The login_email prefix rule (backend PR #101) applies to alumni filings
+    // too — same code, same position in the validation chain as the backend.
+    if (!njuptLocalAllowed(body.login_email)) {
+      return fail(400, 40022, "邮箱前缀格式错误");
     }
     if (
       alumniMockRequests.some(

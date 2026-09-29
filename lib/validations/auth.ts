@@ -6,6 +6,11 @@ import { COLLEGES } from "@/lib/api/types";
 
 const studentIdPattern = /^[A-Za-z]\d{8}$/;
 const emailPattern = /^[^\s@]+@(njupt\.edu\.cn|sast\.fun)$/i;
+/** NJUPT student-mailbox prefix: one letter + eight digits, or bare eight
+ *  digits. Mirrors backend PR #101 (`validate.IsNjuptEmailLocalAllowed`);
+ *  @sast.fun prefixes stay free-form, and the backend judges the address
+ *  lowercased, so both cases pass here. */
+export const njuptEmailLocalPattern = /^(?:[A-Za-z]\d{8}|\d{8})$/;
 const verificationCodePattern = /^\d{6}$/;
 const passwordPattern = /^.{8,}$/;
 
@@ -36,7 +41,7 @@ const registerAccountFormSchema = z.object({
       localPart: z.string().trim(),
       domain: z.enum(["@njupt.edu.cn", "@sast.fun"]),
     })
-    .superRefine(({ localPart }, ctx) => {
+    .superRefine(({ localPart, domain }, ctx) => {
       if (localPart.length === 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.too_small,
@@ -52,6 +57,17 @@ const registerAccountFormSchema = z.object({
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "邮箱前缀不能包含 @",
+          path: ["localPart"],
+        });
+        return;
+      }
+      // The student mailbox prefix is the student ID (backend PR #101): every
+      // login_email write path refuses other shapes with 40022, so rejecting
+      // here keeps the request from ever leaving.
+      if (domain === "@njupt.edu.cn" && !njuptEmailLocalPattern.test(localPart)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "@njupt.edu.cn 前缀须为学号样式：1 位字母 + 8 位数字或纯 8 位数字",
           path: ["localPart"],
         });
       }

@@ -39,7 +39,7 @@ describe("RegisterEmailForm", () => {
 
   it("sends the code when Enter is pressed in the email field before sending", async () => {
     render(<RegisterEmailForm onVerified={jest.fn()} />);
-    await userEvent.type(screen.getByLabelText("邮箱"), "carol{enter}");
+    await userEvent.type(screen.getByLabelText("邮箱"), "b23000001{enter}");
     // Sending starts the resend countdown, replacing the "获取验证码" button.
     expect(await screen.findByText("60s 后重新发送")).toBeInTheDocument();
   });
@@ -55,11 +55,11 @@ describe("RegisterEmailForm", () => {
 
   it("splits a typed full whitelisted address instead of failing on the @", async () => {
     render(<RegisterEmailForm onVerified={jest.fn()} />);
-    await userEvent.type(screen.getByLabelText("邮箱"), "xx@njupt.edu.cn");
+    await userEvent.type(screen.getByLabelText("邮箱"), "b23000002@njupt.edu.cn");
 
-    expect(screen.getByLabelText("邮箱")).toHaveValue("xx");
+    expect(screen.getByLabelText("邮箱")).toHaveValue("b23000002");
     await userEvent.click(screen.getByRole("button", { name: "获取验证码" }));
-    expect(mockSendCode).toHaveBeenCalledWith("xx@njupt.edu.cn");
+    expect(mockSendCode).toHaveBeenCalledWith("b23000002@njupt.edu.cn");
   });
 
   // RHF's trigger() drops object-field errors without a top-level message, so
@@ -109,6 +109,30 @@ describe("RegisterEmailForm", () => {
     expect(
       await screen.findByText("将发送验证码到 b23000000@njupt.edu.cn"),
     ).toBeInTheDocument();
+  });
+
+  // The NJUPT mailbox prefix is the student ID (backend PR #101); rejecting
+  // client-side keeps the request from ever leaving.
+  it("rejects a non-student-id njupt prefix before sending", async () => {
+    render(<RegisterEmailForm onVerified={jest.fn()} />);
+    await userEvent.type(screen.getByLabelText("邮箱"), "my-nickname");
+    await userEvent.click(screen.getByRole("button", { name: "获取验证码" }));
+
+    expect(mockSendCode).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText(
+        "@njupt.edu.cn 前缀须为学号样式：1 位字母 + 8 位数字或纯 8 位数字",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the sast.fun prefix free-form", async () => {
+    render(<RegisterEmailForm onVerified={jest.fn()} />);
+    // Typing the full address also flips the capsule to @sast.fun.
+    await userEvent.type(screen.getByLabelText("邮箱"), "any-nick@sast.fun");
+    await userEvent.click(screen.getByRole("button", { name: "获取验证码" }));
+
+    expect(mockSendCode).toHaveBeenCalledWith("any-nick@sast.fun");
   });
 });
 

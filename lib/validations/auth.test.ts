@@ -3,6 +3,7 @@ import {
   loginAccountSchema,
   passwordSchema,
   registerDetailsSchema,
+  registerVerifyFormSchema,
   resetEmailSchema,
   verificationCodeSchema,
 } from "./auth";
@@ -38,6 +39,43 @@ describe("auth validation schemas", () => {
       if (!result.success) {
         expect(result.error.issues[0]?.message).toBe("请输入完整的邮箱地址");
       }
+    });
+  });
+
+  describe("registerVerifyFormSchema", () => {
+    const valid = (localPart: string, domain = "@njupt.edu.cn") => ({
+      account: { localPart, domain },
+      code: "123456",
+    });
+    const prefixError = (localPart: string) =>
+      registerVerifyFormSchema.safeParse(valid(localPart)).error?.issues.some(
+        (issue) => issue.path.join(".") === "account.localPart",
+      );
+
+    // The NJUPT mailbox prefix is the student ID (backend PR #101: one letter +
+    // eight digits, or bare eight digits; @sast.fun stays free-form).
+    it("accepts both student-id prefix shapes on the njupt domain", () => {
+      expect(registerVerifyFormSchema.safeParse(valid("b24040525")).success).toBe(true);
+      expect(registerVerifyFormSchema.safeParse(valid("24040525")).success).toBe(true);
+      // The backend judges the address lowercased, so mixed case passes.
+      expect(registerVerifyFormSchema.safeParse(valid("B24040525")).success).toBe(true);
+    });
+
+    it("keeps the sast.fun prefix free-form", () => {
+      expect(
+        registerVerifyFormSchema.safeParse(valid("any-nick", "@sast.fun")).success,
+      ).toBe(true);
+    });
+
+    it.each([
+      "xyz123",
+      "2404052",
+      "240405256",
+      "b2404052",
+      "b240405256",
+      "b24040525+x",
+    ])("rejects non-student-id prefix %s on the njupt domain", (localPart) => {
+      expect(prefixError(localPart)).toBe(true);
     });
   });
 

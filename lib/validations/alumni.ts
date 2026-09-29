@@ -1,6 +1,7 @@
 import { z } from "zod/v3";
 
 import { COLLEGES } from "@/lib/api/types";
+import { njuptEmailLocalPattern } from "@/lib/validations/auth";
 import { realNameSchema } from "@/lib/validations/name";
 
 /** Alumni provisioning request.
@@ -34,7 +35,14 @@ export const alumniRequestSchema = z
       // one tied to their student identity. An @sast.fun address is issued by the
       // association, so anyone who has one can still be reached and does not need
       // this fallback. Relaxing this is a product decision, not a bug fix.
-      .regex(/^[^\s@]+@njupt\.edu\.cn$/i, "仅支持 @njupt.edu.cn 学号邮箱"),
+      .regex(/^[^\s@]+@njupt\.edu\.cn$/i, "仅支持 @njupt.edu.cn 学号邮箱")
+      // The school-mailbox prefix is the student ID (backend PR #101 returns
+      // 40022 for any other shape on every login_email write path), so a
+      // filing that passes here cannot be rejected later for the same reason.
+      .refine(
+        (value) => njuptEmailLocalPattern.test(value.split("@")[0]),
+        "@njupt.edu.cn 前缀须为学号样式：1 位字母 + 8 位数字或纯 8 位数字",
+      ),
     personal_email: z
       .string()
       .trim()
