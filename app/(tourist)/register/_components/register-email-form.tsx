@@ -42,14 +42,24 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
   const sendingRef = useRef(false);
 
   // Prefill the domain capsule from the carried email (e.g. back from the
-  // details step with an @sast.fun account should keep showing @sast.fun).
-  const defaultSuffix = defaultEmail.split("@")[1];
-  const initialDomain = defaultSuffix === "sast.fun" ? "@sast.fun" : "@njupt.edu.cn";
+  // details step with an @sast.fun account should keep showing @sast.fun). A
+  // foreign address (e.g. an OAuth other_mail via ?email=) is not registrable —
+  // prefilling it would only mount an @-in-prefix error state, so it starts blank.
+  const defaultAccount: RegisterVerifyFormValues["account"] = (() => {
+    const trimmed = defaultEmail.trim().toLowerCase();
+    const at = trimmed.lastIndexOf("@");
+    const suffix = at > 0 ? trimmed.slice(at) : "";
+    if (suffix === "@sast.fun" || suffix === "@njupt.edu.cn") {
+      return { localPart: trimmed.slice(0, at), domain: suffix };
+    }
+    if (!suffix) return { localPart: trimmed, domain: "@njupt.edu.cn" };
+    return { localPart: "", domain: "@njupt.edu.cn" };
+  })();
 
   const form = useForm<RegisterVerifyFormValues>({
     resolver: zodResolver(registerVerifyFormSchema),
     defaultValues: {
-      account: { localPart: defaultEmail.split("@")[0] ?? "", domain: initialDomain },
+      account: defaultAccount,
       code: "",
     },
   });
@@ -86,8 +96,19 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
 
   const handleSendCode = async () => {
     if (sendingRef.current) return;
-    const accountValid = await form.trigger("account");
-    if (!accountValid) return;
+    // Validate the account manually and setError at the nested path: RHF's
+    // trigger() silently drops object-field errors that carry no top-level
+    // message (a Controller-registered "account" owns only `_f` in the field
+    // registry), so trigger("account") would fail the send with nothing shown.
+    const account = form.getValues("account");
+    const parsed = registerVerifyFormSchema.shape.account.safeParse(account);
+    if (!parsed.success) {
+      form.setError("account.localPart", {
+        message: parsed.error.issues[0]?.message ?? "账户不可为空",
+      });
+      return;
+    }
+    form.clearErrors("account");
 
     sendingRef.current = true;
     setSending(true);
@@ -140,13 +161,18 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
                     onChange={field.onChange}
                     label="邮箱"
                     error={errorMessage}
+                    autoComplete="email"
                     // Registration only accepts njupt/sast prefixes, so a typed
-                    // `@` must stay visible in the prefix (surfaced as a localPart
-                    // error) instead of silently flipping the field to the
-                    // other-email mode, where the domain enum error is invisible
-                    // and the send-code button no-ops.
+                    // `@` never flips the field to the other-email mode (whose
+                    // domain enum error is invisible here): whitelisted full
+                    // addresses are split by the field itself, foreign ones stay
+                    // in the prefix and fail visibly via the localPart error.
                     disableAtDetection
                     allowedDomains={["@njupt.edu.cn", "@sast.fun"]}
+                    context="register"
+                    // The code is already in flight to this exact address —
+                    // editing it would desync the code from its mailbox.
+                    disabled={sent}
                     onEnter={() => {
                       if (!sent) void handleSendCode();
                     }}
