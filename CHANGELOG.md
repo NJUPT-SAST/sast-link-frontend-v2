@@ -6,6 +6,10 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
+### Fixed
+
+- Dependency security sweep: `next` 16.3.4→16.3.6 (carries the GHSA-vcvr-r3jv-pc5j fix for RCE in next/og ImageResponse), and the pnpm overrides bumped `fast-uri` to 3.1.6 (four SSRF/host-confusion advisories reaching ajv-formats) and `js-yaml` to 3.15.2 (CPU exhaustion via jest's istanbul toolchain) — clears all five remaining high-severity Dependabot alerts
+
 ### Added
 
 - Next.js App Router implementation for SAST Link tourist and authenticated flows
@@ -24,6 +28,7 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Changed
 
+- Routine dependency bumps: `lucide-react` 1.48.0 (new icons), `eslint-config-next` 16.3.6, `jest` / `jest-environment-jsdom` 30.5.2
 - Registration email step: typing or pasting a full whitelisted address (`xx@njupt.edu.cn` / `xx@sast.fun`) now splits into prefix + domain capsule instead of failing on the `@` rule; foreign domains stay in the prefix and fail with a visible error (previously the send-code button no-opped silently — react-hook-form's `trigger()` drops nested object-field errors, so the validation failure never rendered)
 - Registration locks the email address and domain capsule once the verification code is sent (changing the target afterwards desynced the code from its mailbox)
 - A foreign `?email=` prefill (e.g. an OAuth `other_mail`) starts the registration form blank instead of mounting an `@`-in-prefix error state
