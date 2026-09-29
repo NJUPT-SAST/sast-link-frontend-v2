@@ -52,6 +52,64 @@ describe("RegisterEmailForm", () => {
     expect(mockSendCode).toHaveBeenCalledTimes(1);
     expect(mockSendCode).toHaveBeenCalledWith("b23000000@njupt.edu.cn");
   });
+
+  it("splits a typed full whitelisted address instead of failing on the @", async () => {
+    render(<RegisterEmailForm onVerified={jest.fn()} />);
+    await userEvent.type(screen.getByLabelText("邮箱"), "xx@njupt.edu.cn");
+
+    expect(screen.getByLabelText("邮箱")).toHaveValue("xx");
+    await userEvent.click(screen.getByRole("button", { name: "获取验证码" }));
+    expect(mockSendCode).toHaveBeenCalledWith("xx@njupt.edu.cn");
+  });
+
+  // RHF's trigger() drops object-field errors without a top-level message, so
+  // an invalid account used to fail the send with no feedback at all.
+  it("surfaces the localPart error when a foreign full address is submitted", async () => {
+    render(<RegisterEmailForm onVerified={jest.fn()} />);
+    await userEvent.type(screen.getByLabelText("邮箱"), "xx@gmail.com");
+    await userEvent.click(screen.getByRole("button", { name: "获取验证码" }));
+
+    expect(mockSendCode).not.toHaveBeenCalled();
+    expect(await screen.findByText("邮箱前缀不能包含 @")).toBeInTheDocument();
+  });
+
+  it("clears a stale account error once the address is fixed and sent", async () => {
+    render(<RegisterEmailForm onVerified={jest.fn()} />);
+    await userEvent.type(screen.getByLabelText("邮箱"), "xx@gmail.com");
+    await userEvent.click(screen.getByRole("button", { name: "获取验证码" }));
+    expect(await screen.findByText("邮箱前缀不能包含 @")).toBeInTheDocument();
+
+    await userEvent.clear(screen.getByLabelText("邮箱"));
+    await userEvent.type(screen.getByLabelText("邮箱"), "b23000000");
+    await userEvent.click(screen.getByRole("button", { name: "获取验证码" }));
+
+    expect(mockSendCode).toHaveBeenCalledWith("b23000000@njupt.edu.cn");
+    expect(await screen.findByText("60s 后重新发送")).toBeInTheDocument();
+    expect(screen.queryByText("邮箱前缀不能包含 @")).not.toBeInTheDocument();
+  });
+
+  it("locks the address once the code is on its way", async () => {
+    render(<RegisterEmailForm onVerified={jest.fn()} />);
+    await userEvent.type(screen.getByLabelText("邮箱"), "b23000000");
+    await userEvent.click(screen.getByRole("button", { name: "获取验证码" }));
+    expect(await screen.findByText("60s 后重新发送")).toBeInTheDocument();
+
+    expect(screen.getByLabelText("邮箱")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "选择邮箱域名" })).toBeDisabled();
+  });
+
+  it("ignores a foreign default email instead of prefilling an error state", () => {
+    render(<RegisterEmailForm defaultEmail="foo@gmail.com" onVerified={jest.fn()} />);
+    expect(screen.getByLabelText("邮箱")).toHaveValue("");
+  });
+
+  it("previews where the code goes instead of the login copy", async () => {
+    render(<RegisterEmailForm onVerified={jest.fn()} />);
+    await userEvent.type(screen.getByLabelText("邮箱"), "b23000000");
+    expect(
+      await screen.findByText("将发送验证码到 b23000000@njupt.edu.cn"),
+    ).toBeInTheDocument();
+  });
 });
 
 // The alumni fallback is only reachable when a Turnstile challenge can actually

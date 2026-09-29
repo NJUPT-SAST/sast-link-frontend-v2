@@ -24,6 +24,11 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Changed
 
+- Registration email step: typing or pasting a full whitelisted address (`xx@njupt.edu.cn` / `xx@sast.fun`) now splits into prefix + domain capsule instead of failing on the `@` rule; foreign domains stay in the prefix and fail with a visible error (previously the send-code button no-opped silently — react-hook-form's `trigger()` drops nested object-field errors, so the validation failure never rendered)
+- Registration locks the email address and domain capsule once the verification code is sent (changing the target afterwards desynced the code from its mailbox)
+- A foreign `?email=` prefill (e.g. an OAuth `other_mail`) starts the registration form blank instead of mounting an `@`-in-prefix error state
+- Registration email field hints now preview the exact normalized send target (「将发送验证码到 …」) instead of the login copy (「将使用 … 继续」), and use `autoComplete="email"`
+- Login account field: visible label is programmatically associated with the input (click-to-focus), and the input disables iOS autocapitalize/autocorrect/spellcheck
 - Profile completion and edit forms refuse control-character majors before submitting (shared `majorSchema`; the backend V015 rule reports such values as incomplete, and a value slipping through would come back as a 400 whose cause is invisible in the input)
 - The admin console's user create/update forms now validate `name` with `realNameSchema` (Han + interpunct only), matching the user-facing registration/completion forms and the backend V016 rule that refuses out-of-set names on every write path — an admin can no longer provision an account that is flagged incomplete the moment it exists
 - Profile signature editing uses a single-line input; line breaks are stripped before submit (the backend rejects control characters, which surfaced as a generic 参数错误 when a mobile keyboard or pasted text introduced a newline)

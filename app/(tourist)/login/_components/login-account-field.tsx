@@ -16,7 +16,7 @@ type Domain = (typeof DOMAINS)[number];
 
 const OTHER_EMAIL = "其他邮箱";
 
-interface LoginAccountFieldProps {
+export interface LoginAccountFieldProps {
   value: { localPart: string; domain: Domain };
   onChange: (value: { localPart: string; domain: Domain }) => void;
   label?: string;
@@ -26,11 +26,15 @@ interface LoginAccountFieldProps {
   disableAtDetection?: boolean;
   /** Restrict the available domains. Defaults to all domains. */
   allowedDomains?: readonly Domain[];
-  /** Copy context for the resolved-email hint. Defaults to login ("继续"). */
-  context?: "login" | "reset";
+  /** Copy context for the resolved-email hint. "login" previews the next step
+   *  (继续); "reset"/"register" preview where the code is sent. */
+  context?: "login" | "reset" | "register";
   /** Fired when Enter is pressed inside the address input (e.g. to send a code
    *  when the form's submit button is disabled). */
   onEnter?: () => void;
+  /** Lock the address and its domain capsule (e.g. after a code was sent,
+   *  changing the target would desync it from the delivered code). */
+  disabled?: boolean;
 }
 
 export function LoginAccountField({
@@ -43,9 +47,12 @@ export function LoginAccountField({
   allowedDomains = DOMAINS,
   context = "login",
   onEnter,
+  disabled = false,
 }: LoginAccountFieldProps) {
   const [focused, setFocused] = useState(false);
-  // id linking the input to its error / hint copy for screen readers.
+  // id linking the input to its visible label; a second id links the input to
+  // its error / hint copy for screen readers.
+  const inputId = useId();
   const describedBy = useId();
   const domainOptions = useMemo(
     () => DOMAINS.filter((d) => allowedDomains.includes(d)),
@@ -60,6 +67,23 @@ export function LoginAccountField({
 
   const handleChange = (raw: string) => {
     if (disableAtDetection) {
+      // Registration accepts only whitelisted domains, so a typed/pasted full
+      // address "xx@njupt.edu.cn" resolves to the matching capsule instead of
+      // dying on the "prefix cannot contain @" rule. Foreign domains stay in
+      // the prefix so the localPart error stays visible — and below 300px,
+      // where the capsule is hidden, this split is the only way to switch
+      // domains at all.
+      const at = raw.lastIndexOf("@");
+      if (at > 0) {
+        const suffix = raw.slice(at).toLowerCase();
+        const match = domainOptions.find(
+          (domain) => domain !== OTHER_EMAIL && domain.toLowerCase() === suffix,
+        );
+        if (match) {
+          onChange({ localPart: raw.slice(0, at), domain: match });
+          return;
+        }
+      }
       onChange({ ...value, localPart: raw });
       return;
     }
@@ -93,9 +117,16 @@ export function LoginAccountField({
         ? "邮箱前缀"
         : "学号";
 
+  // Every flow (login/register/reset) submits the trimmed, lowercased form,
+  // so the hint must preview that exact value, not the raw keystrokes.
+  const previewEmail = (() => {
+    const localPart = value.localPart.trim().toLowerCase();
+    return value.domain === OTHER_EMAIL || atResolved ? localPart : `${localPart}${value.domain}`;
+  })();
+
   return (
     <div className="w-full">
-      <label className="mb-2 block text-[13px] text-muted-foreground">
+      <label htmlFor={inputId} className="mb-2 block text-[13px] text-muted-foreground">
         {label}
       </label>
       <div
@@ -106,9 +137,14 @@ export function LoginAccountField({
         )}
       >
         <input
+          id={inputId}
           type="text"
           inputMode="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           autoComplete={autoComplete}
+          disabled={disabled}
           aria-label={label}
           aria-invalid={!!error}
           aria-describedby={error || value.localPart ? describedBy : undefined}
@@ -123,7 +159,7 @@ export function LoginAccountField({
               onEnter();
             }
           }}
-          className="w-full pr-36 bg-transparent text-[15px] text-foreground placeholder:text-tertiary outline-none"
+          className="w-full pr-36 bg-transparent text-[15px] text-foreground placeholder:text-tertiary outline-none disabled:cursor-not-allowed disabled:text-muted-foreground"
         />
         {!atResolved && (
           <DropdownMenu>
@@ -131,6 +167,7 @@ export function LoginAccountField({
               <button
                 type="button"
                 aria-label="选择邮箱域名"
+                disabled={disabled}
                 className={cn(
                   // The pill overlays the input's right edge like the code field's
                   // resend button, so both fields share the same input width and
@@ -139,6 +176,7 @@ export function LoginAccountField({
                   "absolute right-3.5 top-1/2 -translate-y-1/2 max-w-[8rem] truncate max-[299px]:hidden rounded-md px-2.5 py-1 text-sm font-medium transition-colors",
                   "bg-secondary/80 text-muted-foreground hover:bg-secondary",
                   "dark:bg-muted/60 dark:hover:bg-muted",
+                  "disabled:pointer-events-none disabled:opacity-60",
                 )}
               >
                 {value.domain}
@@ -166,17 +204,9 @@ export function LoginAccountField({
         <p id={describedBy} className="mt-1 min-h-4 text-xs text-destructive">{error}</p>
       ) : value.localPart ? (
         <p id={describedBy} className="mt-1 min-h-4 text-xs text-muted-foreground">
-          {context === "reset"
-            ? `将发送验证码到 ${
-                value.domain === OTHER_EMAIL || atResolved
-                  ? value.localPart
-                  : `${value.localPart}${value.domain}`
-              }`
-            : `将使用 ${
-                value.domain === OTHER_EMAIL || atResolved
-                  ? value.localPart
-                  : `${value.localPart}${value.domain}`
-              } 继续`}
+          {context === "login"
+            ? `将使用 ${previewEmail} 继续`
+            : `将发送验证码到 ${previewEmail}`}
         </p>
       ) : (
         <p className="mt-1 min-h-4" />
