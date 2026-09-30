@@ -347,8 +347,30 @@ export const adminHandlers = [
     if (target.profile.state === "is_deleted") {
       return fail(422, 42200, "用户已注销，请先恢复后再编辑");
     }
+    // PR #104: the student-id occupancy guard folds case and whitespace
+    // (lower(btrim())), excluding the target's own row — re-submitting or
+    // case-normalizing its own ID is not a collision.
+    if (typeof body.student_id === "string" && body.student_id.trim() !== "") {
+      const folded = body.student_id.trim().toLowerCase();
+      const taken = mockUsers.some(
+        (item) =>
+          item.profile.id !== id &&
+          item.profile.student_id.trim().toLowerCase() === folded,
+      );
+      if (taken) return fail(409, 40902, "学号已被占用");
+    }
     const blocked = managerBoundary(auth, target.profile.role, body.role);
     if (blocked) return blocked;
+    // PR #104: identity assertions are admin-only, refused on field PRESENCE —
+    // an unchanged login_email counts just like a rewrite.
+    if (auth.user?.profile.role === "manager") {
+      if (body.personal_email !== undefined) {
+        return fail(403, 40300, "仅管理员可绑定 personal_email");
+      }
+      if (body.login_email !== undefined) {
+        return fail(403, 40300, "仅管理员可修改 login_email");
+      }
+    }
     const allowedFields: (keyof AdminUpdateUserRequest)[] = [
       "name",
       "phone_number",

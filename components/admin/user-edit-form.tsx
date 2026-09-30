@@ -78,7 +78,10 @@ function toFormValues(user: UserProfileData): AdminUpdateUserFormValues {
   };
 }
 
-function toRequest(values: AdminUpdateUserFormValues): AdminUpdateUserRequest {
+function toRequest(
+  values: AdminUpdateUserFormValues,
+  viewerRole: string,
+): AdminUpdateUserRequest {
   const request: AdminUpdateUserRequest = {};
   if (values.name !== undefined) request.name = values.name;
   if (values.phone_number !== undefined) request.phone_number = values.phone_number;
@@ -86,6 +89,12 @@ function toRequest(values: AdminUpdateUserFormValues): AdminUpdateUserRequest {
   if (values.college !== undefined) request.college = values.college;
   if (values.major !== undefined) request.major = values.major;
   if (values.student_id !== undefined) request.student_id = values.student_id;
+  // Backend PR #104: an identity assertion (login_email rewrite, personal_email
+  // bind) from a manager is refused on field PRESENCE, not on the value — even
+  // an unchanged login_email would 403. The inputs are disabled for a manager
+  // and the request withholds both fields entirely, so the rest of the form
+  // stays submittable.
+  if (viewerRole === "manager") return request;
   if (values.login_email !== undefined) request.login_email = values.login_email;
   // A blank value means "no bind requested", so it is withheld entirely.
   if (values.personal_email) request.personal_email = values.personal_email;
@@ -125,7 +134,7 @@ export function UserEditForm({
 
   const handleValid = async (values: AdminUpdateUserFormValues) => {
     try {
-      await onSubmit(toRequest(values));
+      await onSubmit(toRequest(values, viewerRole));
     } catch (error) {
       // Server-side failures (e.g. a login_email already bound to another
       // account) render in the form's root <FormError /> instead of a toast,
@@ -314,8 +323,12 @@ export function UserEditForm({
                     ref={field.ref}
                     label="登录邮箱"
                     type="email"
+                    disabled={viewerRole === "manager"}
                     invalid={fieldState.invalid}
                     error={fieldState.error?.message}
+                    description={
+                      viewerRole === "manager" ? "仅管理员可修改登录邮箱。" : undefined
+                    }
                   />
                 </FormItem>
               )}
@@ -330,9 +343,14 @@ export function UserEditForm({
                     ref={field.ref}
                     label="新增个人邮箱"
                     type="email"
+                    disabled={viewerRole === "manager"}
                     invalid={fieldState.invalid}
                     error={fieldState.error?.message}
-                    description="免验证直接绑定为登录身份（危险操作）。"
+                    description={
+                      viewerRole === "manager"
+                        ? "仅管理员可绑定个人邮箱。"
+                        : "免验证直接绑定为登录身份（危险操作）。"
+                    }
                   />
                 </FormItem>
               )}

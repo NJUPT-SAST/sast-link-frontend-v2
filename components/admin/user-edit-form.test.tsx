@@ -67,6 +67,32 @@ describe("UserEditForm role options per viewer", () => {
   });
 });
 
+describe("UserEditForm identity fields per viewer", () => {
+  // Backend PR #104: a manager's PUT is refused on identity-field PRESENCE,
+  // not on the value — even an unchanged login_email would 403. The inputs
+  // are disabled and the request withholds both fields entirely.
+  it("disables login_email and personal_email for a manager and withholds both", async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    render(<UserEditForm user={makeUser()} onSubmit={onSubmit} viewerRole="manager" />);
+
+    expect(screen.getByRole("textbox", { name: "登录邮箱" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "新增个人邮箱" })).toBeDisabled();
+
+    // A manager editing only the name must not drag the disabled identity
+    // fields into the request.
+    fireEvent.change(screen.getByRole("textbox", { name: "姓名" }), {
+      target: { value: "李四" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const request = onSubmit.mock.calls[0][0] as AdminUpdateUserRequest;
+    expect(request.name).toBe("李四");
+    expect(request.login_email).toBeUndefined();
+    expect(request.personal_email).toBeUndefined();
+  });
+});
+
 describe("UserEditForm", () => {
   it("binds a personal email when filled", async () => {
     const { onSubmit } = setup();

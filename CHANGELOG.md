@@ -29,6 +29,7 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Changed
 
+- Admin console identity writes follow backend PR #104's manager boundary: a manager's edit form disables 登录邮箱 and 新增个人邮箱 (a manager submitting either field gets 403/40300 on field presence — even an unchanged `login_email` counts, so the request withholds both entirely) and the create dialog disables the personal-email bind; provision-time `login_email` stays allowed (the manager already holds the initial password). The MSW admin PUT mirrors the refusals and the folded `lower(btrim())` student-id occupancy check (40902, excluding the target's own row)
 - Admin user edit now matches the backend's closed-account contract (PUT `/admin/users/:id` answers 422/42200 both to closing an account via `state` and to any edit of one — DELETE/restore own the transition because they revoke refresh tokens in the same transaction): the edit page intercepts a soft-deleted account with a restore pointer to the detail page instead of a form whose every submit fails, the 状态 select no longer offers 已注销, and the MSW admin PUT mirrors both refusals
 - Admin user edit copy: the bind field is now 新增个人邮箱 (binds are append-only; existing `other_mail` identities stay on the detail page) with a shorter 危险操作 warning, and the manual-state hint drops its gear glyph
 - Routine dependency bumps: `lucide-react` 1.48.0 (new icons), `eslint-config-next` 16.3.6, `jest` / `jest-environment-jsdom` 30.5.2
