@@ -88,6 +88,38 @@ describe("alumniRequestSchema", () => {
     ).toBe(true);
   });
 
+  // The school-mailbox prefix is the student ID (backend PR #101 returns 40022
+  // for any other shape on every login_email write path).
+  it.each(["18040101", "b18040101"])(
+    "accepts the student-id prefix shape %s",
+    (prefix) => {
+      expect(
+        alumniRequestSchema.safeParse({
+          ...validValues(),
+          login_email: `${prefix}@njupt.edu.cn`,
+        }).success,
+      ).toBe(true);
+    },
+  );
+
+  it.each([
+    "xyz123",
+    "1804010",
+    "180401012",
+    "b18040101+x",
+  ])("rejects non-student-id login_email prefix %s", (prefix) => {
+    const result = alumniRequestSchema.safeParse({
+      ...validValues(),
+      login_email: `${prefix}@njupt.edu.cn`,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((issue) => issue.path[0] === "login_email"),
+      ).toBe(true);
+    }
+  });
+
   it("accepts any domain for personal_email", () => {
     expect(
       alumniRequestSchema.safeParse({

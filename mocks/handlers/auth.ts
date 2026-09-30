@@ -4,6 +4,7 @@ import { API_BASE_URL } from "@/lib/config/public";
 import type { RegisterRequest } from "@/lib/api/types";
 import { codes, emailForTicket, loginCodes, sendCode, verifyCode } from "../data/tickets";
 import { createMockUser, findUserByEmail, issueTokens, mockUsers } from "../data/users";
+import { MAX_LOGIN_EMAIL_LENGTH, njuptLocalAllowed } from "./email-rule";
 
 /** Read one cookie out of a Cookie request header (jsdom tests set the mock
  *  session cookie via document.cookie so the /auth/refresh handler can
@@ -43,12 +44,21 @@ function authUser(user: (typeof mockUsers)[number]) {
 export const authHandlers = [
   http.post(`${API_BASE_URL}/auth/register/send-code`, async ({ request }) => {
     const { login_email } = await request.json() as { login_email: string };
+    if (login_email.length > MAX_LOGIN_EMAIL_LENGTH) {
+      return fail(400, 40000, "邮箱长度超出限制");
+    }
+    if (!njuptLocalAllowed(login_email)) return fail(400, 40022, "邮箱前缀格式错误");
     if (findUserByEmail(login_email)) return fail(409, 40901, "邮箱已被注册");
     sendCode(login_email);
     return ok({ message: "验证码已发送至邮箱", expires_in: 300 });
   }),
   http.post(`${API_BASE_URL}/auth/register/verify-code`, async ({ request }) => {
     const { login_email, code } = await request.json() as { login_email: string; code: string };
+    if (login_email.length > MAX_LOGIN_EMAIL_LENGTH) {
+      return fail(400, 40000, "邮箱长度超出限制");
+    }
+    // Refused before the one-time code is consumed, like the service layer.
+    if (!njuptLocalAllowed(login_email)) return fail(400, 40022, "邮箱前缀格式错误");
     const ticket = verifyCode(login_email, code);
     return ticket ? ok({ register_ticket: ticket, expires_in: 300 }) : fail(401, 40100, "验证码错误或已过期");
   }),

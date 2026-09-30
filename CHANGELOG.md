@@ -30,6 +30,9 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 ### Changed
 
 - Routine dependency bumps: `lucide-react` 1.48.0 (new icons), `eslint-config-next` 16.3.6, `jest` / `jest-environment-jsdom` 30.5.2
+- Registration and alumni filing now pre-validate the `@njupt.edu.cn` mailbox prefix client-side (student-ID shape: one letter + eight digits, or bare eight digits; `@sast.fun` stays free-form), mirroring backend PR #101's `40022` rule on every `login_email` write path — an invalid prefix no longer costs a round-trip to learn it
+- Mock register send-code/verify-code and alumni filing mirror the backend's NJUPT prefix rule (`40022`, refused before the one-time code is consumed or the mailer charged) and the 255-character `login_email` cap (`40000`), keeping local runs faithful to the real backend
+
 - Registration email step: typing or pasting a full whitelisted address (`xx@njupt.edu.cn` / `xx@sast.fun`) now splits into prefix + domain capsule instead of failing on the `@` rule; foreign domains stay in the prefix and fail with a visible error (previously the send-code button no-opped silently — react-hook-form's `trigger()` drops nested object-field errors, so the validation failure never rendered)
 - Registration locks the email address and domain capsule once the verification code is sent (changing the target afterwards desynced the code from its mailbox)
 - A foreign `?email=` prefill (e.g. an OAuth `other_mail`) starts the registration form blank instead of mounting an `@`-in-prefix error state
