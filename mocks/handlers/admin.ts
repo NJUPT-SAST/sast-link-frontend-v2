@@ -338,6 +338,15 @@ export const adminHandlers = [
     if (!target) return fail(404, 40401, "用户不存在");
 
     const body = (await request.json()) as AdminUpdateUserRequest;
+    // Mirrors the backend's order: the request itself is validated before the
+    // target row is consulted — closing via PUT is refused outright, then a
+    // closed account is refused any edit until restored (both 42200).
+    if (body.state === "is_deleted") {
+      return fail(422, 42200, "注销用户请使用 DELETE /admin/users/:id");
+    }
+    if (target.profile.state === "is_deleted") {
+      return fail(422, 42200, "用户已注销，请先恢复后再编辑");
+    }
     const blocked = managerBoundary(auth, target.profile.role, body.role);
     if (blocked) return blocked;
     const allowedFields: (keyof AdminUpdateUserRequest)[] = [

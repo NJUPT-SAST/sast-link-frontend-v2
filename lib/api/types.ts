@@ -241,6 +241,8 @@ export interface AdminUpdateUserRequest {
   student_id?: string;
   login_email?: string;
   role?: UserRole;
+  /** `is_deleted` is refused (42200): closing an account is DELETE/restore's
+   *  job, because those revoke refresh tokens in the same transaction. */
   state?: UserState;
   /** Backend V014: when true, re-derives state from role + student_id and
    *  unpins (removes manual override). Mutually exclusive with `state` — sending
@@ -252,8 +254,9 @@ export interface AdminUpdateUserRequest {
    *  same transaction (admin-vouched, no verification, no mailbox check) — the
    *  rescue path for graduated members whose school mailbox died before they
    *  bound a receivable one. Backend rejects: same as `login_email` (old or
-   *  newly-set), already occupied by another account, account at the 2-bind
-   *  cap (40905), or the target account is deleted. */
+   *  newly-set), already occupied by another account, or the account is at the
+   *  2-bind cap (40905). A closed account cannot be edited at all — every PUT
+   *  on one answers 422 (42200) until it is restored. */
   personal_email?: string;
 }
 

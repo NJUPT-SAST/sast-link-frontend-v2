@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
 import type { AdminUpdateUserRequest, UserProfileData } from "@/lib/api/types";
 import { COLLEGES } from "@/lib/api/types";
@@ -52,11 +52,13 @@ const roleOptionsFor = (viewerRole: string) =>
     ? ROLE_OPTIONS
     : ROLE_OPTIONS.filter((opt) => opt.value !== "admin");
 
+// The closed state is withheld: the backend PUT refuses `is_deleted` (422) —
+// closing an account is DELETE/restore's job, because those revoke refresh
+// tokens in the same transaction. Restoring happens on the detail page.
 const STATE_OPTIONS = [
   { value: "njupter", label: "在校学生" },
   { value: "on_sast", label: "SAST 成员" },
   { value: "retired_sast", label: "已退休" },
-  { value: "is_deleted", label: "已注销" },
 ];
 
 function toFormValues(user: UserProfileData): AdminUpdateUserFormValues {
@@ -162,12 +164,6 @@ export function UserEditForm({
   };
 
   const submit = form.handleSubmit(handleValid, handleInvalid);
-
-  // A deleted account cannot take a new bind; the backend answers 40000. The
-  // field unblocks the moment the admin switches 状态 back to a live one in
-  // the same form, which the backend accepts transactionally.
-  const stateDeleted =
-    useWatch({ control: form.control, name: "state" }) === "is_deleted";
 
   return (
     <Form {...form}>
@@ -296,7 +292,7 @@ export function UserEditForm({
                   </div>
                   {user.state_manual && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      ⚙️ 当前为手动设置的状态
+                      当前为手动设置的状态
                     </p>
                   )}
                 </FormItem>
@@ -332,16 +328,11 @@ export function UserEditForm({
                   <AuthFormField
                     {...field}
                     ref={field.ref}
-                    label="绑定个人邮箱"
+                    label="新增个人邮箱"
                     type="email"
-                    disabled={stateDeleted}
                     invalid={fieldState.invalid}
                     error={fieldState.error?.message}
-                    description={
-                      stateDeleted
-                        ? "已注销用户不可绑定邮箱，请先将状态改回再绑定。"
-                        : "免验证直接绑定为登录身份（用于毕业生救援）。不填写则不绑定。"
-                    }
+                    description="免验证直接绑定为登录身份（危险操作）。"
                   />
                 </FormItem>
               )}

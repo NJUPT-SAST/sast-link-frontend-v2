@@ -29,6 +29,8 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Changed
 
+- Admin user edit now matches the backend's closed-account contract (PUT `/admin/users/:id` answers 422/42200 both to closing an account via `state` and to any edit of one — DELETE/restore own the transition because they revoke refresh tokens in the same transaction): the edit page intercepts a soft-deleted account with a restore pointer to the detail page instead of a form whose every submit fails, the 状态 select no longer offers 已注销, and the MSW admin PUT mirrors both refusals
+- Admin user edit copy: the bind field is now 新增个人邮箱 (binds are append-only; existing `other_mail` identities stay on the detail page) with a shorter 危险操作 warning, and the manual-state hint drops its gear glyph
 - Routine dependency bumps: `lucide-react` 1.48.0 (new icons), `eslint-config-next` 16.3.6, `jest` / `jest-environment-jsdom` 30.5.2
 - Registration and alumni filing now pre-validate the `@njupt.edu.cn` mailbox prefix client-side (student-ID shape: one letter + eight digits, or bare eight digits; `@sast.fun` stays free-form), mirroring backend PR #101's `40022` rule on every `login_email` write path — an invalid prefix no longer costs a round-trip to learn it
 - Mock register send-code/verify-code and alumni filing mirror the backend's NJUPT prefix rule (`40022`, refused before the one-time code is consumed or the mailer charged) and the 255-character `login_email` cap (`40000`), keeping local runs faithful to the real backend
