@@ -193,6 +193,43 @@ export const mockUsers: MockUser[] = [
       updated_at: createdAt,
     },
   },
+  {
+    id: 6,
+    loginEmail: "manager@njupt.edu.cn",
+    password: "Password123",
+    refreshToken: "refresh-manager",
+    profile: {
+      // Manager (backend PR #98): a department head running member management.
+      // A student-role account in the backend's derivation, so the njupter
+      // state matches what the automatic state machine would produce.
+      id: 6,
+      name: "Manager",
+      login_email: "manager@njupt.edu.cn",
+      role: "manager",
+      state: "njupter",
+      email_type: "njupt_email",
+      phone_number: "13800000006",
+      qq_number: "10006",
+      student_id: "B24040006",
+      college: "计算机学院、软件学院、网络空间安全学院",
+      major: "软件工程",
+      profile: {
+        nickname: "Manager",
+        department: "software",
+        intro: null,
+        email: "manager@njupt.edu.cn",
+        avatar: DEFAULT_AVATAR,
+        blog_url: null,
+        github_url: null,
+      },
+      identities: [],
+      profile_needs_completion: false,
+      incomplete_fields: [],
+      created_at: createdAt,
+      state_manual: false,
+      updated_at: createdAt,
+    },
+  },
 ];
 
 // --- Demo volume ---------------------------------------------------------
@@ -230,6 +267,11 @@ const SEED_SPECS: SeedSpec[] = [
   { count: 4, role: "member", state: "on_sast", department: "office" },
   { count: 8, role: "member", state: "on_sast", department: "software", incomplete: true },
   { count: 20, role: "member", state: "retired_sast", department: "software" },
+  // Managers are student-role accounts in the backend's derivation (njupter,
+  // and retired_sast once past the fourth school year), and unlike lecturers
+  // they DO fold into the unfinished bucket.
+  { count: 4, role: "manager", state: "njupter", department: "software" },
+  { count: 1, role: "manager", state: "njupter", department: "software", incomplete: true },
   { count: 15, role: "lecturer", state: "on_sast", department: "software" },
   // Unfinished lecturers and admins: both must stay out of the 未补全 slice,
   // so the mock exercises the exclusion rather than only the happy path.

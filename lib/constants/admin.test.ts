@@ -1,4 +1,4 @@
-import { AUDIT_ACTION_LABELS, AUDIT_RESOURCE_LABELS } from "./admin";
+import { ADMIN_NAV_ITEMS, AUDIT_ACTION_LABELS, AUDIT_RESOURCE_LABELS } from "./admin";
 
 // 从 sast-link-backend-v2 全部审计写入点（internal/service 下各服务 audit / buildAuditEntry /
 // auditParams 调用）系统化核对得到的 action 全集。oauth_consent / oauth_grants_* 等
@@ -52,6 +52,25 @@ const BACKEND_AUDIT_RESOURCES = [
 ];
 
 // 前端字典的键必须与后端审计写入值严格一一对应（缺失或多余都会失败）。
+// Backend PR #98: the console splits three ways. The nav table is the single
+// source the layout guard and the top-bar entry derive from, so pin the exact
+// role matrix here.
+describe("admin nav role matrix", () => {
+  const rolesFor = (href: string) =>
+    ADMIN_NAV_ITEMS.find((item) => item.href === href)!.roles;
+
+  it("admits manager to the overview and user management only", () => {
+    expect(rolesFor("/admin")).toEqual(["admin", "manager"]);
+    expect(rolesFor("/admin/users")).toEqual(["admin", "manager", "lecturer"]);
+  });
+
+  it("keeps the technical surfaces admin-only", () => {
+    expect(rolesFor("/admin/alumni-requests")).toEqual(["admin"]);
+    expect(rolesFor("/admin/oauth-clients")).toEqual(["admin"]);
+    expect(rolesFor("/admin/audit-logs")).toEqual(["admin"]);
+  });
+});
+
 describe("audit log enum coverage", () => {
   it("action keys exactly match the backend audit actions", () => {
     expect(Object.keys(AUDIT_ACTION_LABELS).sort()).toEqual(

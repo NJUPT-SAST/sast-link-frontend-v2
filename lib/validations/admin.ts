@@ -27,7 +27,7 @@ const redirectUriSchema = z
   .max(2048, "回调地址最长 2048 字符")
   .refine(isValidRedirectUri, "必须是 https，或 http + localhost/127.0.0.1，且不能含 fragment/userinfo");
 
-const userRoleSchema = z.enum(["freshman", "member", "lecturer", "admin"]);
+const userRoleSchema = z.enum(["freshman", "member", "manager", "lecturer", "admin"]);
 const userStateSchema = z.enum(["njupter", "on_sast", "retired_sast", "is_deleted"]);
 const departmentSchema = z.enum([
   "software",

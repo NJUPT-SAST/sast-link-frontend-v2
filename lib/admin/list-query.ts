@@ -21,7 +21,7 @@ export const DEFAULT_PAGE_SIZE = 20;
 /** 与 Pagination 的每页条数下拉、后端 page_size 上限保持一致。 */
 export const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
-const USER_ROLES: UserRole[] = ["freshman", "member", "lecturer", "admin"];
+const USER_ROLES: UserRole[] = ["freshman", "member", "manager", "lecturer", "admin"];
 const USER_STATES: UserState[] = ["njupter", "on_sast", "retired_sast", "is_deleted"];
 const DEPARTMENTS: Department[] = [
   "software",

@@ -6,8 +6,13 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
+### Fixed
+
+- Dependency security sweep: `next` 16.3.4→16.3.6 (carries the GHSA-vcvr-r3jv-pc5j fix for RCE in next/og ImageResponse), and the pnpm overrides bumped `fast-uri` to 3.1.6 (four SSRF/host-confusion advisories reaching ajv-formats) and `js-yaml` to 3.15.2 (CPU exhaustion via jest's istanbul toolchain) — clears all five remaining high-severity Dependabot alerts
+
 ### Added
 
+- Manager (部长) role support, adapting backend PR #98: `manager` joins the role enums/types/labels and filters; the console nav admits managers to the overview and user management (three-tier split — lecturer stays read-only, OAuth clients / audit logs / alumni requests stay admin-only); the overview renders only the users card and donuts when the stats response carries no `clients`/`audit` keys (manager view gets the users aggregate only); user write affordances follow the manager boundary — a manager sees no admin option in role selects and no edit/delete/restore actions on admin accounts (the backend answers 403 there), enforced client-side via `canManageUsers` / `canWriteTargetUser` with MSW handlers mirroring the same gates and boundary
 - Next.js App Router implementation for SAST Link tourist and authenticated flows
 - Two-step login flow
 - Three-step registration flow
@@ -24,6 +29,7 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Changed
 
+- Routine dependency bumps: `lucide-react` 1.48.0 (new icons), `eslint-config-next` 16.3.6, `jest` / `jest-environment-jsdom` 30.5.2
 - Registration and alumni filing now pre-validate the `@njupt.edu.cn` mailbox prefix client-side (student-ID shape: one letter + eight digits, or bare eight digits; `@sast.fun` stays free-form), mirroring backend PR #101's `40022` rule on every `login_email` write path — an invalid prefix no longer costs a round-trip to learn it
 - Mock register send-code/verify-code and alumni filing mirror the backend's NJUPT prefix rule (`40022`, refused before the one-time code is consumed or the mailer charged) and the 255-character `login_email` cap (`40000`), keeping local runs faithful to the real backend
 

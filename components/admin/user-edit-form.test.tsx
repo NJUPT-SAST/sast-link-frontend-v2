@@ -49,6 +49,24 @@ function setup(overrides: { user?: UserProfileData; onSubmit?: jest.Mock } = {})
   return { onSubmit };
 }
 
+describe("UserEditForm role options per viewer", () => {
+  it("offers the full ladder including manager to an admin viewer", () => {
+    render(<UserEditForm user={makeUser()} onSubmit={jest.fn()} />);
+    const select = screen.getByLabelText("角色") as HTMLSelectElement;
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).toEqual(["freshman", "member", "manager", "lecturer", "admin"]);
+  });
+
+  it("withholds the admin option from a manager viewer", () => {
+    render(
+      <UserEditForm user={makeUser()} onSubmit={jest.fn()} viewerRole="manager" />,
+    );
+    const select = screen.getByLabelText("角色") as HTMLSelectElement;
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).toEqual(["freshman", "member", "manager", "lecturer"]);
+  });
+});
+
 describe("UserEditForm", () => {
   it("binds a personal email when filled", async () => {
     const { onSubmit } = setup();

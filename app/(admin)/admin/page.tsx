@@ -7,6 +7,7 @@ import { Activity, KeyRound, Users } from "lucide-react";
 import { getAdminStats, getAdminUsers } from "@/lib/api/admin";
 import { ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
 import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
+import { cn } from "@/lib/utils";
 import { AdminErrorState } from "@/components/admin/error-state";
 import { DotLoading } from "@/components/ui/dot-loading";
 import {
@@ -196,7 +197,8 @@ export default function AdminOverviewPage() {
   );
   // Grade buckets come from login emails, not /admin/stats, so this fetch
   // pages the whole user list once per mount; no 60s refresh — the roster
-  // shifts far slower than the stats counters.
+  // shifts far slower than the stats counters. Open to every reader of the
+  // directory (admin / manager), which is exactly the stats audience.
   const {
     data: gradeItems,
     isLoading: gradeLoading,
@@ -221,21 +223,35 @@ export default function AdminOverviewPage() {
 
       {!isLoading && !error && data && (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
+          {/* Manager viewers receive the users aggregate only — clients and
+           * audit are technical surfaces whose keys are absent from the
+           * response entirely — so each card renders iff its data leg exists,
+           * and the grid drops to a single column rather than stretching one
+           * lonely card across a third of the row. */}
+          <div
+            className={cn(
+              "grid gap-4",
+              (data.clients || data.audit) && "sm:grid-cols-3",
+            )}
+          >
             <StatCard icon={<Users className="size-5" />} label="总用户" value={data.users.total} href="/admin/users" />
-            <StatCard
-              icon={<KeyRound className="size-5" />}
-              label="OAuth 客户端"
-              value={data.clients.total}
-              sub={`激活 ${data.clients.active}`}
-              href="/admin/oauth-clients"
-            />
-            <StatCard
-              icon={<Activity className="size-5" />}
-              label="近期操作"
-              value={data.audit.recent.length}
-              href="/admin/audit-logs"
-            />
+            {data.clients && (
+              <StatCard
+                icon={<KeyRound className="size-5" />}
+                label="OAuth 客户端"
+                value={data.clients.total}
+                sub={`激活 ${data.clients.active}`}
+                href="/admin/oauth-clients"
+              />
+            )}
+            {data.audit && (
+              <StatCard
+                icon={<Activity className="size-5" />}
+                label="近期操作"
+                value={data.audit.recent.length}
+                href="/admin/audit-logs"
+              />
+            )}
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
