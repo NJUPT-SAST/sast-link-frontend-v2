@@ -7,8 +7,11 @@ export interface AdminNavItem {
 }
 
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
-  { label: "概览", href: "/admin", roles: ["admin"] },
-  { label: "用户管理", href: "/admin/users", roles: ["admin", "lecturer"] },
+  // Manager gets the overview too, but the backend answers /admin/stats with
+  // the users aggregate only (clients/audit keys absent) — the overview page
+  // renders conditionally on what the response carries.
+  { label: "概览", href: "/admin", roles: ["admin", "manager"] },
+  { label: "用户管理", href: "/admin/users", roles: ["admin", "manager", "lecturer"] },
   // The backend gates the whole surface (listing included) on the admin role.
   { label: "建号申请", href: "/admin/alumni-requests", roles: ["admin"] },
   { label: "OAuth 客户端", href: "/admin/oauth-clients", roles: ["admin"] },

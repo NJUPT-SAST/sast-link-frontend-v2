@@ -34,8 +34,13 @@ const selectClass =
   "h-12 w-full rounded-lg border border-input bg-card px-3.5 text-[15px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
 
 // Reuse the shared label tables (single source of truth); create never offers
-// is_deleted — a fresh account is not a deletion.
-const ROLE_OPTIONS = Object.entries(ROLE_LABELS);
+// is_deleted — a fresh account is not a deletion. A manager cannot create an
+// admin (403), so its select drops the option rather than offering a request
+// the API would refuse.
+const roleOptionsFor = (viewerRole: string) =>
+  Object.entries(ROLE_LABELS).filter(
+    ([value]) => viewerRole === "admin" || value !== "admin",
+  );
 const STATE_OPTIONS = Object.entries(STATE_LABELS).filter(
   ([value]) => value !== "is_deleted",
 );
@@ -74,9 +79,12 @@ interface UserCreateDialogProps {
   /** Parent performs the mutation (owns `createAdminUser`) and returns the
    *  created account so the dialog can present the one-time password. */
   onCreate: (data: AdminCreateUserRequest) => Promise<AdminCreateUserData>;
+  /** Role of the viewer; a manager's select hides the admin option. Defaults
+   *  to admin — pre-manager behaviour. */
+  viewerRole?: string;
 }
 
-export function UserCreateDialog({ open, onOpenChange, onCreate }: UserCreateDialogProps) {
+export function UserCreateDialog({ open, onOpenChange, onCreate, viewerRole = "admin" }: UserCreateDialogProps) {
   const form = useForm<AdminCreateUserFormValues>({
     resolver: zodResolver(adminCreateUserSchema),
     defaultValues: createEmptyValues(),
@@ -368,7 +376,7 @@ export function UserCreateDialog({ open, onOpenChange, onCreate }: UserCreateDia
                         角色
                       </label>
                       <Select id="role" {...field} className={selectClass}>
-                        {ROLE_OPTIONS.map(([value, label]) => (
+                        {roleOptionsFor(viewerRole).map(([value, label]) => (
                           <option key={value} value={value}>{label}</option>
                         ))}
                       </Select>

@@ -20,6 +20,7 @@ export function avatarFallbackChar(profile: Pick<UserProfileType, "nickname">): 
 export const ROLE_LABELS: Record<string, string > = {
   freshman: "Freshman",
   member: "Member",
+  manager: "Manager",
   lecturer: "Lecturer",
   admin: "Admin",
 };

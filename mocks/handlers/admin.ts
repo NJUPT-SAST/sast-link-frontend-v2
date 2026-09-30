@@ -30,14 +30,42 @@ interface AuthResult {
   response?: ReturnType<typeof fail>;
 }
 
-function authenticatedAdmin(request: Request, allowLecturer = false): AuthResult {
+/** Console role gates, mirroring backend PR #98's three-tier split:
+ *  - "admin" — technical surfaces (OAuth clients, audit log): admin only.
+ *  - "write" — member management (user writes, overview stats): admin +
+ *    manager. A manager stays bounded in the handlers below: it cannot write
+ *    an admin's account nor grant the admin role (403, mirroring the
+ *    service-layer boundary).
+ *  - "read" — the user directory: admin + manager + lecturer. */
+type AdminGate = "admin" | "write" | "read";
+
+function authenticatedAdmin(request: Request, gate: AdminGate = "admin"): AuthResult {
   const value = request.headers.get("Authorization");
   const user = value?.startsWith("Bearer ") ? findUserByAccessToken(value.slice(7)) : undefined;
   if (!user) return { response: fail(401, 40100, "未登录") };
-  if (user.profile.role !== "admin" && !(allowLecturer && user.profile.role === "lecturer")) {
-    return { response: fail(403, 40300, "无权限") };
-  }
+  const role = user.profile.role;
+  const allowed =
+    gate === "admin"
+      ? role === "admin"
+      : gate === "write"
+        ? role === "admin" || role === "manager"
+        : role === "admin" || role === "manager" || role === "lecturer";
+  if (!allowed) return { response: fail(403, 40300, "无权限") };
   return { user };
+}
+
+/** The manager boundary: a manager may not write an admin's account
+ *  (target) nor set the admin role (next). Null when the caller may pass. */
+function managerBoundary(
+  auth: AuthResult,
+  targetRole: string | undefined,
+  nextRole?: string | undefined,
+): ReturnType<typeof fail> | null {
+  if (auth.user?.profile.role !== "manager") return null;
+  if (targetRole === "admin" || nextRole === "admin") {
+    return fail(403, 40300, "无权限");
+  }
+  return null;
 }
 
 function paginate<T>(items: T[], page: number, pageSize: number) {
@@ -237,8 +265,16 @@ function filterAuditLogs(params: AdminAuditLogListParams): AdminAuditLog[] {
 
 export const adminHandlers = [
   http.get(`${API_BASE_URL}/admin/stats`, ({ request }) => {
-    const auth = authenticatedAdmin(request);
+    const auth = authenticatedAdmin(request, "write");
     if (auth.response) return auth.response;
+
+    // Manager viewers get the users aggregate only: clients and audit are
+    // technical surfaces whose keys are absent from the response entirely
+    // (never null), matching the backend's "not disclosed rather than empty"
+    // posture.
+    if (auth.user?.profile.role !== "admin") {
+      return ok({ users: buildUserStats() });
+    }
 
     const recent = [...adminMockAuditLogs]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -255,7 +291,7 @@ export const adminHandlers = [
   }),
 
   http.get(`${API_BASE_URL}/admin/users`, ({ request }) => {
-    const auth = authenticatedAdmin(request, true);
+    const auth = authenticatedAdmin(request, "read");
     if (auth.response) return auth.response;
 
     const params = parseSearchParams(request);
@@ -284,7 +320,7 @@ export const adminHandlers = [
   }),
 
   http.get(`${API_BASE_URL}/admin/users/:id`, ({ request, params }) => {
-    const auth = authenticatedAdmin(request, true);
+    const auth = authenticatedAdmin(request, "read");
     if (auth.response) return auth.response;
 
     const id = Number(params.id);
@@ -294,7 +330,7 @@ export const adminHandlers = [
   }),
 
   http.put(`${API_BASE_URL}/admin/users/:id`, async ({ request, params }) => {
-    const auth = authenticatedAdmin(request);
+    const auth = authenticatedAdmin(request, "write");
     if (auth.response) return auth.response;
 
     const id = Number(params.id);
@@ -302,6 +338,8 @@ export const adminHandlers = [
     if (!target) return fail(404, 40401, "用户不存在");
 
     const body = (await request.json()) as AdminUpdateUserRequest;
+    const blocked = managerBoundary(auth, target.profile.role, body.role);
+    if (blocked) return blocked;
     const allowedFields: (keyof AdminUpdateUserRequest)[] = [
       "name",
       "phone_number",
@@ -354,12 +392,15 @@ export const adminHandlers = [
   }),
 
   http.delete(`${API_BASE_URL}/admin/users/:id`, ({ request, params }) => {
-    const auth = authenticatedAdmin(request);
+    const auth = authenticatedAdmin(request, "write");
     if (auth.response) return auth.response;
 
     const id = Number(params.id);
     const target = mockUsers.find((item) => item.profile.id === id);
     if (!target) return fail(404, 40401, "用户不存在");
+
+    const blocked = managerBoundary(auth, target.profile.role);
+    if (blocked) return blocked;
 
     target.profile.state = "is_deleted";
     target.profile.updated_at = new Date().toISOString();
@@ -367,12 +408,15 @@ export const adminHandlers = [
   }),
 
   http.put(`${API_BASE_URL}/admin/users/:id/restore`, ({ request, params }) => {
-    const auth = authenticatedAdmin(request);
+    const auth = authenticatedAdmin(request, "write");
     if (auth.response) return auth.response;
 
     const id = Number(params.id);
     const target = mockUsers.find((item) => item.profile.id === id);
     if (!target) return fail(404, 40401, "用户不存在");
+
+    const blocked = managerBoundary(auth, target.profile.role);
+    if (blocked) return blocked;
 
     target.profile.state = "njupter";
     target.profile.updated_at = new Date().toISOString();

@@ -260,4 +260,23 @@ describe("AdminOverviewPage", () => {
     );
     expect(legendDot?.style.background).toBe("rgb(148, 163, 184)");
   });
+
+  it("renders only the users card when clients/audit are absent (manager view)", async () => {
+    // Backend PR #98: a manager's /admin/stats carries the users aggregate
+    // only — the clients and audit keys are absent entirely (never null), so
+    // the overview must not reach for them.
+    const usersOnly = { ...statsData } as Partial<typeof statsData>;
+    delete usersOnly.clients;
+    delete usersOnly.audit;
+    mockGetAdminStats.mockResolvedValue({ data: { data: usersOnly } });
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("总用户")).toBeInTheDocument());
+    expect(screen.queryByText("OAuth 客户端")).not.toBeInTheDocument();
+    expect(screen.queryByText("近期操作")).not.toBeInTheDocument();
+    // The users legs survive: both donuts still render.
+    expect(screen.getByText("角色分布")).toBeInTheDocument();
+    expect(screen.getByText("状态分布")).toBeInTheDocument();
+  });
 });

@@ -12,6 +12,7 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Added
 
+- Manager (部长) role support, adapting backend PR #98: `manager` joins the role enums/types/labels and filters; the console nav admits managers to the overview and user management (three-tier split — lecturer stays read-only, OAuth clients / audit logs / alumni requests stay admin-only); the overview renders only the users card and donuts when the stats response carries no `clients`/`audit` keys (manager view gets the users aggregate only); user write affordances follow the manager boundary — a manager sees no admin option in role selects and no edit/delete/restore actions on admin accounts (the backend answers 403 there), enforced client-side via `canManageUsers` / `canWriteTargetUser` with MSW handlers mirroring the same gates and boundary
 - Next.js App Router implementation for SAST Link tourist and authenticated flows
 - Two-step login flow
 - Three-step registration flow

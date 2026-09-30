@@ -6,6 +6,7 @@ import { ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
 import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
 import { Button } from "@/components/ui/button";
 import { adminUserDetailHref, adminUserEditHref } from "@/lib/admin-user-route";
+import { canWriteTargetUser } from "@/components/admin/permissions";
 
 
 interface UserListProps {
@@ -13,6 +14,12 @@ interface UserListProps {
   loading?: boolean;
   /** Read-only mode (e.g. lecturer): hides selection and edit/restore actions. */
   canManage?: boolean;
+  /** Role of the viewer, for the per-row write guard: a manager may not edit,
+   * delete or restore an admin's account (backend answers 403), so those rows
+   * render without the actions instead of offering a request that cannot
+   * succeed. Defaults to admin — the only viewer role the list knew before
+   * managers existed — so omitted callers keep their current behaviour. */
+  viewerRole?: string;
   /** Serialized list filters, forwarded so detail/edit can return to this page. */
   listQuery?: string;
   onRestore?: (user: UserProfileData) => void;
@@ -23,8 +30,9 @@ interface UserListProps {
 
 const ROLE_BADGE: Record<string, string> = {
   admin: "bg-link/10 text-link",
-  lecturer: "bg-accent text-accent-foreground",
-  member: "bg-secondary text-secondary-foreground",
+  manager: "bg-accent text-accent-foreground",
+  lecturer: "bg-secondary text-secondary-foreground",
+  member: "bg-muted text-muted-foreground",
   freshman: "bg-muted text-muted-foreground",
 };
 
@@ -68,6 +76,7 @@ export function UserList({
   users,
   loading = false,
   canManage = true,
+  viewerRole = "admin",
   listQuery,
   onRestore,
   selectedIds = new Set(),
@@ -217,7 +226,7 @@ export function UserList({
               <Button variant="ghost" size="sm" asChild>
                 <Link href={adminUserDetailHref(user.id, listQuery)}>查看</Link>
               </Button>
-              {canManage && (
+              {canManage && canWriteTargetUser(viewerRole, user.role) && (
                 <>
                   <Button variant="ghost" size="sm" asChild>
                     <Link href={adminUserEditHref(user.id, listQuery)}>编辑</Link>

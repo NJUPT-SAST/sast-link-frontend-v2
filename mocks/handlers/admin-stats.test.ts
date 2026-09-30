@@ -26,6 +26,28 @@ async function fetchStats(): Promise<UserStats> {
   return body.data.users;
 }
 
+// Backend PR #98 role gates on the stats endpoint: manager sees the users leg
+// only (clients/audit keys absent entirely); lecturer is refused outright.
+describe("mock GET /admin/stats role gates", () => {
+  it("returns only the users leg to a manager viewer", async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/stats`, {
+      headers: { Authorization: "Bearer access-6-0" },
+    });
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { data: Record<string, unknown> };
+    expect(body.data.users).toBeDefined();
+    expect("clients" in body.data).toBe(false);
+    expect("audit" in body.data).toBe(false);
+  });
+
+  it("refuses the endpoint to a lecturer", async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/stats`, {
+      headers: { Authorization: "Bearer access-3-0" },
+    });
+    expect(response.status).toBe(403);
+  });
+});
+
 describe("mock GET /admin/stats user aggregation", () => {
   it("counts only the unfinished non-lecturer/admin accounts in the role bucket", async () => {
     const users = await fetchStats();

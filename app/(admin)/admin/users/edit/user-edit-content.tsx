@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { canManageUsers } from "@/components/admin/permissions";
+import { canManageUsers, canWriteTargetUser } from "@/components/admin/permissions";
 import { UserEditForm } from "@/components/admin/user-edit-form";
 import { BackButton } from "@/components/navigation/back-button";
 import { Button } from "@/components/ui/button";
@@ -24,11 +24,19 @@ export function AdminUserEditContent() {
   const listHref = adminUsersListHref(listQuery);
   const { data: user, isLoading } = useAdminUser(id);
   const { updateUser, isLoading: mutationLoading } = useAdminMutations();
-  const canManage = canManageUsers(useUserProfileStore((state) => state.profile.role));
+  const viewerRole = useUserProfileStore((state) => state.profile.role);
+  const canManage = canManageUsers(viewerRole);
 
+  // A manager cannot write an admin's account (the backend answers 403), so
+  // once the target loads it bounces back to the list — the same escape a
+  // read-only viewer takes. Waiting for `user` avoids bouncing on a flash of
+  // missing data; a genuinely missing id falls through to the not-found
+  // branch below.
   useEffect(() => {
-    if (!canManage) router.replace(listHref);
-  }, [canManage, router, listHref]);
+    if (!canManage || (user && !canWriteTargetUser(viewerRole, user.role))) {
+      router.replace(listHref);
+    }
+  }, [canManage, user, viewerRole, router, listHref]);
 
   const handleSubmit = async (data: AdminUpdateUserRequest) => {
     if (id === null) return;
@@ -66,6 +74,7 @@ export function AdminUserEditContent() {
         user={user}
         onSubmit={handleSubmit}
         loading={mutationLoading}
+        viewerRole={viewerRole}
         cancelFallback={listHref}
       />
     </div>

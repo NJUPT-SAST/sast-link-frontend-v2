@@ -41,7 +41,7 @@ This repository is the current SAST Link Frontend V2 implementation, not a gener
 - `/admin/audit-logs` audit log filtering and pagination
 - `/admin/alumni-requests` alumni account-request review and approval
 
-`admin` can access all four routes. `lecturer` has read-only access to user management.
+`admin` can access all four routes. `manager` (department head, backend PR #98) additionally gets user management (read + write, bounded: cannot write `admin` accounts or grant the `admin` role) and a users-only overview (`GET /admin/stats` returns no `clients`/`audit` keys). `lecturer` has read-only access to user management.
 
 ## Runtime Model
 

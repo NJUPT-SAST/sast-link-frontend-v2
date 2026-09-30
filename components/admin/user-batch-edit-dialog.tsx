@@ -28,11 +28,20 @@ interface UserBatchEditDialogProps {
   count: number;
   loading?: boolean;
   onConfirm: (fields: BatchEditFields) => void;
+  /** Role of the viewer; a manager's role select hides the admin option
+   *  (granting it fails per item on the backend). Defaults to admin. */
+  viewerRole?: string;
 }
 
-const ROLE_OPTIONS = Object.entries(ROLE_LABELS);
 const STATE_OPTIONS = Object.entries(STATE_LABELS);
 const DEPT_OPTIONS = Object.entries(DEPARTMENT_LABELS);
+
+// A manager may not grant the admin role, so the option is withheld instead
+// of offered and refused per item.
+const roleOptionsFor = (viewerRole: string) =>
+  Object.entries(ROLE_LABELS).filter(
+    ([value]) => viewerRole === "admin" || value !== "admin",
+  );
 
 const selectClass =
   "h-12 w-full rounded-lg border border-input bg-card px-3.5 text-[15px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
@@ -43,6 +52,7 @@ export function UserBatchEditDialog({
   count,
   loading = false,
   onConfirm,
+  viewerRole = "admin",
 }: UserBatchEditDialogProps) {
   const [role, setRole] = useState("");
   const [state, setState] = useState("");
@@ -146,7 +156,7 @@ export function UserBatchEditDialog({
                 </label>
                 <Select id="batch-role" value={role} onChange={(e) => setRole(e.target.value)} className={selectClass}>
                   <option value="">保持不变</option>
-                  {ROLE_OPTIONS.map(([value, label]) => (
+                  {roleOptionsFor(viewerRole).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
                     </option>

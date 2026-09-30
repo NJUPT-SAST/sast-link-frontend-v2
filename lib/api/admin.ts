@@ -38,8 +38,12 @@ export interface AdminStatsData {
      *  same deploy-order reason as incomplete_by_role. */
     incomplete_by_state?: Record<string, number>;
   };
-  clients: { total: number; active: number };
-  audit: { recent: AdminAuditLog[] };
+  /** Manager-scoped view: the backend admits managers to the overview for the
+   *  users aggregate only — clients and audit are technical surfaces (client
+   * counts, actor/IP trails) and the two keys are absent from the response
+   * entirely (never null). Admin viewers always receive both. */
+  clients?: { total: number; active: number };
+  audit?: { recent: AdminAuditLog[] };
 }
 
 export function getAdminStats() {
