@@ -63,6 +63,24 @@ export function AdminUserEditContent() {
 
   if (!user) return null;
 
+  // The backend answers 422 (42200) to every PUT on a closed account —
+  // restore revokes tokens in its own transaction and must come first — so
+  // the form is never offered for one; the detail page holds the restore.
+  if (user.state === "is_deleted") {
+    return (
+      <div className="flex flex-col gap-8">
+        <BackButton fallback={listHref} />
+        <div className="flex h-64 flex-col items-center justify-center gap-4">
+          <p className="text-tertiary">该用户已注销，恢复后才能编辑</p>
+          <div className="flex gap-3">
+            <Button asChild><Link href={adminUserDetailHref(id, listQuery)}>前往详情页恢复</Link></Button>
+            <Button variant="outline" asChild><Link href={listHref}>返回用户列表</Link></Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <BackButton fallback={listHref} />

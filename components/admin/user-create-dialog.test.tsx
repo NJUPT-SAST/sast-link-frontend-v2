@@ -112,6 +112,26 @@ describe("UserCreateDialog", () => {
     expect(onCreate).not.toHaveBeenCalled();
   });
 
+  // Backend PR #104: a manager cannot bind a personal email on provision
+  // either (403) — login_email stays allowed (the manager already holds the
+  // initial password), so only the bind field is gated.
+  it("disables personal_email for a manager viewer and withholds it", async () => {
+    const onCreate = jest.fn().mockResolvedValue(created);
+    render(
+      <UserCreateDialog open onOpenChange={jest.fn()} onCreate={onCreate} viewerRole="manager" />,
+    );
+    fillRequiredFields();
+
+    expect(screen.getByRole("textbox", { name: "个人邮箱（可选）" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
+
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
+    const request = onCreate.mock.calls[0][0] as AdminCreateUserRequest;
+    expect(request.login_email).toBe("b24040525@njupt.edu.cn");
+    expect(request.personal_email).toBeUndefined();
+  });
+
   it("keeps the form open and shows server-side errors (e.g. duplicate email)", async () => {
     const onCreate = jest.fn().mockRejectedValue(new Error("邮箱已被占用"));
     renderDialog(onCreate);

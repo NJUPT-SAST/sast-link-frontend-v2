@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
 import type { AdminUpdateUserRequest, UserProfileData } from "@/lib/api/types";
 import { COLLEGES } from "@/lib/api/types";
@@ -52,11 +52,13 @@ const roleOptionsFor = (viewerRole: string) =>
     ? ROLE_OPTIONS
     : ROLE_OPTIONS.filter((opt) => opt.value !== "admin");
 
+// The closed state is withheld: the backend PUT refuses `is_deleted` (422) —
+// closing an account is DELETE/restore's job, because those revoke refresh
+// tokens in the same transaction. Restoring happens on the detail page.
 const STATE_OPTIONS = [
   { value: "njupter", label: "在校学生" },
   { value: "on_sast", label: "SAST 成员" },
   { value: "retired_sast", label: "已退休" },
-  { value: "is_deleted", label: "已注销" },
 ];
 
 function toFormValues(user: UserProfileData): AdminUpdateUserFormValues {
@@ -76,7 +78,10 @@ function toFormValues(user: UserProfileData): AdminUpdateUserFormValues {
   };
 }
 
-function toRequest(values: AdminUpdateUserFormValues): AdminUpdateUserRequest {
+function toRequest(
+  values: AdminUpdateUserFormValues,
+  viewerRole: string,
+): AdminUpdateUserRequest {
   const request: AdminUpdateUserRequest = {};
   if (values.name !== undefined) request.name = values.name;
   if (values.phone_number !== undefined) request.phone_number = values.phone_number;
@@ -84,6 +89,12 @@ function toRequest(values: AdminUpdateUserFormValues): AdminUpdateUserRequest {
   if (values.college !== undefined) request.college = values.college;
   if (values.major !== undefined) request.major = values.major;
   if (values.student_id !== undefined) request.student_id = values.student_id;
+  // Backend PR #104: an identity assertion (login_email rewrite, personal_email
+  // bind) from a manager is refused on field PRESENCE, not on the value — even
+  // an unchanged login_email would 403. The inputs are disabled for a manager
+  // and the request withholds both fields entirely, so the rest of the form
+  // stays submittable.
+  if (viewerRole === "manager") return request;
   if (values.login_email !== undefined) request.login_email = values.login_email;
   // A blank value means "no bind requested", so it is withheld entirely.
   if (values.personal_email) request.personal_email = values.personal_email;
@@ -123,7 +134,7 @@ export function UserEditForm({
 
   const handleValid = async (values: AdminUpdateUserFormValues) => {
     try {
-      await onSubmit(toRequest(values));
+      await onSubmit(toRequest(values, viewerRole));
     } catch (error) {
       // Server-side failures (e.g. a login_email already bound to another
       // account) render in the form's root <FormError /> instead of a toast,
@@ -162,12 +173,6 @@ export function UserEditForm({
   };
 
   const submit = form.handleSubmit(handleValid, handleInvalid);
-
-  // A deleted account cannot take a new bind; the backend answers 40000. The
-  // field unblocks the moment the admin switches 状态 back to a live one in
-  // the same form, which the backend accepts transactionally.
-  const stateDeleted =
-    useWatch({ control: form.control, name: "state" }) === "is_deleted";
 
   return (
     <Form {...form}>
@@ -296,7 +301,7 @@ export function UserEditForm({
                   </div>
                   {user.state_manual && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      ⚙️ 当前为手动设置的状态
+                      当前为手动设置的状态
                     </p>
                   )}
                 </FormItem>
@@ -318,8 +323,12 @@ export function UserEditForm({
                     ref={field.ref}
                     label="登录邮箱"
                     type="email"
+                    disabled={viewerRole === "manager"}
                     invalid={fieldState.invalid}
                     error={fieldState.error?.message}
+                    description={
+                      viewerRole === "manager" ? "仅管理员可修改登录邮箱。" : undefined
+                    }
                   />
                 </FormItem>
               )}
@@ -332,15 +341,15 @@ export function UserEditForm({
                   <AuthFormField
                     {...field}
                     ref={field.ref}
-                    label="绑定个人邮箱"
+                    label="新增个人邮箱"
                     type="email"
-                    disabled={stateDeleted}
+                    disabled={viewerRole === "manager"}
                     invalid={fieldState.invalid}
                     error={fieldState.error?.message}
                     description={
-                      stateDeleted
-                        ? "已注销用户不可绑定邮箱，请先将状态改回再绑定。"
-                        : "免验证直接绑定为登录身份（用于毕业生救援）。不填写则不绑定。"
+                      viewerRole === "manager"
+                        ? "仅管理员可绑定个人邮箱。"
+                        : "免验证直接绑定为登录身份（危险操作）。"
                     }
                   />
                 </FormItem>
