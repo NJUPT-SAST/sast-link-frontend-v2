@@ -22,8 +22,8 @@ const ROLE_OPTIONS = [
   { value: "", label: "全部角色" },
   { value: "freshman", label: "新生" },
   { value: "member", label: "成员" },
-  { value: "manager", label: "部长" },
   { value: "lecturer", label: "讲师" },
+  { value: "manager", label: "部长" },
   { value: "admin", label: "管理员" },
 ];
 

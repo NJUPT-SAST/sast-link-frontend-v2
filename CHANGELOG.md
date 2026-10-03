@@ -8,6 +8,7 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Fixed
 
+- Role option order in the admin dropdowns (single-user edit form, user list filters): 讲师 (lecturer) now precedes 部长 (manager), so manager sits between lecturer and admin in both selects
 - Dependency security sweep: `next` 16.3.4→16.3.6 (carries the GHSA-vcvr-r3jv-pc5j fix for RCE in next/og ImageResponse), and the pnpm overrides bumped `fast-uri` to 3.1.6 (four SSRF/host-confusion advisories reaching ajv-formats) and `js-yaml` to 3.15.2 (CPU exhaustion via jest's istanbul toolchain) — clears all five remaining high-severity Dependabot alerts
 
 ### Added
