@@ -8,8 +8,8 @@ import type {
   AdminCreateUserData,
   AdminCreateUserRequest,
   AdminUpdateUserRequest,
+  AdminUserListItem,
   AdminUserListParams,
-  UserProfileData,
   UserRole,
   UserState,
 } from "@/lib/api/types";
@@ -57,7 +57,7 @@ function AdminUsersContent() {
 
   const [confirm, setConfirm] = useState<{
     open: boolean;
-    user: UserProfileData | null;
+    user: AdminUserListItem | null;
     action: "delete" | "restore";
   }>({ open: false, user: null, action: "delete" });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -194,7 +194,7 @@ function AdminUsersContent() {
     [setFilters],
   );
 
-  const handleRestore = (user: UserProfileData) => {
+  const handleRestore = (user: AdminUserListItem) => {
     setConfirm({ open: true, user, action: "restore" });
   };
 

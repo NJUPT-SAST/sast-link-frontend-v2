@@ -54,7 +54,7 @@ describe("UserEditForm role options per viewer", () => {
     render(<UserEditForm user={makeUser()} onSubmit={jest.fn()} />);
     const select = screen.getByLabelText("角色") as HTMLSelectElement;
     const values = Array.from(select.options).map((o) => o.value);
-    expect(values).toEqual(["freshman", "member", "manager", "lecturer", "admin"]);
+    expect(values).toEqual(["freshman", "member", "lecturer", "manager", "admin"]);
   });
 
   it("withholds the admin option from a manager viewer", () => {
@@ -63,7 +63,7 @@ describe("UserEditForm role options per viewer", () => {
     );
     const select = screen.getByLabelText("角色") as HTMLSelectElement;
     const values = Array.from(select.options).map((o) => o.value);
-    expect(values).toEqual(["freshman", "member", "manager", "lecturer"]);
+    expect(values).toEqual(["freshman", "member", "lecturer", "manager"]);
   });
 });
 

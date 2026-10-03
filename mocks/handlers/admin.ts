@@ -316,7 +316,18 @@ export const adminHandlers = [
 
     const users = filterUsers(filters);
     const { items, total } = paginate(users, page, pageSize);
-    return ok({ users: items, total, page, page_size: pageSize });
+    // The wire shape is the backend's adminUserDTO: department rides at the top
+    // level and the profile/identity halves are absent (usermapping.go).
+    return ok({
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- identities is dropped from the wire on purpose
+      users: items.map(({ profile, identities, ...rest }) => ({
+        ...rest,
+        department: profile?.department ?? null,
+      })),
+      total,
+      page,
+      page_size: pageSize,
+    });
   }),
 
   http.get(`${API_BASE_URL}/admin/users/:id`, ({ request, params }) => {

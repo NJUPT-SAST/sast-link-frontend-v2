@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import type { UserProfileData } from "@/lib/api/types";
+import type { AdminUserListItem } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
 import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
@@ -10,7 +10,7 @@ import { canWriteTargetUser } from "@/components/admin/permissions";
 
 
 interface UserListProps {
-  users: UserProfileData[];
+  users: AdminUserListItem[];
   loading?: boolean;
   /** Read-only mode (e.g. lecturer): hides selection and edit/restore actions. */
   canManage?: boolean;
@@ -22,7 +22,7 @@ interface UserListProps {
   viewerRole?: string;
   /** Serialized list filters, forwarded so detail/edit can return to this page. */
   listQuery?: string;
-  onRestore?: (user: UserProfileData) => void;
+  onRestore?: (user: AdminUserListItem) => void;
   selectedIds?: Set<number>;
   onToggleSelect?: (id: number) => void;
   onToggleSelectAll?: (checked: boolean) => void;
@@ -208,7 +208,7 @@ export function UserList({
               className={cn(ORDER_DEPARTMENT, "admin-cell-label-lg text-tertiary")}
               data-label="部门"
             >
-              {user.profile?.department ? DEPARTMENT_LABELS[user.profile.department] ?? user.profile.department : "-"}
+              {user.department ? DEPARTMENT_LABELS[user.department] ?? user.department : "-"}
             </div>
             <div
               className={cn(ORDER_STATE, "admin-cell-label-lg text-tertiary")}

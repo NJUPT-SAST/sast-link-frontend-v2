@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 
 import { UserList } from "./user-list";
 import { AuditLogList } from "./audit-log-list";
-import type { AdminAuditLog, UserProfileData } from "@/lib/api/types";
+import type { AdminAuditLog, AdminUserListItem } from "@/lib/api/types";
 
 /**
  * Both lists are one grid that switches between a desktop table and a mobile card.
@@ -15,7 +15,7 @@ import type { AdminAuditLog, UserProfileData } from "@/lib/api/types";
  * area is only 576px, and used admin-cell-label-sm, whose labels disappear at 640px
  * — so between 640px and 1024px the table was squeezed with no labels at all.
  */
-function user(overrides: Partial<UserProfileData> = {}): UserProfileData {
+function user(overrides: Partial<AdminUserListItem> = {}): AdminUserListItem {
   return {
     id: 1,
     name: "张三",
@@ -28,16 +28,7 @@ function user(overrides: Partial<UserProfileData> = {}): UserProfileData {
     student_id: "B24040001",
     college: "计算机学院、软件学院、网络空间安全学院",
     major: "软件工程",
-    profile: {
-      nickname: "张三",
-      department: "software",
-      intro: null,
-      email: "a@b.c",
-      avatar: null,
-      blog_url: null,
-      github_url: null,
-    },
-    identities: [],
+    department: "software",
     profile_needs_completion: false,
     state_manual: false,
     incomplete_fields: [],

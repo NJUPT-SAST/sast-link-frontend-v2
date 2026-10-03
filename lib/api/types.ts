@@ -236,11 +236,19 @@ export interface AdminUserListParams {
 }
 
 export interface AdminUserListData {
-  users: UserProfileData[];
+  users: AdminUserListItem[];
   total: number;
   page: number;
   page_size: number;
 }
+
+/** One GET /admin/users row — the backend's adminUserDTO (usermapping.go). The
+ *  list drops the profile/identity halves and carries department at the top
+ *  level instead of under profile, unlike the detail/batch reads that reuse
+ *  UserProfileData. */
+export type AdminUserListItem = Omit<UserProfileData, "profile" | "identities"> & {
+  department: Department | null;
+};
 
 export interface AdminUpdateUserRequest {
   name?: string;
