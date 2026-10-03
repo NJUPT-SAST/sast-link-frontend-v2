@@ -8,7 +8,7 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Fixed
 
-- Role option order in the admin dropdowns (single-user edit form, user list filters): 讲师 (lecturer) now precedes 部长 (manager), so manager sits between lecturer and admin in both selects
+- Role option order in the admin dropdowns (single-user edit form, user list filters, create-user dialog, batch edit dialog): 讲师 (lecturer) now precedes 部长 (manager), so manager sits between lecturer and admin everywhere — the create/batch selects derive from `ROLE_LABELS`, whose key order is now documented as the ladder
 - Admin user list department column showed "-" on every row: `GET /admin/users` rows carry `department` at the top level (backend `adminUserDTO`) and have no `profile` object, but the column read `profile.department` — the detail/batch shape. The list row is now typed as its own `AdminUserListItem`, the column reads the top-level key, and the MSW list handler mirrors the wire shape
 - Dependency security sweep: `next` 16.3.4→16.3.6 (carries the GHSA-vcvr-r3jv-pc5j fix for RCE in next/og ImageResponse), and the pnpm overrides bumped `fast-uri` to 3.1.6 (four SSRF/host-confusion advisories reaching ajv-formats) and `js-yaml` to 3.15.2 (CPU exhaustion via jest's istanbul toolchain) — clears all five remaining high-severity Dependabot alerts
 

@@ -17,11 +17,14 @@ export function avatarFallbackChar(profile: Pick<UserProfileType, "nickname">): 
   return profile.nickname?.charAt(0) || "U";
 }
 
+// Key order is the role ladder (freshman → admin) and is load-bearing: the
+// create/batch dialogs build their role selects via Object.entries over this
+// map, so 讲师 must stay above 部长 here. Label lookups are order-agnostic.
 export const ROLE_LABELS: Record<string, string > = {
   freshman: "Freshman",
   member: "Member",
-  manager: "Manager",
   lecturer: "Lecturer",
+  manager: "Manager",
   admin: "Admin",
 };
 
