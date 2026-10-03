@@ -3,7 +3,7 @@ import { z } from "zod/v3";
 import { realNameSchema } from "@/lib/validations/name";
 import { majorSchema } from "@/lib/validations/major";
 
-import { COLLEGES } from "@/lib/api/types";
+import { COLLEGES, DEPARTMENT_KEYS } from "@/lib/api/types";
 
 // Protocol is optional here because the edit form renders the scheme as a
 // fixed "https://" prefix and submits a normalized value (see withHttpsScheme
@@ -45,16 +45,9 @@ export const profileEditSchema = z.object({
   // silently overwrite a blank value on save.
   college: z.enum(COLLEGES).or(z.literal("")),
   major: majorSchema,
-  // department is shown read-only — managed by admin / recruitment, not edited here
-  department: z.enum([
-    "",
-    "software",
-    "media",
-    "electronics",
-    "office",
-    "publicity",
-    "outreach",
-  ]),
+  // department is shown read-only — managed by admin / recruitment, not edited here.
+  // "" = not assigned / clear-to-NULL on write (backend PR #100 semantics).
+  department: z.enum(["", ...DEPARTMENT_KEYS]),
   blogUrl: z
     .string()
     .trim()

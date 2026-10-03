@@ -14,6 +14,7 @@ import {
 import { scrollToFirstError } from "@/lib/form";
 import { toApiError } from "@/lib/api/errors";
 import { CODE_ALUMNI_BOUND_EMAIL_LIMIT, CODE_VALIDATION } from "@/lib/api/error-codes";
+import { useDepartmentOptions } from "@/hooks/use-departments";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -31,6 +32,7 @@ const FIELD_ORDER = [
   "major",
   "role",
   "state",
+  "department",
   "login_email",
   "personal_email",
   "phone_number",
@@ -73,6 +75,10 @@ function toFormValues(user: UserProfileData): AdminUpdateUserFormValues {
     personal_email: "",
     role: user.role,
     state: user.state,
+    // Backend PR #100: echoed like role/state — "" when unassigned. An
+    // untouched submit re-sends the same value (no-op); picking 未分配 on an
+    // assigned member sends "" which clears to NULL.
+    department: user.profile?.department ?? "",
   };
 }
 
@@ -84,6 +90,10 @@ function toRequest(values: AdminUpdateUserFormValues): AdminUpdateUserRequest {
   if (values.college !== undefined) request.college = values.college;
   if (values.major !== undefined) request.major = values.major;
   if (values.student_id !== undefined) request.student_id = values.student_id;
+  // Department is writable by both admin and manager (backend PR #100), so it
+  // stays ahead of the viewer-scoped withholding applied to the identity
+  // fields below.
+  if (values.department !== undefined) request.department = values.department;
   if (values.login_email !== undefined) request.login_email = values.login_email;
   // A blank value means "no bind requested", so it is withheld entirely.
   if (values.personal_email) request.personal_email = values.personal_email;
@@ -112,6 +122,7 @@ export function UserEditForm({
   cancelFallback = "/admin/users",
 }: UserEditFormProps) {
   const router = useRouter();
+  const departmentOptions = useDepartmentOptions();
   const form = useForm<AdminUpdateUserFormValues>({
     resolver: zodResolver(adminUpdateUserSchema),
     defaultValues: toFormValues(user),
@@ -299,6 +310,26 @@ export function UserEditForm({
                       ⚙️ 当前为手动设置的状态
                     </p>
                   )}
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="department"
+              render={({ field }) => (
+                <FormItem>
+                  <label htmlFor="department" className="mb-2 block text-[13px] text-muted-foreground">
+                    部门
+                  </label>
+                  <Select id="department" {...field} className={selectClass}>
+                    <option value="">未分配</option>
+                    {departmentOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </Select>
+                  <div className="min-h-4 text-xs">
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />

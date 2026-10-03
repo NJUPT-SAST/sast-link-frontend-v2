@@ -7,14 +7,15 @@
  * 解析一律做白名单校验并静默丢弃非法值：URL 是用户可编辑的输入，脏参数只应退化为
  * 默认筛选，不能把非法值透传给后端。
  */
-import type {
-  AdminAuditLogListParams,
-  AdminUserListParams,
-  AlumniRequestListParams,
-  AlumniRequestStatus,
-  Department,
-  UserRole,
-  UserState,
+import {
+  DEPARTMENT_KEYS,
+  type AdminAuditLogListParams,
+  type AdminUserListParams,
+  type AlumniRequestListParams,
+  type AlumniRequestStatus,
+  type Department,
+  type UserRole,
+  type UserState,
 } from "@/lib/api/types";
 
 export const DEFAULT_PAGE_SIZE = 20;
@@ -23,14 +24,7 @@ export const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
 const USER_ROLES: UserRole[] = ["freshman", "member", "manager", "lecturer", "admin"];
 const USER_STATES: UserState[] = ["njupter", "on_sast", "retired_sast", "is_deleted"];
-const DEPARTMENTS: Department[] = [
-  "software",
-  "media",
-  "electronics",
-  "office",
-  "publicity",
-  "outreach",
-];
+const DEPARTMENTS: Department[] = [...DEPARTMENT_KEYS];
 const ALUMNI_STATUSES: AlumniRequestStatus[] = ["pending", "approved", "rejected"];
 type SearchParamsLike = Pick<URLSearchParams, "get">;
 
