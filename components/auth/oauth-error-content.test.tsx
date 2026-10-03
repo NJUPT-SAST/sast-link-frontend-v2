@@ -2,6 +2,10 @@ jest.mock("next/navigation", () => ({
   useSearchParams: () => mockSearchParams(),
 }));
 
+jest.mock("@/lib/api/oauth", () => ({
+  buildOAuthLoginUrl: (provider: string) => `http://backend.test/oauth/${provider}`,
+}));
+
 import { render, screen } from "@testing-library/react";
 import { OAuthErrorContent } from "./oauth-error-content";
 
@@ -13,12 +17,12 @@ function setup(params: string) {
 
 describe("OAuthErrorContent", () => {
   it("shows the backend description verbatim and offers the way back", () => {
-    setup("error=40000&error_description=state+%E6%97%A0%E6%95%88%E6%88%96%E5%B7%B2%E8%BF%87%E6%9C%9F%EF%BC%8C%E8%AF%B7%E9%87%8D%E6%96%B0%E7%99%BB%E5%BD%95");
+    setup("error=40000&error_description=%E7%99%BB%E5%BD%95%E5%B7%B2%E4%B8%AD%E6%96%AD%EF%BC%8C%E8%AF%B7%E9%87%8D%E6%96%B0%E5%8F%91%E8%B5%B7%E7%99%BB%E5%BD%95");
     render(<OAuthErrorContent />);
 
     expect(screen.getByText("第三方登录失败")).toBeInTheDocument();
     expect(
-      screen.getByText(/state 无效或已过期，请重新登录/),
+      screen.getByText(/登录已中断，请重新发起登录。请稍后重试或换用其他登录方式。/),
     ).toBeInTheDocument();
     expect(screen.getByTestId("oauth-error-code")).toHaveTextContent("错误码 40000");
     expect(screen.getByRole("link", { name: "返回登录" })).toHaveAttribute(
@@ -65,5 +69,34 @@ describe("OAuthErrorContent", () => {
 
     expect(screen.getByText(/请稍后重试或换用其他登录方式/)).toBeInTheDocument();
     expect(screen.queryByText(/请联系管理员/)).not.toBeInTheDocument();
+  });
+
+  it("offers a one-click restart when the backend names the provider", () => {
+    setup("error=40000&error_description=%E7%99%BB%E5%BD%95%E5%B7%B2%E4%B8%AD%E6%96%AD&provider=github");
+    render(<OAuthErrorContent />);
+
+    expect(screen.getByRole("link", { name: "重试 GitHub 登录" }))
+      .toHaveAttribute("href", "http://backend.test/oauth/github");
+    // The way back to the password flow stays available as the secondary action.
+    expect(screen.getByRole("link", { name: "返回登录" })).toHaveAttribute(
+      "href",
+      "/login",
+    );
+  });
+
+  it("labels the restart button per provider (lark)", () => {
+    setup("error=50300&provider=lark");
+    render(<OAuthErrorContent />);
+
+    expect(screen.getByRole("link", { name: "重试飞书登录" }))
+      .toHaveAttribute("href", "http://backend.test/oauth/lark");
+  });
+
+  it("degrades to the plain display for an unknown provider", () => {
+    setup("error=40000&provider=google");
+    render(<OAuthErrorContent />);
+
+    expect(screen.queryByRole("link", { name: /重试/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "返回登录" })).toBeInTheDocument();
   });
 });

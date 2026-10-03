@@ -6,6 +6,10 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
+### Added
+
+- One-click login restart on the third-party login error page, adapting backend PR #103: the backend's error redirect now carries `provider` (`github`/`lark`); when present, `/oauth/error` renders a primary 「重试 GitHub 登录」/「重试飞书登录」 button hitting the backend OAuth entry (no `?redirect=` is attached — the page cannot know the pre-login origin, matching the login-page buttons), with 返回登录 demoted to the secondary action; unknown provider values degrade to the previous plain display
+
 ### Fixed
 
 - Dependency security sweep: `next` 16.3.4→16.3.6 (carries the GHSA-vcvr-r3jv-pc5j fix for RCE in next/og ImageResponse), and the pnpm overrides bumped `fast-uri` to 3.1.6 (four SSRF/host-confusion advisories reaching ajv-formats) and `js-yaml` to 3.15.2 (CPU exhaustion via jest's istanbul toolchain) — clears all five remaining high-severity Dependabot alerts
