@@ -8,7 +8,7 @@ import type { AdminUserListParams } from "@/lib/api/types";
 import { adminUserFiltersSchema, type AdminUserFiltersFormValues } from "@/lib/validations/admin";
 import { DEFAULT_PAGE_SIZE } from "@/lib/admin/list-query";
 import { cn } from "@/lib/utils";
-import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
+import { useDepartmentOptions } from "@/hooks/use-departments";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { FilterDrawer } from "@/components/admin/filter-drawer";
@@ -33,11 +33,6 @@ const STATE_OPTIONS = [
   { value: "on_sast", label: "SAST 成员" },
   { value: "retired_sast", label: "已退休" },
   { value: "is_deleted", label: "已注销" },
-];
-
-const DEPARTMENT_OPTIONS = [
-  { value: "", label: "全部部门" },
-  ...Object.entries(DEPARTMENT_LABELS).map(([value, label]) => ({ value, label })),
 ];
 
 const COMPLETION_OPTIONS = [
@@ -102,6 +97,8 @@ function toParams(values: AdminUserFiltersFormValues): AdminUserListParams {
 }
 
 export function UserFilters({ value, onChange }: UserFiltersProps) {
+  const catalogue = useDepartmentOptions();
+  const departmentOptions = [{ value: "", label: "全部部门" }, ...catalogue];
   const form = useForm<AdminUserFiltersFormValues>({
     resolver: zodResolver(adminUserFiltersSchema),
     defaultValues: toFormValues(value),
@@ -185,7 +182,7 @@ export function UserFilters({ value, onChange }: UserFiltersProps) {
             部门
           </label>
           <Select id="department" {...form.register("department")} className={selectClass}>
-            {DEPARTMENT_OPTIONS.map((opt) => (
+            {departmentOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </Select>

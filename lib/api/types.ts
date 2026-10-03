@@ -23,13 +23,23 @@ export const COLLEGES = [
 ] as const;
 
 export type College = (typeof COLLEGES)[number];
-export type Department =
-  | "software"
-  | "media"
-  | "electronics"
-  | "office"
-  | "publicity"
-  | "outreach";
+
+/** Mirrors the backend `department_enum` (migration V021, backend PR #100):
+ *  software 软件研发部 / media 多媒体部 / electronics 电子部 / office 办公室 /
+ *  liaison 外联部 / publicity 科宣部 / competition 赛事部. The canonical
+ *  key→label source is `GET /departments`; DEPARTMENT_LABELS is the static
+ *  mirror (and offline fallback) of that catalogue. */
+export const DEPARTMENT_KEYS = [
+  "software",
+  "media",
+  "electronics",
+  "office",
+  "liaison",
+  "publicity",
+  "competition",
+] as const;
+
+export type Department = (typeof DEPARTMENT_KEYS)[number];
 type LoginMethod = "github" | "lark" | "other_mail";
 export type UserRole = "freshman" | "member" | "manager" | "lecturer" | "admin";
 export type UserState = "njupter" | "on_sast" | "retired_sast" | "is_deleted";
@@ -247,7 +257,10 @@ export interface AdminUpdateUserRequest {
    *  both returns 400. This is the undo for a manual pin. */
   state_auto?: boolean;
   email_type?: EmailType;
-  department?: Department;
+  /** Backend PR #100: department rides on the single-user update with the
+   *  same semantics as `PUT /user/profile` — a key sets it, `""` clears to
+   *  NULL, omitted leaves it unchanged. */
+  department?: Department | "";
   /** Optional. When supplied, bound as an `other_mail` login identity in the
    *  same transaction (admin-vouched, no verification, no mailbox check) — the
    *  rescue path for graduated members whose school mailbox died before they

@@ -9,7 +9,6 @@ import type {
   AdminCreateUserRequest,
   AdminUpdateUserRequest,
   AdminUserListParams,
-  Department,
   UserProfileData,
   UserRole,
   UserState,
@@ -92,7 +91,9 @@ function AdminUsersContent() {
 
   const handleBatchConfirm = async (fields: BatchEditFields) => {
     const ids = Array.from(selectedIds);
-    if (ids.length === 0 || (!fields.role && !fields.state && !fields.department)) {
+    // `fields.department === ""` is a clear command (backend PR #100), not an
+    // empty selection — compare against undefined, not truthiness.
+    if (ids.length === 0 || (!fields.role && !fields.state && fields.department === undefined)) {
       setBatchOpen(false);
       return;
     }
@@ -117,11 +118,13 @@ function AdminUsersContent() {
       // Phase 2 — state/department stay one-by-one. Skip ids whose role change
       // already failed (or was not reported).
       const singleUpdateFailures = new Map<number, string>();
-      if (fields.state || fields.department) {
+      if (fields.state || fields.department !== undefined) {
         const roleFailed = computeRoleFailedIds(ids, roleResults);
         const request: AdminUpdateUserRequest = {
           ...(fields.state ? { state: fields.state as UserState } : {}),
-          ...(fields.department ? { department: fields.department as Department } : {}),
+          ...(fields.department !== undefined
+            ? { department: fields.department }
+            : {}),
         };
         for (const id of ids) {
           if (roleFailed.has(id)) continue;

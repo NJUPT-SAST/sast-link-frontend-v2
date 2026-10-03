@@ -6,20 +6,12 @@ import { Camera, Pencil } from "lucide-react";
 
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { avatarFallbackChar, DEFAULT_AVATAR, ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
+import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
 import { cn } from "@/lib/utils";
 import { useAvatarUpload } from "@/hooks/use-avatar-upload";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarCropperDialog } from "@/components/user/avatar-cropper-dialog";
 import { Button } from "@/components/ui/button";
-
-const DEPARTMENT_LABELS: Record<string, string> = {
-  software: "软件研发部",
-  media: "多媒体部",
-  electronics: "电子部",
-  office: "办公室",
-  publicity: "科宣部",
-  outreach: "外联部",
-};
 
 function Field({
   label,

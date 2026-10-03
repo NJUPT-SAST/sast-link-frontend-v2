@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
-import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
+import { useDepartmentOptions } from "@/hooks/use-departments";
+import type { Department } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { DotLoading } from "@/components/ui/dot-loading";
@@ -19,8 +20,15 @@ import {
 export type BatchEditFields = {
   role?: string;
   state?: string;
-  department?: string;
+  /** Department key, or "" to clear the assignment (backend PR #100:
+   *  set-on-value / clear-on-empty-string / skip-when-absent). */
+  department?: Department | "";
 };
+
+/** Select-only sentinel distinguishing "clear to NULL" from the untouched
+ *  default "" — the backend treats an empty string as a clear command, so the
+ *  dialog cannot overload "" for both meanings. */
+const DEPT_CLEAR = "__clear__";
 
 interface UserBatchEditDialogProps {
   open: boolean;
@@ -34,7 +42,6 @@ interface UserBatchEditDialogProps {
 }
 
 const STATE_OPTIONS = Object.entries(STATE_LABELS);
-const DEPT_OPTIONS = Object.entries(DEPARTMENT_LABELS);
 
 // A manager may not grant the admin role, so the option is withheld instead
 // of offered and refused per item.
@@ -58,6 +65,7 @@ export function UserBatchEditDialog({
   const [state, setState] = useState("");
   const [department, setDepartment] = useState("");
   const [dangerConfirm, setDangerConfirm] = useState(false);
+  const departmentOptions = useDepartmentOptions();
 
   const hasChange = Boolean(role || state || department);
   const isDangerous = role === "admin" || state === "is_deleted";
@@ -81,7 +89,10 @@ export function UserBatchEditDialog({
     const fields: BatchEditFields = {};
     if (role) fields.role = role;
     if (state) fields.state = state;
-    if (department) fields.department = department;
+    if (department === DEPT_CLEAR) fields.department = "";
+    // The state string only ever holds "", DEPT_CLEAR, or a catalogue key —
+    // narrowing it here keeps BatchEditFields typed without casts downstream.
+    else if (department) fields.department = department as Department;
     return fields;
   };
 
@@ -184,9 +195,10 @@ export function UserBatchEditDialog({
                 </label>
                 <Select id="batch-department" value={department} onChange={(e) => setDepartment(e.target.value)} className={selectClass}>
                   <option value="">保持不变</option>
-                  {DEPT_OPTIONS.map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
+                  <option value={DEPT_CLEAR}>清空部门（设为未分配）</option>
+                  {departmentOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
                     </option>
                   ))}
                 </Select>

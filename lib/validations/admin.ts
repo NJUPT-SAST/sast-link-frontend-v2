@@ -1,7 +1,7 @@
 import { z } from "zod/v3";
 
 import { realNameSchema } from "@/lib/validations/name";
-import { COLLEGES, CREATE_USER_STATES } from "@/lib/api/types";
+import { COLLEGES, CREATE_USER_STATES, DEPARTMENT_KEYS } from "@/lib/api/types";
 
 function isValidRedirectUri(value: string): boolean {
   if (value.length > 2048) return false;
@@ -29,14 +29,7 @@ const redirectUriSchema = z
 
 const userRoleSchema = z.enum(["freshman", "member", "manager", "lecturer", "admin"]);
 const userStateSchema = z.enum(["njupter", "on_sast", "retired_sast", "is_deleted"]);
-const departmentSchema = z.enum([
-  "software",
-  "media",
-  "electronics",
-  "office",
-  "publicity",
-  "outreach",
-]);
+const departmentSchema = z.enum(DEPARTMENT_KEYS);
 const emailTypeSchema = z.enum(["njupt_email", "sast_email"]);
 const grantTypeSchema = z.enum(["authorization_code", "refresh_token"]);
 const scopeSchema = z.enum(["openid", "profile", "email", "admin:read", "admin:write", "user:read", "user:write"]);
@@ -76,6 +69,11 @@ export const adminUpdateUserSchema = z
     login_email: z.string().trim().email("请输入有效的邮箱").max(255, "邮箱最多 255 个字符").optional(),
     role: userRoleSchema.optional(),
     state: userStateSchema.optional(),
+    // Backend PR #100: department rides on PUT /admin/users/{id} with the
+    // same semantics as PUT /user/profile — a value sets it, "" clears to
+    // NULL, omitted leaves it alone. The edit form echoes the current value
+    // ("" when unassigned), so an untouched submit is a no-op.
+    department: z.enum(["", ...DEPARTMENT_KEYS]).optional(),
     email_type: emailTypeSchema.optional(),
     // Empty means "no bind requested"; a filled value is admin-vouched and
     // bound as an `other_mail` login identity without verification.

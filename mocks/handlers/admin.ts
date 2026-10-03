@@ -386,6 +386,17 @@ export const adminHandlers = [
       }
     }
 
+    // Backend PR #100: department lives on the (upserted) profile row — set on
+    // a key, clear-to-NULL on "", matching PUT /user/profile semantics.
+    if (body.department !== undefined) {
+      if (!target.profile.profile) {
+        target.profile.profile = { department: body.department || null };
+      } else {
+        target.profile.profile.department = body.department || null;
+      }
+      hasUpdate = true;
+    }
+
     if (!hasUpdate) return fail(400, 40000, "没有任何待更新字段");
     target.profile.updated_at = new Date().toISOString();
     return ok({ message: "用户信息更新成功", user: target.profile });

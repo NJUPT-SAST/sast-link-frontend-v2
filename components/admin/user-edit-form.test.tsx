@@ -128,3 +128,66 @@ describe("UserEditForm", () => {
     ).toBeInTheDocument();
   });
 });
+describe("UserEditForm department (backend PR #100)", () => {
+  it("echoes the assigned department and re-sends it untouched on save", async () => {
+    const { onSubmit } = setup({
+      user: makeUser({ profile: { department: "media" } }),
+    });
+    const select = screen.getByLabelText("部门") as HTMLSelectElement;
+    expect(select.value).toBe("media");
+
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    expect(onSubmit.mock.calls[0][0].department).toBe("media");
+  });
+
+  it("defaults an unassigned member to 未分配 and submits the empty string", async () => {
+    const { onSubmit } = setup();
+    const select = screen.getByLabelText("部门") as HTMLSelectElement;
+    expect(select.value).toBe("");
+
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    expect(onSubmit.mock.calls[0][0].department).toBe("");
+  });
+
+  it("sends the picked department", async () => {
+    const { onSubmit } = setup({
+      user: makeUser({ profile: { department: "software" } }),
+    });
+    fireEvent.change(screen.getByLabelText("部门"), {
+      target: { value: "competition" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    expect(onSubmit.mock.calls[0][0].department).toBe("competition");
+  });
+
+  it("clears the assignment when switching to 未分配", async () => {
+    const { onSubmit } = setup({
+      user: makeUser({ profile: { department: "liaison" } }),
+    });
+    fireEvent.change(screen.getByLabelText("部门"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    // "" is the backend's clear-to-NULL command, not "leave unchanged".
+    expect(onSubmit.mock.calls[0][0].department).toBe("");
+  });
+
+  it("lists the seven backend departments plus 未分配", async () => {
+    setup();
+    const select = screen.getByLabelText("部门") as HTMLSelectElement;
+    await waitFor(() => {
+      expect(Array.from(select.options).map((o) => o.value)).toEqual([
+        "",
+        "software",
+        "media",
+        "electronics",
+        "office",
+        "liaison",
+        "publicity",
+        "competition",
+      ]);
+    });
+  });
+});
