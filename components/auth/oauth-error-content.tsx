@@ -4,6 +4,10 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import {
+  buildOAuthLoginUrl,
+  type OAuthProvider,
+} from "@/lib/api/oauth";
 
 /**
  * Codes worth retrying as-is: the user did nothing wrong and a second attempt
@@ -13,10 +17,26 @@ import { Button } from "@/components/ui/button";
  */
 const RETRYABLE_CODES = new Set(["40000", "42900", "50000", "50300"]);
 
+/** Full restart-button copy per provider (backend PR #103's error
+ *  redirect carries ?provider=). CJK needs no padding around 飞书, while the
+ *  Latin brand reads better spaced. */
+const RESTART_LABELS: Record<OAuthProvider, string> = {
+  github: "重试 GitHub 登录",
+  lark: "重试飞书登录",
+};
+
+/** The backend adds ?provider= to the error redirect so the page can offer a
+ *  one-click restart. Anything but the known providers (hand-edited links)
+ *  degrades to the plain display. */
+function parseProvider(raw: string | null): OAuthProvider | null {
+  return raw === "github" || raw === "lark" ? raw : null;
+}
+
 export function OAuthErrorContent() {
   const searchParams = useSearchParams();
   const code = searchParams.get("error");
   const description = searchParams.get("error_description");
+  const provider = parseProvider(searchParams.get("provider"));
 
   // The backend owns the copy: error_description is this deployment's fixed
   // string (never provider text), so it is displayed verbatim. A missing
@@ -39,8 +59,20 @@ export function OAuthErrorContent() {
           错误码 {code}
         </p>
       )}
-      <div className="mt-2">
-        <Button asChild>
+      <div className="mt-2 flex flex-col gap-2">
+        {provider && (
+          <Button asChild>
+            {/* Plain anchor: the login restart is a hard GET to the backend
+                OAuth entry, outside the static-export router. No ?redirect=
+                is attached — this page cannot know the pre-login page, and the
+                login-page buttons send none either, so the backend falls back
+                to its default post-login address. */}
+            <a href={buildOAuthLoginUrl(provider)}>
+              {RESTART_LABELS[provider]}
+            </a>
+          </Button>
+        )}
+        <Button asChild variant={provider ? "outline" : "default"}>
           <Link href="/login">返回登录</Link>
         </Button>
       </div>
