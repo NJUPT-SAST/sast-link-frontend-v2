@@ -15,6 +15,30 @@ export function exchangeLoginCode(code: string) {
   });
 }
 
+/** Response payload of the Feishu in-client login-free entrance (backend PR
+ *  #105, `POST /oauth/lark/app-code`). Its fields mirror the authorize-page
+ *  callback redirect's query parameters one for one: bound=true carries the
+ *  one-time login_code (redeem via exchangeLoginCode), bound=false carries the
+ *  registration double-binding pair plus display hints for the register step. */
+export interface LarkAppCodeLoginData {
+  bound: boolean;
+  login_code?: string;
+  registration_state?: string;
+  oauth_state?: string;
+  provider: string;
+  name?: string;
+  avatar?: string;
+}
+
+/** Redeem the JSAPI pre-authorization code obtained inside the Feishu client
+ *  (tt.requestAccess / tt.requestAuthCode). Same identity gate and the same
+ *  login/register split as the authorize-page callback. */
+export function larkAppCodeLogin(code: string) {
+  return apiClient.post<ApiEnvelope<LarkAppCodeLoginData>>("/oauth/lark/app-code", {
+    code,
+  });
+}
+
 /** Records the user's decision on a pending authorization request and returns
  *  the target redirect_uri (with the one-time authorization code) to follow. */
 export function consentAuthorize(requestId: string, approve: boolean) {

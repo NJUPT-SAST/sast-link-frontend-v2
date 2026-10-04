@@ -6,6 +6,10 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
+### Added
+
+- Feishu in-client login-free entrance, adapting backend PR #105: when the landing page is opened inside the Feishu client (Lark/Feishu webview UA + the Feishu app id configured), it loads the Feishu JSSDK, obtains the one-time JSAPI pre-authorization code via `tt.requestAccess` (falling back to `tt.requestAuthCode` on clients older than 6.9.0) and posts it to the new `POST /oauth/lark/app-code`; a bound identity lands in a session through the same login_code redemption leg the authorize-page callback uses (extracted into `lib/login-session.ts`), an unbound one is forwarded to `/register` with the double-binding pair and display hints. Ordinary browsers are untouched; failures surface on the landing page with a retry and the regular login entrance. Deployment prerequisite (Feishu admin console, not code): add the 网页应用 capability to the SAST Feishu app and point its desktop/mobile home URL at this frontend
+
 ### Fixed
 
 - Role option order in the admin dropdowns (single-user edit form, user list filters, create-user dialog, batch edit dialog): 讲师 (lecturer) now precedes 部长 (manager), so manager sits between lecturer and admin everywhere — the create/batch selects derive from `ROLE_LABELS`, whose key order is now documented as the ladder

@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 
 import { useAuthSession } from "@/hooks/use-auth-session";
+import { useLarkH5AutoLogin } from "@/hooks/use-lark-h5-auto-login";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/animation/page-transition";
 import { PhotoGlyphsSection } from "@/components/visual/photo-glyphs-section";
@@ -21,17 +23,24 @@ import { PhotoGlyphsSection } from "@/components/visual/photo-glyphs-section";
 export default function Home() {
   const router = useRouter();
   const status = useAuthSession();
+  // Inside the Feishu client the landing tries the app-code login first; while
+  // it runs the splash cover stays up (no flash of login/register at a user
+  // the auto-login is about to sign in).
+  const larkLogin = useLarkH5AutoLogin(status);
   const [showLanding, setShowLanding] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     if (status === "authenticated") {
       router.replace("/home");
-    } else if (status === "unauthenticated") {
+    } else if (
+      status === "unauthenticated" &&
+      larkLogin.status !== "running"
+    ) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowLanding(true);
     }
-  }, [router, status]);
+  }, [router, status, larkLogin.status]);
 
   // Restrained parallax: the title tilts a few degrees toward the cursor.
   // Runs once the landing is actually shown.
@@ -67,7 +76,22 @@ export default function Home() {
   // Until the session check resolves, cover the frame with black — the boot
   // intro paints over the same color, so signed-out and signed-in visitors both
   // see an unbroken dark opening instead of a white flash.
-  if (!showLanding) return <div aria-hidden="true" className="fixed inset-0 bg-black" />;
+  if (!showLanding) {
+    if (larkLogin.status === "running") {
+      return (
+        <div
+          className="fixed inset-0 grid place-items-center bg-black"
+          data-testid="lark-login-cover"
+        >
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 size={28} className="animate-spin text-link" />
+            <p className="type-tech text-tertiary">正在通过飞书登录…</p>
+          </div>
+        </div>
+      );
+    }
+    return <div aria-hidden="true" className="fixed inset-0 bg-black" />;
+  }
 
   // Fade, not the default slide: this page's transition container is the
   // full-viewport landing itself, and slide's translate on a min-h-screen
@@ -101,6 +125,16 @@ export default function Home() {
             <Link href="/login">登录</Link>
           </Button>
         </div>
+        {larkLogin.status === "failed" && (
+          <div className="mt-6 flex max-w-md flex-col items-center gap-2 text-center">
+            <p className="text-[13px] text-destructive" data-testid="lark-login-error">
+              飞书登录失败：{larkLogin.error}
+            </p>
+            <Button variant="outline" size="sm" onClick={larkLogin.retry}>
+              重试飞书登录
+            </Button>
+          </div>
+        )}
       </PageTransition>
       {/* Second screen: full-viewport monochrome character-photo background. */}
       <PhotoGlyphsSection />
