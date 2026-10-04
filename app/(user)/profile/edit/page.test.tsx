@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+import type { UserProfileType } from "@/lib/api/types";
 import EditPage from "./page";
 
 const profile = {
@@ -12,7 +13,7 @@ const profile = {
   qqNumber: "1234567890",
   college: "计算机学院、软件学院、网络空间安全学院",
   major: "软件工程",
-  role: "member" as const,
+  role: "member" as UserProfileType["role"],
   state: "njupter" as const,
   emailType: "njupt_email" as const,
   createdAt: "2026-05-28T12:00:00Z",
@@ -33,14 +34,23 @@ const mockRouterReplace = jest.fn();
 const mockScrollToFirstError = jest.fn();
 const mockMapProfile = jest.fn((data) => data);
 
+const mockProfileState = { profile };
+
 jest.mock("@/store/use-user-profile-store", () => ({
   useUserProfileStore: (selector: (state: unknown) => unknown) => {
     const state = {
-      profile,
+      profile: mockProfileState.profile,
       setProfile: mockSetProfile,
     };
     return selector(state);
   },
+}));
+
+jest.mock("@/hooks/use-departments", () => ({
+  useDepartmentOptions: () => [
+    { value: "software" as const, label: "软件研发部" },
+    { value: "media" as const, label: "多媒体部" },
+  ],
 }));
 
 jest.mock("swr", () => ({
@@ -82,6 +92,7 @@ jest.mock("@/lib/message", () => ({
 
 describe("EditPage", () => {
   beforeEach(() => {
+    mockProfileState.profile = profile;
     mockUpdateUserProfile.mockReset();
     mockSetProfile.mockReset();
     mockMutate.mockReset();
@@ -151,6 +162,82 @@ describe("EditPage", () => {
     expect(payload.college).toBe("计算机学院、软件学院、网络空间安全学院");
     expect(payload.major).toBe("软件工程");
     expect(payload.department).toBeUndefined();
+  });
+
+  // Backend departmentSelfEditRoles: the key is accepted only from
+  // manager/admin; any other role submitting it is a 400, so a member keeps
+  // the read-only display and the payload withholds the key.
+  it("keeps department read-only for a non-manager/admin role", () => {
+    render(<EditPage />);
+
+    expect(screen.getByText("软件研发部")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "部门" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lets a manager self-edit department and sends the picked key", async () => {
+    mockProfileState.profile = { ...profile, role: "manager" };
+    mockUpdateUserProfile.mockResolvedValueOnce({
+      data: { data: { user: profile } },
+    });
+
+    render(<EditPage />);
+
+    fireEvent.change(screen.getByLabelText("部门"), {
+      target: { value: "media" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+
+    await waitFor(() => {
+      expect(mockUpdateUserProfile).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = mockUpdateUserProfile.mock.calls[0][0];
+    expect(payload.department).toBe("media");
+  });
+
+  it("sends the empty-string clear when a manager picks 未分配", async () => {
+    mockProfileState.profile = { ...profile, role: "manager" };
+    mockUpdateUserProfile.mockResolvedValueOnce({
+      data: { data: { user: profile } },
+    });
+
+    render(<EditPage />);
+
+    fireEvent.change(screen.getByLabelText("部门"), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+
+    await waitFor(() => {
+      expect(mockUpdateUserProfile).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = mockUpdateUserProfile.mock.calls[0][0];
+    expect(payload.department).toBe("");
+  });
+
+  it("lets an admin self-edit department too", async () => {
+    mockProfileState.profile = { ...profile, role: "admin" };
+    mockUpdateUserProfile.mockResolvedValueOnce({
+      data: { data: { user: profile } },
+    });
+
+    render(<EditPage />);
+
+    const select = screen.getByLabelText("部门") as HTMLSelectElement;
+    expect(select.value).toBe("software");
+
+    fireEvent.change(select, { target: { value: "media" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+
+    await waitFor(() => {
+      expect(mockUpdateUserProfile).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = mockUpdateUserProfile.mock.calls[0][0];
+    expect(payload.department).toBe("media");
   });
 
   it("strips line breaks from the signature before submitting", async () => {
@@ -353,6 +440,7 @@ describe("EditPage", () => {
       "intro",
       "college",
       "major",
+      "department",
       "phoneNumber",
       "qqNumber",
       "blogUrl",

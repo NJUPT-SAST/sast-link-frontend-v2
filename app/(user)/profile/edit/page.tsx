@@ -16,6 +16,7 @@ import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
 import { avatarFallbackChar, DEFAULT_AVATAR } from "@/lib/constants/profile";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { useAvatarUpload } from "@/hooks/use-avatar-upload";
+import { useDepartmentOptions } from "@/hooks/use-departments";
 import { message } from "@/lib/message";
 import {
   profileEditSchema,
@@ -45,11 +46,18 @@ const FIELD_ORDER = [
   "intro",
   "college",
   "major",
+  "department",
   "phoneNumber",
   "qqNumber",
   "blogUrl",
   "githubUrl",
 ];
+
+// The backend role-gates the department self-edit on field presence
+// (session/profile.go departmentSelfEditRoles): manager/admin may write it,
+// any other role submitting the key is a 400 rather than a silent drop — so
+// the key rides the update only for the roles allowed to change it.
+const DEPARTMENT_SELF_EDIT_ROLES = ["manager", "admin"] as const;
 
 /**
  * Warns the user before they lose unsaved edits:
@@ -92,7 +100,10 @@ const stripUrlScheme = (value: string) => value.replace(/^https?:\/\//i, "");
 const withHttpsScheme = (value: string) =>
   value === "" || /^https?:\/\//i.test(value) ? value : `https://${value}`;
 
-function toUpdateRequest(values: ProfileEditFormValues): UpdateProfileRequest {
+function toUpdateRequest(
+  values: ProfileEditFormValues,
+  canEditDepartment: boolean,
+): UpdateProfileRequest {
   return {
     nickname: values.nickname,
     name: values.name,
@@ -104,8 +115,10 @@ function toUpdateRequest(values: ProfileEditFormValues): UpdateProfileRequest {
     // leave college untouched when the user hasn't chosen one
     ...(values.college ? { college: values.college } : {}),
     major: values.major,
-    // student_id is set during registration — not editable;
-    // department is managed by admin / recruitment — not editable
+    // student_id is set during registration — not editable.
+    // department self-edit is manager/admin-only (PR #100 write semantics:
+    // a key sets it, "" clears to NULL); withheld for everyone else.
+    ...(canEditDepartment ? { department: values.department } : {}),
     // the https:// prefix is a UI affordance, not part of the stored value
     blog_url: withHttpsScheme(values.blogUrl),
     github_url: withHttpsScheme(values.githubUrl),
@@ -120,6 +133,12 @@ export default function EditPage() {
   const [loading, setLoading] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const handleAvatarUploaded = useAvatarUpload();
+  const departmentOptions = useDepartmentOptions();
+  // The department picker exists only for the roles the backend lets
+  // self-edit the field; everyone else keeps the read-only display.
+  const canEditDepartment = (
+    DEPARTMENT_SELF_EDIT_ROLES as readonly string[]
+  ).includes(profile.role);
 
   const form = useForm<ProfileEditFormValues>({
     resolver: zodResolver(profileEditSchema),
@@ -164,7 +183,9 @@ export default function EditPage() {
   const onValid = async (values: ProfileEditFormValues) => {
     setLoading(true);
     try {
-      const response = await updateUserProfile(toUpdateRequest(values));
+      const response = await updateUserProfile(
+        toUpdateRequest(values, canEditDepartment),
+      );
       setProfile(mapProfile(response.data.data.user));
       const key = profileKey();
       if (key) mutate(key);
@@ -341,15 +362,45 @@ export default function EditPage() {
                 />
               ))}
 
-              {/* Department is read-only — managed by admin / recruitment */}
-              <div className="flex flex-col gap-1 text-sm">
-                <span className="text-[13px] text-muted-foreground">部门</span>
-                <span className="text-foreground">
-                  {profile.department
-                    ? DEPARTMENT_LABELS[profile.department] ?? profile.department
-                    : "未分配"}
-                </span>
-              </div>
+              {/* Department self-edit is manager/admin-only (the backend
+                  role-gates the key on field presence); other roles see the
+                  read-only display. */}
+              {canEditDepartment ? (
+                <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <label
+                        htmlFor="department"
+                        className="mb-2 block text-[13px] text-muted-foreground"
+                      >
+                        部门
+                      </label>
+                      <Select id="department" {...field} className={selectClass}>
+                        <option value="">未分配</option>
+                        {departmentOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </Select>
+                      <div className="min-h-4 text-xs [&_p]:text-destructive">
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <div className="flex flex-col gap-1 text-sm">
+                  <span className="text-[13px] text-muted-foreground">部门</span>
+                  <span className="text-foreground">
+                    {profile.department
+                      ? DEPARTMENT_LABELS[profile.department] ?? profile.department
+                      : "未分配"}
+                  </span>
+                </div>
+              )}
             </div>
           </section>
 
