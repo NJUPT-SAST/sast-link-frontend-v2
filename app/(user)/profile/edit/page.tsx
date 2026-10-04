@@ -392,13 +392,18 @@ export default function EditPage() {
                   )}
                 />
               ) : (
-                <div className="flex flex-col gap-1 text-sm">
+                <div className="flex flex-col gap-1">
                   <span className="text-[13px] text-muted-foreground">部门</span>
-                  <span className="text-foreground">
+                  {/* Matches the field box the editable controls use, as a
+                      read-only value: select-none keeps the display text from
+                      being drag-selected — a read-only form value is not
+                      copyable data, and text selection here is what led users
+                      into the custom-cursor trap. */}
+                  <div className="flex h-12 select-none items-center rounded-lg border border-input bg-card px-3.5 text-[15px] text-tertiary">
                     {profile.department
                       ? DEPARTMENT_LABELS[profile.department] ?? profile.department
                       : "未分配"}
-                  </span>
+                  </div>
                 </div>
               )}
             </div>
