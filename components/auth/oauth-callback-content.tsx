@@ -5,11 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { toApiError } from "@/lib/api/errors";
-import { exchangeLoginCode } from "@/lib/api/oauth";
-import { createSession, setSession } from "@/lib/token";
-import { postAuthDestination } from "@/lib/auth-destination";
-import { useUserListStore } from "@/store/use-user-list-store";
-import { useUserProfileStore } from "@/store/use-user-profile-store";
+import { establishLoginCodeSession } from "@/lib/login-session";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -45,8 +41,6 @@ function Steps({ failed, cancelled }: { failed: boolean; cancelled?: boolean }) 
 export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const addAccount = useUserListStore((state) => state.addAccount);
-  const resetProfile = useUserProfileStore((state) => state.resetProfile);
   const [exchangeError, setExchangeError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const exchangedRef = useRef(false);
@@ -74,23 +68,10 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
     exchangedRef.current = true;
     setExchangeError(null);
 
-    exchangeLoginCode(code)
-      .then((response) => {
-        const data = response.data.data;
-        const session = createSession(data.access_token, data.expires_in);
-        setSession(session);
-        resetProfile();
-        addAccount({
-          userId: data.user.id,
-          loginEmail: data.user.login_email,
-          name: data.user.name,
-          avatar: null,
-          session,
-        });
-        router.replace(postAuthDestination(data, "/home"));
-      })
+    establishLoginCodeSession(code)
+      .then((destination) => router.replace(destination))
       .catch((reason) => setExchangeError(toApiError(reason).message));
-  }, [addAccount, code, resetProfile, router, searchParams, retryCount]);
+  }, [code, router, searchParams, retryCount]);
 
   const handleRetry = () => {
     exchangedRef.current = false;
