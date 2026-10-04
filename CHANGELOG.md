@@ -6,6 +6,10 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
+### Added
+
+- One-click login restart on the third-party login error page, adapting backend PR #103: the backend's error redirect now carries `provider` (`github`/`lark`); when present, `/oauth/error` renders a primary 「重试 GitHub 登录」/「重试飞书登录」 button hitting the backend OAuth entry (no `?redirect=` is attached — the page cannot know the pre-login origin, matching the login-page buttons), with 返回登录 demoted to the secondary action; unknown provider values degrade to the previous plain display
+
 ### Fixed
 
 - Role option order in the admin dropdowns (single-user edit form, user list filters, create-user dialog, batch edit dialog): 讲师 (lecturer) now precedes 部长 (manager), so manager sits between lecturer and admin everywhere — the create/batch selects derive from `ROLE_LABELS`, whose key order is now documented as the ladder
