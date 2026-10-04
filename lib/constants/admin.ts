@@ -44,13 +44,17 @@ export function formatScope(scope: Scope): string {
   return `${scope} · ${SCOPE_LABELS[scope]}`;
 }
 
+/** Static mirror of `GET /departments` (backend PR #100). Kept for offline
+ *  fallback and synchronous label rendering — a key missing here falls back
+ *  to the raw value at every call site. */
 export const DEPARTMENT_LABELS: Record<Department, string> = {
   software: "软件研发部",
   media: "多媒体部",
   electronics: "电子部",
   office: "办公室",
+  liaison: "外联部",
   publicity: "科宣部",
-  outreach: "外联部",
+  competition: "赛事部",
 };
 
 /**

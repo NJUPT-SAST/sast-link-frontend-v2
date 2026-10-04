@@ -6,12 +6,19 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
+### Added
+
+- One-click login restart on the third-party login error page, adapting backend PR #103: the backend's error redirect now carries `provider` (`github`/`lark`); when present, `/oauth/error` renders a primary 「重试 GitHub 登录」/「重试飞书登录」 button hitting the backend OAuth entry (no `?redirect=` is attached — the page cannot know the pre-login origin, matching the login-page buttons), with 返回登录 demoted to the secondary action; unknown provider values degrade to the previous plain display
+
 ### Fixed
 
+- Role option order in the admin dropdowns (single-user edit form, user list filters, create-user dialog, batch edit dialog): 讲师 (lecturer) now precedes 部长 (manager), so manager sits between lecturer and admin everywhere — the create/batch selects derive from `ROLE_LABELS`, whose key order is now documented as the ladder
+- Admin user list department column showed "-" on every row: `GET /admin/users` rows carry `department` at the top level (backend `adminUserDTO`) and have no `profile` object, but the column read `profile.department` — the detail/batch shape. The list row is now typed as its own `AdminUserListItem`, the column reads the top-level key, and the MSW list handler mirrors the wire shape
 - Dependency security sweep: `next` 16.3.4→16.3.6 (carries the GHSA-vcvr-r3jv-pc5j fix for RCE in next/og ImageResponse), and the pnpm overrides bumped `fast-uri` to 3.1.6 (four SSRF/host-confusion advisories reaching ajv-formats) and `js-yaml` to 3.15.2 (CPU exhaustion via jest's istanbul toolchain) — clears all five remaining high-severity Dependabot alerts
 
 ### Added
 
+- Department field support, adapting backend PR #100: the department enum expands to the backend's seven keys (`software` / `media` / `electronics` / `office` / `liaison` / `publicity` / `competition`, replacing the stale `outreach` key); department pickers (admin user filters, batch edit, single-user edit) source their options from the new public `GET /departments` catalogue with a static mirror as fallback; the single-user edit form gains a department select with the backend's write semantics (set on a key, clear-to-NULL on 未分配, no-op when untouched); the batch edit dialog offers an explicit 清空部门 option that issues the empty-string clear command per selected id
 - Manager (部长) role support, adapting backend PR #98: `manager` joins the role enums/types/labels and filters; the console nav admits managers to the overview and user management (three-tier split — lecturer stays read-only, OAuth clients / audit logs / alumni requests stay admin-only); the overview renders only the users card and donuts when the stats response carries no `clients`/`audit` keys (manager view gets the users aggregate only); user write affordances follow the manager boundary — a manager sees no admin option in role selects and no edit/delete/restore actions on admin accounts (the backend answers 403 there), enforced client-side via `canManageUsers` / `canWriteTargetUser` with MSW handlers mirroring the same gates and boundary
 - Next.js App Router implementation for SAST Link tourist and authenticated flows
 - Two-step login flow

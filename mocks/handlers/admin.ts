@@ -316,7 +316,18 @@ export const adminHandlers = [
 
     const users = filterUsers(filters);
     const { items, total } = paginate(users, page, pageSize);
-    return ok({ users: items, total, page, page_size: pageSize });
+    // The wire shape is the backend's adminUserDTO: department rides at the top
+    // level and the profile/identity halves are absent (usermapping.go).
+    return ok({
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- identities is dropped from the wire on purpose
+      users: items.map(({ profile, identities, ...rest }) => ({
+        ...rest,
+        department: profile?.department ?? null,
+      })),
+      total,
+      page,
+      page_size: pageSize,
+    });
   }),
 
   http.get(`${API_BASE_URL}/admin/users/:id`, ({ request, params }) => {
@@ -415,6 +426,17 @@ export const adminHandlers = [
         }
         hasUpdate = true;
       }
+    }
+
+    // Backend PR #100: department lives on the (upserted) profile row — set on
+    // a key, clear-to-NULL on "", matching PUT /user/profile semantics.
+    if (body.department !== undefined) {
+      if (!target.profile.profile) {
+        target.profile.profile = { department: body.department || null };
+      } else {
+        target.profile.profile.department = body.department || null;
+      }
+      hasUpdate = true;
     }
 
     if (!hasUpdate) return fail(400, 40000, "没有任何待更新字段");

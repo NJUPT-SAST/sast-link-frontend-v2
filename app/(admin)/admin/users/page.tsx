@@ -8,9 +8,8 @@ import type {
   AdminCreateUserData,
   AdminCreateUserRequest,
   AdminUpdateUserRequest,
+  AdminUserListItem,
   AdminUserListParams,
-  Department,
-  UserProfileData,
   UserRole,
   UserState,
 } from "@/lib/api/types";
@@ -58,7 +57,7 @@ function AdminUsersContent() {
 
   const [confirm, setConfirm] = useState<{
     open: boolean;
-    user: UserProfileData | null;
+    user: AdminUserListItem | null;
     action: "delete" | "restore";
   }>({ open: false, user: null, action: "delete" });
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -92,7 +91,9 @@ function AdminUsersContent() {
 
   const handleBatchConfirm = async (fields: BatchEditFields) => {
     const ids = Array.from(selectedIds);
-    if (ids.length === 0 || (!fields.role && !fields.state && !fields.department)) {
+    // `fields.department === ""` is a clear command (backend PR #100), not an
+    // empty selection — compare against undefined, not truthiness.
+    if (ids.length === 0 || (!fields.role && !fields.state && fields.department === undefined)) {
       setBatchOpen(false);
       return;
     }
@@ -117,11 +118,13 @@ function AdminUsersContent() {
       // Phase 2 — state/department stay one-by-one. Skip ids whose role change
       // already failed (or was not reported).
       const singleUpdateFailures = new Map<number, string>();
-      if (fields.state || fields.department) {
+      if (fields.state || fields.department !== undefined) {
         const roleFailed = computeRoleFailedIds(ids, roleResults);
         const request: AdminUpdateUserRequest = {
           ...(fields.state ? { state: fields.state as UserState } : {}),
-          ...(fields.department ? { department: fields.department as Department } : {}),
+          ...(fields.department !== undefined
+            ? { department: fields.department }
+            : {}),
         };
         for (const id of ids) {
           if (roleFailed.has(id)) continue;
@@ -191,7 +194,7 @@ function AdminUsersContent() {
     [setFilters],
   );
 
-  const handleRestore = (user: UserProfileData) => {
+  const handleRestore = (user: AdminUserListItem) => {
     setConfirm({ open: true, user, action: "restore" });
   };
 

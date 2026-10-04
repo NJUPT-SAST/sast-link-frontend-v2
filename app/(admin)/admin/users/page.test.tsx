@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { SWRConfig } from "swr";
+import { http, HttpResponse } from "msw";
 
+import { server } from "@/mocks/server";
+import { API_BASE_URL } from "@/lib/config/public";
 import AdminUsersPage from "./page";
 
 // The page reads its filters from the URL; jsdom keeps a real location/history,
@@ -148,5 +151,52 @@ describe("AdminUsersPage selection across pages", () => {
     const pagination = screen.getByLabelText("跳转到页码");
     await waitFor(() => expect(pagination).toHaveValue("2"));
     expect(within(document.body).getByLabelText("跳转到页码")).toBe(pagination);
+  });
+
+  it("sends a department clear command (empty string) per selected id — backend PR #100", async () => {
+    const bodies: Array<{ id: string; body: Record<string, unknown> }> = [];
+    server.use(
+      http.put(`${API_BASE_URL}/admin/users/:id`, async ({ request, params }) => {
+        bodies.push({
+          id: String(params.id),
+          body: (await request.json()) as Record<string, unknown>,
+        });
+        return HttpResponse.json({
+          code: 0,
+          message: "ok",
+          data: { message: "用户信息更新成功", user: null },
+        });
+      }),
+    );
+
+    renderPage();
+    await waitForRows();
+    fireEvent.click(screen.getByLabelText("全选本页用户"));
+    fireEvent.click(await screen.findByRole("button", { name: /批量修改/ }));
+
+    // The sentinel option maps to "" — the backend's clear-to-NULL command.
+    // A truthiness guard would swallow it, so this pins the !== undefined one.
+    // The filter bar also labels a select 部门 — scope to the dialog's id.
+    fireEvent.change(
+      await screen.findByLabelText("部门", { selector: "#batch-department" }),
+      {
+        target: { value: "__clear__" },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "确认修改" }));
+
+    await waitFor(() => expect(bodies.length).toBeGreaterThan(0));
+    const ids = bodies.map((b) => b.id);
+    expect(new Set(ids).size).toBe(ids.length); // one PUT per selected id
+    for (const { body } of bodies) {
+      expect(body).toEqual({ department: "" });
+    }
+    // Sonner toasts are unreliable under jsdom; the dialog closing (selection
+    // cleared) is the observable success signal.
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "确认修改" }),
+      ).not.toBeInTheDocument(),
+    );
   });
 });
