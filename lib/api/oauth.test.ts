@@ -17,6 +17,7 @@ import {
   buildOAuthLoginUrl,
   consumeBindState,
   exchangeLoginCode,
+  larkAppCodeLogin,
 } from "./oauth";
 import * as publicConfig from "@/lib/config/public";
 
@@ -41,6 +42,13 @@ describe("lib/api/oauth v2", () => {
     exchangeLoginCode("login-code");
     expect(apiClient.post).toHaveBeenCalledWith("/oauth/exchange-code", {
       code: "login-code",
+    });
+  });
+
+  it("submits the JSAPI pre-authorization code to the app-code entrance", () => {
+    larkAppCodeLogin("pre-auth-code");
+    expect(apiClient.post).toHaveBeenCalledWith("/oauth/lark/app-code", {
+      code: "pre-auth-code",
     });
   });
 

@@ -9,6 +9,7 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 ### Added
 
 - One-click login restart on the third-party login error page, adapting backend PR #103: the backend's error redirect now carries `provider` (`github`/`lark`); when present, `/oauth/error` renders a primary 「重试 GitHub 登录」/「重试飞书登录」 button hitting the backend OAuth entry (no `?redirect=` is attached — the page cannot know the pre-login origin, matching the login-page buttons), with 返回登录 demoted to the secondary action; unknown provider values degrade to the previous plain display
+- Feishu in-client login-free entrance, adapting backend PR #105: when the landing page is opened inside the Feishu client (Lark/Feishu webview UA + the Feishu app id configured), it loads the Feishu JSSDK, obtains the one-time JSAPI pre-authorization code via `tt.requestAccess` (falling back to `tt.requestAuthCode` on clients older than 6.9.0) and posts it to the new `POST /oauth/lark/app-code`; a bound identity lands in a session through the same login_code redemption leg the authorize-page callback uses (extracted into `lib/login-session.ts`), an unbound one is forwarded to `/register` with the double-binding pair and display hints. Ordinary browsers are untouched; failures surface on the landing page with a retry and the regular login entrance. Deployment prerequisite (Feishu admin console, not code): add the 网页应用 capability to the SAST Feishu app and point its desktop/mobile home URL at this frontend
 
 ### Fixed
 
