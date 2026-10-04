@@ -148,6 +148,70 @@ describe("TargetCursor", () => {
     );
   });
 
+  // Edge's Super Drag Drop can take a text drag over and end it without the
+  // page ever seeing dragend or another pointer event — a frozen page. A
+  // selection drag is cancelled at dragstart, so it never starts.
+  it("cancels a native drag that starts on selected text", async () => {
+    mockPointer(true);
+    render(
+      <>
+        <TargetCursor />
+        <p>可选中的文本</p>
+      </>,
+    );
+    await screen.findByTestId("target-cursor");
+    const text = screen.getByText("可选中的文本").firstChild!;
+
+    const notCancelled = fireEvent.dragStart(text);
+    expect(notCancelled).toBe(false);
+    expect(document.documentElement).toHaveClass("tc-active");
+  });
+
+  it("resumes on a button-free pointermove when dragend never arrives", async () => {
+    mockPointer(true);
+    render(<TargetCursor />);
+    const root = await screen.findByTestId("target-cursor");
+
+    fireEvent.dragStart(window);
+    await waitFor(() => expect(root.style.visibility).toBe("hidden"));
+
+    // A move with the drag's button still held does not end the drag.
+    fireEvent(window, new MouseEvent("pointermove", { clientX: 100, clientY: 100, buttons: 1 }));
+    expect(document.documentElement).not.toHaveClass("tc-active");
+
+    fireEvent(window, new MouseEvent("pointermove", { clientX: 420, clientY: 260 }));
+    await waitFor(() => {
+      expect(document.documentElement).toHaveClass("tc-active");
+      expect(root.style.visibility).toBe("");
+      expect(root.style.transform).toBe("translate(420px, 260px)");
+    });
+  });
+
+  it("releases the press when the pointer stream is cancelled", async () => {
+    mockPointer(true);
+    render(<TargetCursor />);
+    const root = await screen.findByTestId("target-cursor");
+    const dot = root.querySelector("div") as HTMLElement;
+    const scale = () => Number(/scale\(([\d.]+)\)/.exec(dot.style.transform)?.[1] ?? NaN);
+    // Keep the loop awake (it pauses 120ms after the last move) so press can
+    // lerp all the way in each direction.
+    const nudge = () => fireEvent(window, new MouseEvent("pointermove", { clientX: 200, clientY: 200 }));
+
+    fireEvent.mouseDown(window);
+    await waitFor(() => {
+      nudge();
+      expect(scale()).toBeGreaterThan(1.5);
+    });
+
+    // No pointerup/mouseup follows a cancelled stream — the press must still
+    // release, or the dot stays swollen and the corners stay gathered.
+    fireEvent(window, new Event("pointercancel"));
+    await waitFor(() => {
+      nudge();
+      expect(scale()).toBeLessThan(1.05);
+    });
+  });
+
   it("pauses the rAF loop when idle and wakes on the next pointer move", async () => {
     mockPointer(true);
     // Control the loop manually: capture each rAF callback instead of letting

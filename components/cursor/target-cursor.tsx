@@ -99,7 +99,17 @@ export function TargetCursor() {
         target && docBody.contains(target) ? target.getBoundingClientRect() : null;
     };
 
+    const endDrag = () => {
+      dragging = false;
+      document.documentElement.classList.add("tc-active");
+    };
+
     const onMove = (event: PointerEvent) => {
+      // A native drag suppresses the pointer stream until it ends, so a
+      // button-free pointermove proves the drag is over — resume even when
+      // dragend never reached the window (source node removed mid-drag).
+      // buttons === 0 skips a stray move from the drag's own held button.
+      if (dragging && event.buttons === 0) endDrag();
       // A non-finite coordinate would poison shell/corners with NaN, whose
       // translate(NaNpx) is silently dropped by CSS — freezing the reticle at
       // its last valid spot while .tc-active keeps the system cursor hidden.
@@ -131,22 +141,40 @@ export function TargetCursor() {
 
     const onDown = () => { pressed = true; wake(); };
     const onUp = () => { pressed = false; wake(); };
+    // A cancelled pointer stream (native drag start, browser gesture) never
+    // delivers its pointerup — without this the press-gather would stick.
+    const onCancel = () => { pressed = false; wake(); };
 
-    // Dragging a selection starts a native drag-and-drop interaction, which
-    // owns the pointer for its whole duration: no pointermove reaches the page
-    // until dragend, so the loop idles out and the reticle freezes at the
-    // drag origin while .tc-active keeps the system cursor hidden — the
-    // reported "square cursor stuck at the start of a text drag". Hand the
-    // pointer back to the system for the drag (the browser draws its own drag
-    // cursor and drag image), then resync from dragend's coordinates.
-    const onDragStart = () => {
+    // A native drag-and-drop owns the pointer for its whole duration: no
+    // pointermove reaches the page until it ends.
+    //
+    // Selection drags (a Text node, or selected text inside a field) are
+    // cancelled outright. On Edge for Windows, Super Drag Drop takes over a
+    // text drag at the browser level and the session can end without the page
+    // ever seeing dragend or another pointer event — the page stays frozen
+    // until a reload. Cancelling dragstart keeps the drag from starting, so
+    // the pointer stream stays alive; copy/paste of the selection is
+    // unaffected.
+    //
+    // Other drags (links, images) keep the native behavior: the pointer is
+    // handed back to the system (the browser draws its own drag cursor and
+    // drag image) and the reticle resyncs on dragend or the next pointermove.
+    const onDragStart = (event: DragEvent) => {
+      const source = event.target;
+      if (
+        source instanceof Text ||
+        (source instanceof Element && source.closest("input, textarea"))
+      ) {
+        event.preventDefault();
+        return;
+      }
       dragging = true;
+      pressed = false;
       document.documentElement.classList.remove("tc-active");
       wake();
     };
     const onDragEnd = (event: DragEvent) => {
-      dragging = false;
-      document.documentElement.classList.add("tc-active");
+      endDrag();
       const { clientX, clientY } = event;
       if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
         pointer.x = clientX;
@@ -323,6 +351,7 @@ export function TargetCursor() {
     window.addEventListener("mousedown", onDown);
     window.addEventListener("mouseup", onUp);
     window.addEventListener("blur", onUp);
+    window.addEventListener("pointercancel", onCancel);
     window.addEventListener("dragstart", onDragStart);
     window.addEventListener("dragend", onDragEnd);
     // The locked bracket must track scroll/resize without re-reading layout
@@ -348,6 +377,7 @@ export function TargetCursor() {
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("blur", onUp);
+      window.removeEventListener("pointercancel", onCancel);
       window.removeEventListener("dragstart", onDragStart);
       window.removeEventListener("dragend", onDragEnd);
       window.removeEventListener("resize", refreshRect);
