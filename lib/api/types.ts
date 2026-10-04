@@ -257,8 +257,15 @@ export interface AdminUpdateUserRequest {
   college?: College;
   major?: string;
   student_id?: string;
+  /** Backend PR #104: a `login_email` rewrite is admin-only (manager: 403,
+   *  40300 — refused on field presence, an unchanged value counts too). The
+   *  reset flow delivers there and `@sast.fun` local parts are free-form, so a
+   *  manager-chosen address would own the account. `email_type` rides along
+   *  and is equally restricted. */
   login_email?: string;
   role?: UserRole;
+  /** `is_deleted` is refused (42200): closing an account is DELETE/restore's
+   *  job, because those revoke refresh tokens in the same transaction. */
   state?: UserState;
   /** Backend V014: when true, re-derives state from role + student_id and
    *  unpins (removes manual override). Mutually exclusive with `state` — sending
@@ -273,8 +280,10 @@ export interface AdminUpdateUserRequest {
    *  same transaction (admin-vouched, no verification, no mailbox check) — the
    *  rescue path for graduated members whose school mailbox died before they
    *  bound a receivable one. Backend rejects: same as `login_email` (old or
-   *  newly-set), already occupied by another account, account at the 2-bind
-   *  cap (40905), or the target account is deleted. */
+   *  newly-set), already occupied by another account, or the account is at the
+   *  2-bind cap (40905). A closed account cannot be edited at all — every PUT
+   *  on one answers 422 (42200) until it is restored. Admin-only submission
+   *  (backend PR #104): a manager sending the field gets 403 (40300). */
   personal_email?: string;
 }
 
@@ -299,7 +308,9 @@ export interface AdminCreateUserRequest {
   /** Optional; backend default 「其他」. */
   college?: College;
   /** Optional. When supplied, bound as an `other_mail` login identity
-   *  (admin-vouched, no verification) in the same transaction. */
+   *  (admin-vouched, no verification) in the same transaction. Admin-only
+   *  submission (backend PR #104): a manager sending the field gets 403
+   *  (40300) — the bind outlives the initial password the manager sees. */
   personal_email?: string;
   /** Optional; backend default `member`. */
   role?: UserRole;
