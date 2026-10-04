@@ -161,7 +161,12 @@ export function TargetCursor() {
     function drawFrame() {
       // Native drag in flight: the reticle hides and the loop parks until
       // dragend wakes it — the overlay-restore path below must not un-hide it.
+      // The lock is dropped like the overlay branch does: a drag most often
+      // starts on the locked element itself (links are both lockable and
+      // draggable), and without this the brackets would re-lock onto the drag
+      // origin after dragend until the next mouseover/out corrected them.
       if (dragging) {
+        setTarget(null);
         root.style.visibility = "hidden";
         raf = 0;
         return;

@@ -114,12 +114,24 @@ describe("TargetCursor", () => {
   // origin while .tc-active kept the system cursor hidden.
   it("hands the pointer to the system during a native drag and resyncs on dragend", async () => {
     mockPointer(true);
-    render(<TargetCursor />);
+    render(
+      <>
+        <TargetCursor />
+        <button>锁定我</button>
+      </>,
+    );
     const root = await screen.findByTestId("target-cursor");
+
+    // A drag typically starts on the locked element itself (links are both
+    // lockable and draggable) — the lock must drop with the reticle, or the
+    // brackets re-lock onto the drag origin after dragend.
+    fireEvent.mouseOver(screen.getByRole("button", { name: "锁定我" }));
+    await waitFor(() => expect(root.dataset.state).toBe("locked"));
 
     fireEvent.dragStart(window);
     await waitFor(() => {
       expect(root.style.visibility).toBe("hidden");
+      expect(root.dataset.state).toBe("idle");
       expect(document.documentElement).not.toHaveClass("tc-active");
     });
 
