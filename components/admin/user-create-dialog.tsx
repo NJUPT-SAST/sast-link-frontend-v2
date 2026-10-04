@@ -114,8 +114,14 @@ export function UserCreateDialog({ open, onOpenChange, onCreate, viewerRole = "a
       role: values.role,
       state: values.state,
     };
+    // Backend PR #104: a manager cannot bind a personal email on provision
+    // either (403) — the field is disabled and withheld from the request.
+    // login_email stays allowed here: the manager already holds the initial
+    // password, so choosing the address grants nothing beyond that.
     if (values.major) request.major = values.major;
-    if (values.personal_email) request.personal_email = values.personal_email;
+    if (values.personal_email && viewerRole !== "manager") {
+      request.personal_email = values.personal_email;
+    }
     return request;
   };
 
@@ -327,9 +333,14 @@ export function UserCreateDialog({ open, onOpenChange, onCreate, viewerRole = "a
                         ref={field.ref}
                         label="个人邮箱（可选）"
                         type="email"
+                        disabled={viewerRole === "manager"}
                         invalid={fieldState.invalid}
                         error={fieldState.error?.message}
-                        description="填写后将直绑为该账号的登录身份（免验证），成员可凭此邮箱登录与找回密码。"
+                        description={
+                          viewerRole === "manager"
+                            ? "仅管理员可绑定个人邮箱。"
+                            : "填写后将直绑为该账号的登录身份（免验证），成员可凭此邮箱登录与找回密码。"
+                        }
                       />
                     </FormItem>
                   )}

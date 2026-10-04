@@ -67,10 +67,36 @@ describe("UserEditForm role options per viewer", () => {
   });
 });
 
+describe("UserEditForm identity fields per viewer", () => {
+  // Backend PR #104: a manager's PUT is refused on identity-field PRESENCE,
+  // not on the value — even an unchanged login_email would 403. The inputs
+  // are disabled and the request withholds both fields entirely.
+  it("disables login_email and personal_email for a manager and withholds both", async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    render(<UserEditForm user={makeUser()} onSubmit={onSubmit} viewerRole="manager" />);
+
+    expect(screen.getByRole("textbox", { name: "登录邮箱" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "新增个人邮箱" })).toBeDisabled();
+
+    // A manager editing only the name must not drag the disabled identity
+    // fields into the request.
+    fireEvent.change(screen.getByRole("textbox", { name: "姓名" }), {
+      target: { value: "李四" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const request = onSubmit.mock.calls[0][0] as AdminUpdateUserRequest;
+    expect(request.name).toBe("李四");
+    expect(request.login_email).toBeUndefined();
+    expect(request.personal_email).toBeUndefined();
+  });
+});
+
 describe("UserEditForm", () => {
   it("binds a personal email when filled", async () => {
     const { onSubmit } = setup();
-    fireEvent.change(screen.getByRole("textbox", { name: "绑定个人邮箱" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "新增个人邮箱" }), {
       target: { value: "alumni@gmail.com" },
     });
     fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
@@ -91,24 +117,11 @@ describe("UserEditForm", () => {
     expect(request.personal_email).toBeUndefined();
   });
 
-  it("blocks filling for a deleted account until the state is restored", async () => {
-    const user = makeUser({
-      state: "is_deleted",
-      identities: [],
-    });
-    setup({ user });
-
-    const input = screen.getByRole("textbox", { name: "绑定个人邮箱" }) as HTMLInputElement;
-    expect(input).toBeDisabled();
-    expect(
-      screen.getByText(/已注销用户不可绑定邮箱，请先将状态改回再绑定/),
-    ).toBeInTheDocument();
-
-    // Restoring the account state in the same form unblocks the bind.
-    fireEvent.change(screen.getByRole("combobox", { name: "状态" }), {
-      target: { value: "njupter" },
-    });
-    expect(input).not.toBeDisabled();
+  it("withholds the deleted option from the state select", () => {
+    render(<UserEditForm user={makeUser()} onSubmit={jest.fn()} />);
+    const select = screen.getByRole("combobox", { name: "状态" }) as HTMLSelectElement;
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).toEqual(["njupter", "on_sast", "retired_sast"]);
   });
 
   it("explains the bind cap failure with its own copy", async () => {
@@ -116,7 +129,7 @@ describe("UserEditForm", () => {
       .fn()
       .mockRejectedValue(apiFailure(409, 40905, "该账号的邮箱绑定数量已达上限"));
     setup({ onSubmit });
-    fireEvent.change(screen.getByRole("textbox", { name: "绑定个人邮箱" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "新增个人邮箱" }), {
       target: { value: "alumni@gmail.com" },
     });
     fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
