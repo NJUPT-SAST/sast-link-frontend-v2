@@ -99,8 +99,17 @@ export function TargetCursor() {
     };
 
     const onMove = (event: PointerEvent) => {
-      pointer.x = event.clientX;
-      pointer.y = event.clientY;
+      // A non-finite coordinate would poison shell/corners with NaN, whose
+      // translate(NaNpx) is silently dropped by CSS — freezing the reticle at
+      // its last valid spot while .tc-active keeps the system cursor hidden.
+      // Skip only the coordinate update for a malformed event but still wake:
+      // the event itself proves the pointer is active, and swallowing the wake
+      // would leave the loop paused with a stale reticle.
+      const { clientX, clientY } = event;
+      if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+        pointer.x = clientX;
+        pointer.y = clientY;
+      }
       lastMove = performance.now();
       wake();
     };
@@ -124,7 +133,7 @@ export function TargetCursor() {
 
     // Function declaration (hoisted) so the wake/refreshRect helpers defined
     // above can reference the loop without a use-before-define violation.
-    function frame() {
+    function drawFrame() {
       // The bracket shell tracks the pointer slowly (SHELL_FOLLOW); the dot
       // tracks faster and leads it by at most MAX_DOT_LEAD px — a physical lead
       // small enough to never read as an off-center "snap back" on settle.
@@ -254,6 +263,21 @@ export function TargetCursor() {
         return;
       }
       raf = requestAnimationFrame(frame);
+    }
+
+    // A throw inside drawFrame breaks the rAF chain while `raf` still holds
+    // the dead frame's id — wake() would then refuse to restart the loop
+    // forever, leaving the reticle frozen at its last position with the
+    // system cursor hidden by .tc-active (the "square cursor stuck until a
+    // refresh" failure). Resetting the id lets the next input event restart
+    // the loop instead.
+    function frame() {
+      try {
+        drawFrame();
+      } catch (error) {
+        raf = 0;
+        console.warn("[target-cursor] frame crashed; the loop resumes on the next input", error);
+      }
     }
 
     window.addEventListener("pointermove", onMove, { passive: true });
