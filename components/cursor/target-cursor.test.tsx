@@ -109,6 +109,33 @@ describe("TargetCursor", () => {
     await waitFor(() => expect(root.style.visibility).toBe(""));
   });
 
+  // A native text drag-and-drop owns the pointer: no pointermove reaches the
+  // page until dragend. Without the hand-off the reticle froze at the drag
+  // origin while .tc-active kept the system cursor hidden.
+  it("hands the pointer to the system during a native drag and resyncs on dragend", async () => {
+    mockPointer(true);
+    render(<TargetCursor />);
+    const root = await screen.findByTestId("target-cursor");
+
+    fireEvent.dragStart(window);
+    await waitFor(() => {
+      expect(root.style.visibility).toBe("hidden");
+      expect(document.documentElement).not.toHaveClass("tc-active");
+    });
+
+    fireEvent.dragEnd(window, { clientX: 320, clientY: 240 });
+    await waitFor(() => {
+      expect(root.style.visibility).toBe("");
+      expect(document.documentElement).toHaveClass("tc-active");
+    });
+
+    // The loop resumed: a fresh move after dragend is tracked again.
+    fireEvent(window, new MouseEvent("pointermove", { clientX: 500, clientY: 300 }));
+    await waitFor(() =>
+      expect(root.style.transform).toBe("translate(500px, 300px)"),
+    );
+  });
+
   it("pauses the rAF loop when idle and wakes on the next pointer move", async () => {
     mockPointer(true);
     // Control the loop manually: capture each rAF callback instead of letting

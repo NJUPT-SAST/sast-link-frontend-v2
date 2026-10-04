@@ -72,6 +72,7 @@ export function TargetCursor() {
     let lastMove = performance.now();
     let lastDotHidden = false;
     let rectCache: DOMRect | null = null;
+    let dragging = false;
 
     document.documentElement.classList.add("tc-active");
 
@@ -131,9 +132,40 @@ export function TargetCursor() {
     const onDown = () => { pressed = true; wake(); };
     const onUp = () => { pressed = false; wake(); };
 
+    // Dragging a selection starts a native drag-and-drop interaction, which
+    // owns the pointer for its whole duration: no pointermove reaches the page
+    // until dragend, so the loop idles out and the reticle freezes at the
+    // drag origin while .tc-active keeps the system cursor hidden — the
+    // reported "square cursor stuck at the start of a text drag". Hand the
+    // pointer back to the system for the drag (the browser draws its own drag
+    // cursor and drag image), then resync from dragend's coordinates.
+    const onDragStart = () => {
+      dragging = true;
+      document.documentElement.classList.remove("tc-active");
+      wake();
+    };
+    const onDragEnd = (event: DragEvent) => {
+      dragging = false;
+      document.documentElement.classList.add("tc-active");
+      const { clientX, clientY } = event;
+      if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+        pointer.x = clientX;
+        pointer.y = clientY;
+      }
+      lastMove = performance.now();
+      wake();
+    };
+
     // Function declaration (hoisted) so the wake/refreshRect helpers defined
     // above can reference the loop without a use-before-define violation.
     function drawFrame() {
+      // Native drag in flight: the reticle hides and the loop parks until
+      // dragend wakes it — the overlay-restore path below must not un-hide it.
+      if (dragging) {
+        root.style.visibility = "hidden";
+        raf = 0;
+        return;
+      }
       // The bracket shell tracks the pointer slowly (SHELL_FOLLOW); the dot
       // tracks faster and leads it by at most MAX_DOT_LEAD px — a physical lead
       // small enough to never read as an off-center "snap back" on settle.
@@ -286,6 +318,8 @@ export function TargetCursor() {
     window.addEventListener("mousedown", onDown);
     window.addEventListener("mouseup", onUp);
     window.addEventListener("blur", onUp);
+    window.addEventListener("dragstart", onDragStart);
+    window.addEventListener("dragend", onDragEnd);
     // The locked bracket must track scroll/resize without re-reading layout
     // every frame — just refresh the cached box.
     window.addEventListener("resize", refreshRect);
@@ -309,6 +343,8 @@ export function TargetCursor() {
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("blur", onUp);
+      window.removeEventListener("dragstart", onDragStart);
+      window.removeEventListener("dragend", onDragEnd);
       window.removeEventListener("resize", refreshRect);
       window.removeEventListener("scroll", refreshRect, { capture: true });
     };
