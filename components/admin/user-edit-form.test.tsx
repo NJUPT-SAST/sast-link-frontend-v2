@@ -91,6 +91,35 @@ describe("UserEditForm identity fields per viewer", () => {
     expect(request.login_email).toBeUndefined();
     expect(request.personal_email).toBeUndefined();
   });
+
+  // Backend PR #98: a manager runs every member-management write — role
+  // (short of admin) and state included. Both must ride along; dropping them
+  // would show a success toast while the change silently no-ops.
+  it("sends a manager's role and state picks through", async () => {
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    render(
+      <UserEditForm
+        user={makeUser({ role: "member", state: "njupter" })}
+        onSubmit={onSubmit}
+        viewerRole="manager"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("角色"), {
+      target: { value: "lecturer" },
+    });
+    fireEvent.change(screen.getByLabelText("状态"), {
+      target: { value: "on_sast" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保存修改" }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    const request = onSubmit.mock.calls[0][0] as AdminUpdateUserRequest;
+    expect(request.role).toBe("lecturer");
+    expect(request.state).toBe("on_sast");
+    expect(request.login_email).toBeUndefined();
+    expect(request.personal_email).toBeUndefined();
+  });
 });
 
 describe("UserEditForm", () => {

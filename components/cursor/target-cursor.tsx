@@ -72,6 +72,7 @@ export function TargetCursor() {
     let lastMove = performance.now();
     let lastDotHidden = false;
     let rectCache: DOMRect | null = null;
+    let dragging = false;
 
     document.documentElement.classList.add("tc-active");
 
@@ -99,8 +100,17 @@ export function TargetCursor() {
     };
 
     const onMove = (event: PointerEvent) => {
-      pointer.x = event.clientX;
-      pointer.y = event.clientY;
+      // A non-finite coordinate would poison shell/corners with NaN, whose
+      // translate(NaNpx) is silently dropped by CSS — freezing the reticle at
+      // its last valid spot while .tc-active keeps the system cursor hidden.
+      // Skip only the coordinate update for a malformed event but still wake:
+      // the event itself proves the pointer is active, and swallowing the wake
+      // would leave the loop paused with a stale reticle.
+      const { clientX, clientY } = event;
+      if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+        pointer.x = clientX;
+        pointer.y = clientY;
+      }
       lastMove = performance.now();
       wake();
     };
@@ -122,9 +132,45 @@ export function TargetCursor() {
     const onDown = () => { pressed = true; wake(); };
     const onUp = () => { pressed = false; wake(); };
 
+    // Dragging a selection starts a native drag-and-drop interaction, which
+    // owns the pointer for its whole duration: no pointermove reaches the page
+    // until dragend, so the loop idles out and the reticle freezes at the
+    // drag origin while .tc-active keeps the system cursor hidden — the
+    // reported "square cursor stuck at the start of a text drag". Hand the
+    // pointer back to the system for the drag (the browser draws its own drag
+    // cursor and drag image), then resync from dragend's coordinates.
+    const onDragStart = () => {
+      dragging = true;
+      document.documentElement.classList.remove("tc-active");
+      wake();
+    };
+    const onDragEnd = (event: DragEvent) => {
+      dragging = false;
+      document.documentElement.classList.add("tc-active");
+      const { clientX, clientY } = event;
+      if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+        pointer.x = clientX;
+        pointer.y = clientY;
+      }
+      lastMove = performance.now();
+      wake();
+    };
+
     // Function declaration (hoisted) so the wake/refreshRect helpers defined
     // above can reference the loop without a use-before-define violation.
-    function frame() {
+    function drawFrame() {
+      // Native drag in flight: the reticle hides and the loop parks until
+      // dragend wakes it — the overlay-restore path below must not un-hide it.
+      // The lock is dropped like the overlay branch does: a drag most often
+      // starts on the locked element itself (links are both lockable and
+      // draggable), and without this the brackets would re-lock onto the drag
+      // origin after dragend until the next mouseover/out corrected them.
+      if (dragging) {
+        setTarget(null);
+        root.style.visibility = "hidden";
+        raf = 0;
+        return;
+      }
       // The bracket shell tracks the pointer slowly (SHELL_FOLLOW); the dot
       // tracks faster and leads it by at most MAX_DOT_LEAD px — a physical lead
       // small enough to never read as an off-center "snap back" on settle.
@@ -256,12 +302,29 @@ export function TargetCursor() {
       raf = requestAnimationFrame(frame);
     }
 
+    // A throw inside drawFrame breaks the rAF chain while `raf` still holds
+    // the dead frame's id — wake() would then refuse to restart the loop
+    // forever, leaving the reticle frozen at its last position with the
+    // system cursor hidden by .tc-active (the "square cursor stuck until a
+    // refresh" failure). Resetting the id lets the next input event restart
+    // the loop instead.
+    function frame() {
+      try {
+        drawFrame();
+      } catch (error) {
+        raf = 0;
+        console.warn("[target-cursor] frame crashed; the loop resumes on the next input", error);
+      }
+    }
+
     window.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("mouseover", onOver, { passive: true });
     document.addEventListener("mouseout", onOut, { passive: true });
     window.addEventListener("mousedown", onDown);
     window.addEventListener("mouseup", onUp);
     window.addEventListener("blur", onUp);
+    window.addEventListener("dragstart", onDragStart);
+    window.addEventListener("dragend", onDragEnd);
     // The locked bracket must track scroll/resize without re-reading layout
     // every frame — just refresh the cached box.
     window.addEventListener("resize", refreshRect);
@@ -285,6 +348,8 @@ export function TargetCursor() {
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("blur", onUp);
+      window.removeEventListener("dragstart", onDragStart);
+      window.removeEventListener("dragend", onDragEnd);
       window.removeEventListener("resize", refreshRect);
       window.removeEventListener("scroll", refreshRect, { capture: true });
     };

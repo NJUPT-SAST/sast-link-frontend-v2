@@ -109,6 +109,45 @@ describe("TargetCursor", () => {
     await waitFor(() => expect(root.style.visibility).toBe(""));
   });
 
+  // A native text drag-and-drop owns the pointer: no pointermove reaches the
+  // page until dragend. Without the hand-off the reticle froze at the drag
+  // origin while .tc-active kept the system cursor hidden.
+  it("hands the pointer to the system during a native drag and resyncs on dragend", async () => {
+    mockPointer(true);
+    render(
+      <>
+        <TargetCursor />
+        <button>锁定我</button>
+      </>,
+    );
+    const root = await screen.findByTestId("target-cursor");
+
+    // A drag typically starts on the locked element itself (links are both
+    // lockable and draggable) — the lock must drop with the reticle, or the
+    // brackets re-lock onto the drag origin after dragend.
+    fireEvent.mouseOver(screen.getByRole("button", { name: "锁定我" }));
+    await waitFor(() => expect(root.dataset.state).toBe("locked"));
+
+    fireEvent.dragStart(window);
+    await waitFor(() => {
+      expect(root.style.visibility).toBe("hidden");
+      expect(root.dataset.state).toBe("idle");
+      expect(document.documentElement).not.toHaveClass("tc-active");
+    });
+
+    fireEvent.dragEnd(window, { clientX: 320, clientY: 240 });
+    await waitFor(() => {
+      expect(root.style.visibility).toBe("");
+      expect(document.documentElement).toHaveClass("tc-active");
+    });
+
+    // The loop resumed: a fresh move after dragend is tracked again.
+    fireEvent(window, new MouseEvent("pointermove", { clientX: 500, clientY: 300 }));
+    await waitFor(() =>
+      expect(root.style.transform).toBe("translate(500px, 300px)"),
+    );
+  });
+
   it("pauses the rAF loop when idle and wakes on the next pointer move", async () => {
     mockPointer(true);
     // Control the loop manually: capture each rAF callback instead of letting

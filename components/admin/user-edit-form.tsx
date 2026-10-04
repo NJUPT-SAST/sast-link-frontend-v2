@@ -99,6 +99,11 @@ function toRequest(
   // stays ahead of the viewer-scoped withholding applied to the identity
   // fields below.
   if (values.department !== undefined) request.department = values.department;
+  // A manager runs every member-management write — role (short of admin) and
+  // state included; promoting to manager/lecturer is the point of the role
+  // (backend PR #98). Both fields ride along for every viewer.
+  if (values.role !== undefined) request.role = values.role;
+  if (values.state !== undefined) request.state = values.state;
   // Backend PR #104: an identity assertion (login_email rewrite, personal_email
   // bind) from a manager is refused on field PRESENCE, not on the value — even
   // an unchanged login_email would 403. The inputs are disabled for a manager
@@ -108,8 +113,6 @@ function toRequest(
   if (values.login_email !== undefined) request.login_email = values.login_email;
   // A blank value means "no bind requested", so it is withheld entirely.
   if (values.personal_email) request.personal_email = values.personal_email;
-  if (values.role !== undefined) request.role = values.role;
-  if (values.state !== undefined) request.state = values.state;
   return request;
 }
 

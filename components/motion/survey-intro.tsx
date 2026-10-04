@@ -110,7 +110,7 @@ export function SurveyIntro() {
         className="absolute left-6 top-10 text-[10px] tracking-[0.2em]"
         style={{ animation: "survey-fade 0.3s 0.7s linear both" }}
       >
-        32.06° N — 118.79° E
+        32.12° N — 118.93° E
       </div>
 
       {stars.map((s, i) => (
