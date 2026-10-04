@@ -23,6 +23,18 @@ async function pickDepartment(value: string) {
   fireEvent.click(screen.getByRole("button", { name: "确认修改" }));
 }
 
+describe("UserBatchEditDialog state options", () => {
+  // PUT refuses `state: "is_deleted"` wholesale (422) — closing an account is
+  // DELETE/restore's job — so offering the option would queue a batch that
+  // fails on every item.
+  it("withholds the closed state from the batch state select", async () => {
+    setup();
+    const select = (await screen.findByLabelText("状态")) as HTMLSelectElement;
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).toEqual(["", "njupter", "on_sast", "retired_sast"]);
+  });
+});
+
 describe("UserBatchEditDialog department tri-state (backend PR #100)", () => {
   it("sends the picked department key through onConfirm", async () => {
     const { onConfirm } = setup();

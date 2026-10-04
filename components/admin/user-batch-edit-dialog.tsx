@@ -41,7 +41,13 @@ interface UserBatchEditDialogProps {
   viewerRole?: string;
 }
 
-const STATE_OPTIONS = Object.entries(STATE_LABELS);
+// PUT refuses `state: "is_deleted"` wholesale (422): closing an account is
+// DELETE/restore's job, because those revoke refresh tokens in the same
+// transaction. The option is withheld rather than offered — a batch picking
+// it would fail on every item.
+const STATE_OPTIONS = Object.entries(STATE_LABELS).filter(
+  ([value]) => value !== "is_deleted",
+);
 
 // A manager may not grant the admin role, so the option is withheld instead
 // of offered and refused per item.
@@ -68,7 +74,7 @@ export function UserBatchEditDialog({
   const departmentOptions = useDepartmentOptions();
 
   const hasChange = Boolean(role || state || department);
-  const isDangerous = role === "admin" || state === "is_deleted";
+  const isDangerous = role === "admin";
 
   const reset = () => {
     setRole("");
@@ -111,7 +117,6 @@ export function UserBatchEditDialog({
 
   const dangerHints = [
     role === "admin" && `将把 ${count} 名用户设为「管理员」，管理员拥有全部管理权限，请谨慎确认。`,
-    state === "is_deleted" && `将把 ${count} 名用户注销，注销后无法登录，但数据会被保留，请谨慎确认。`,
   ].filter(Boolean) as string[];
 
   return (
