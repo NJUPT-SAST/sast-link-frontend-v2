@@ -19,6 +19,14 @@
 		# frame-ancestors, object-src 'none', base-uri, connect-src. img-src
 		# allows the COS bucket hosting avatars (bucket host, not a custom CDN).
 		#
+		# 'unsafe-eval' in script-src is required by the Feishu JSSDK: its factory
+		# evaluates strings mid-initialization (h5-js-sdk-*.js:3:14296, same site
+		# across 1.5.29–1.5.40), and without the token the factory dies in an
+		# EvalError before mounting window.h5sdk — the in-client login then fails
+		# with 飞书环境不可用. Verified against the real Feishu web-app container
+		# via /debug/h5 (probe v2, unmasked with crossorigin=anonymous). Our own
+		# bundle never evals; the token exists for the SDK alone.
+		#
 		# challenges.cloudflare.com is Cloudflare Turnstile (alumni request
 		# human verification): script-src for its api.js, frame-src for the
 		# widget iframe it renders. Both are required — the frame would otherwise
@@ -30,7 +38,7 @@
 		# login). Only script-src is needed: the SDK talks to the client over the
 		# native bridge, so it issues no other-origin fetches, frames, or images
 		# (the /goofy/lark/op/ path is one of Feishu's long-lived SDK CDN paths).
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://lf1-cdn-tos.bytegoofy.com; frame-src https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.cos.ap-shanghai.myqcloud.com; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://lf1-cdn-tos.bytegoofy.com; frame-src https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.cos.ap-shanghai.myqcloud.com; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 	}
 
 	handle {
