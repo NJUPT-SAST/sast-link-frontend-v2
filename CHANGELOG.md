@@ -8,6 +8,8 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Added
 
+- The unbind dialog now points at the password reset flow when the password check fails: 40105（密码错误） renders a 「忘记了密码？通过邮箱验证码重置」 link to /reset — the backend offers no set-initial-password endpoint, and the email-code reset is the only passwordless exit (it can also target a bound `other_mail`). The /oauth/error page's retryable-code set now reads from `error-codes.ts` instead of magic strings, with 42900 officially joining the catalog: rate limiting and account lockout share it (HTTP 429 + `Retry-After`), alongside 50000 and 50300
+
 - Silent alumni rejection, adapting backend PR #110 (V022): the review dialog's reject step gains a 「静默驳回」checkbox that sends `silent: true` — the verdict lands and nothing is emailed, for mistaken submissions whose applicant already self-registered (the reason stays mandatory in both modes: it is the ticket's and the audit's own explanation). The queue marks such tickets 「静默驳回（未通知申请人）」 and never offers a resend — their `notified_at` was set by the rejecting transaction, not by SMTP, so the flag (not `notified_at`) is what the card reads. Approval now also special-cases 40902 (student id occupied) to point the reviewer at the silent path instead of a generic error
 
 - Closed-account purge awareness, adapting backend PR #110 (V023): the admin user detail card shows 「注销时间」 on closed accounts (the physical-purge clock; past the grace window the row is hard-deleted and restore answers 404), and the delete/restore confirmations no longer promise 「数据会被保留」 — they now name the grace window (default 30 days) and that data is permanently removed after it

@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 
+import Link from "next/link";
+
+import { CODE_PASSWORD_INVALID } from "@/lib/api/error-codes";
 import { IDENTITY_PROVIDERS } from "@/lib/constants/providers";
 import { useIdentities } from "@/hooks/use-identities";
 import { message } from "@/lib/message";
@@ -36,11 +39,17 @@ export function IdentityList({ actionable }: IdentityListProps) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // True only when the last unbind failed the password check (40105). That is
+  // the one unbind failure with a self-service exit: the backend has no
+  // set-initial-password endpoint, so the only passwordless way back in is the
+  // email-code reset flow — worth pointing at instead of a retry loop.
+  const [passwordInvalid, setPasswordInvalid] = useState(false);
 
   const closeUnbind = () => {
     setUnbindTarget(null);
     setPassword("");
     setError("");
+    setPasswordInvalid(false);
   };
 
   const handleBind = (key: "github" | "lark") => {
@@ -68,7 +77,9 @@ export function IdentityList({ actionable }: IdentityListProps) {
       mutate();
       closeUnbind();
     } catch (error) {
-      setError(toApiError(error).message);
+      const apiError = toApiError(error);
+      setError(apiError.message);
+      setPasswordInvalid(apiError.code === CODE_PASSWORD_INVALID);
     } finally {
       setLoading(false);
     }
@@ -131,6 +142,7 @@ export function IdentityList({ actionable }: IdentityListProps) {
                       ? () => {
                           setPassword("");
                           setError("");
+                          setPasswordInvalid(false);
                           setUnbindTarget(boundIdentity ?? null);
                         }
                       : () => handleBind(provider.key)
@@ -169,9 +181,22 @@ export function IdentityList({ actionable }: IdentityListProps) {
               label="当前密码"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                // Retyping means the user may be back on track — the reset
+                // hint only makes sense right after a 40105 failure.
+                setPasswordInvalid(false);
+              }}
               error={error}
             />
+            {passwordInvalid && (
+              <p className="text-xs text-tertiary">
+                忘记了密码？{" "}
+                <Link href="/reset" className="text-link hover:underline">
+                  通过邮箱验证码重置
+                </Link>
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeUnbind}>
