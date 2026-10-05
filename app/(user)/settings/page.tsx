@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { logout } from "@/lib/api/auth";
+import { clearAccountDataCache } from "@/lib/api/session-keys";
 import { clearSession } from "@/lib/token";
 import { markAuthInvalidated } from "@/lib/auth-cross-tab";
 import { message } from "@/lib/message";
@@ -43,6 +44,9 @@ export default function SettingsPage() {
       return;
     }
     clearSession();
+    // The session is gone: drop its SWR cache so another account signing in
+    // here never renders the previous account's identities/grants/badge.
+    void clearAccountDataCache();
     if (profile.loginEmail) useUserListStore.getState().removeAccount(profile.loginEmail);
     resetProfile();
     router.replace("/login");

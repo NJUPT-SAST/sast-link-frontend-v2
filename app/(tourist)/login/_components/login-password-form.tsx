@@ -8,6 +8,7 @@ import Link from "next/link";
 
 import { passwordLogin } from "@/lib/api/auth";
 import { toApiError } from "@/lib/api/errors";
+import { clearAccountDataCache } from "@/lib/api/session-keys";
 import { createSession, setSession } from "@/lib/token";
 import { safeSessionStorage } from "@/lib/safe-session-storage";
 import { postAuthDestination } from "@/lib/auth-destination";
@@ -65,6 +66,9 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
       const data = response.data.data;
       const session = createSession(data.access_token, data.expires_in);
       setSession(session);
+      // The account just changed: drop the previous account's SWR cache so
+      // the new account never flashes its identities/grants.
+      void clearAccountDataCache();
       // Clear any previous account's profile so the new session starts clean.
       resetProfile();
       addAccount({
