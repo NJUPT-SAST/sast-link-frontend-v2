@@ -31,6 +31,9 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 - Same-frame double clicks could double-fire the register verify/details submits and the password reset: `disabled={loading}` cannot commit fast enough, and react-hook-form's async validation lets both clicks through — the second details submit burned the one-time `register_ticket` and surfaced a misleading 40103. All three submit paths now carry the `submittingRef` guard the login form already used
 =======
+=======
+- The `/debug/h5` diagnostic probe no longer ships in production: the route now renders an inert 「仅在开发环境」 notice (deep links still resolve but load nothing), the landing-page entry is hidden outside dev, and a post-build step (`scripts/strip-dev-probe.mjs`, wired into `pnpm build`) deletes the orphaned probe chunk the bundler emits before dead-code elimination runs — no production artifact carries the probe's CDN version sweep or its live requestAccess call
+
 - A production build without `NEXT_PUBLIC_API_BASE_URL` now fails loudly instead of silently pointing every request at a developer's `http://localhost:8080` (every other `NEXT_PUBLIC_*` degrades to feature-off; the API base had a pretend-to-work fallback). Static export bakes the value in at build time, so a missing base is unrecoverable at runtime — `lib/config/public.ts` now throws during the prerender pass, and the CI build pins `/v2` the way the deploy pipeline's variable checks already do
 
 - A bare `docker build` without build args used to bake `http://localhost:8080` as the API base while the container CSP's `connect-src 'self'` silently killed every request — an image that builds fine and fails at runtime. The `ARG` default is now the same-origin `/v2` the compose file and deploy pipeline use

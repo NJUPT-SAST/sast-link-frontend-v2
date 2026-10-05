@@ -26,6 +26,13 @@ jest.mock("@/hooks/use-lark-h5-auto-login", () => ({
   useLarkH5AutoLogin: () => mockLarkLogin,
 }));
 
+// The diagnostic-probe link is dev-only (DEV_RUNTIME folds away in a
+// production build); this suite asserts the dev-rendered landing page.
+jest.mock("@/lib/config/public", () => ({
+  ...jest.requireActual("@/lib/config/public"),
+  DEV_RUNTIME: true,
+}));
+
 describe("Home Page", () => {
   beforeEach(() => {
     jest.clearAllMocks();

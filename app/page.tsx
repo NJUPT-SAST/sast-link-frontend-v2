@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useLarkH5AutoLogin } from "@/hooks/use-lark-h5-auto-login";
+import { DEV_RUNTIME } from "@/lib/config/public";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/animation/page-transition";
 import { PhotoGlyphsSection } from "@/components/visual/photo-glyphs-section";
@@ -136,10 +137,15 @@ export default function Home() {
               </Button>
               {/* The in-client failure path has no address bar to type a URL
                   into, so the diagnostic page rides along here — one tap away
-                  without re-pointing the Feishu web-app home URL. */}
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/debug/h5">查看诊断探针</Link>
-              </Button>
+                  without re-pointing the Feishu web-app home URL. Dev builds
+                  only: the probe loads third-party CDN scripts and calls
+                  requestAccess with the production app id, so it never ships
+                  in a production bundle. */}
+              {DEV_RUNTIME && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/debug/h5">查看诊断探针</Link>
+                </Button>
+              )}
             </div>
           </div>
         )}

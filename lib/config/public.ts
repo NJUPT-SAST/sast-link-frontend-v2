@@ -1,3 +1,8 @@
+/** True only under `next dev` — NODE_ENV is inlined at build time, so a
+ *  production bundle folds every `DEV_RUNTIME` consumer's dev-only branch
+ *  away and dev-only surfaces never ship (see /debug/h5). */
+export const DEV_RUNTIME = process.env.NODE_ENV === "development";
+
 const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
 // Every other NEXT_PUBLIC_* degrades to "feature off" when missing, but a
