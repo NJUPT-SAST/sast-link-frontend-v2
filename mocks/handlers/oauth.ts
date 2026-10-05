@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw";
 
 import { API_BASE_URL } from "@/lib/config/public";
+import { withCors } from "./respond";
 
 /** Demo consent endpoint so the consent page can be exercised without a
  *  backend. Accepts any request_id and bounces to Evento's callback with a
@@ -16,7 +17,7 @@ export const oauthHandlers = [
     if (!body.request_id) {
       return HttpResponse.json(
         { code: 40000, message: "缺少授权请求标识", data: null },
-        { status: 400 },
+        { status: 400, headers: withCors() },
       );
     }
     const params = new URLSearchParams({ state: "mock-state" });
@@ -26,6 +27,6 @@ export const oauthHandlers = [
       code: 0,
       message: "ok",
       data: { redirect_uri: `${MOCK_CLIENT_REDIRECT_URI}?${params.toString()}` },
-    });
+    }, { headers: withCors() });
   }),
 ];

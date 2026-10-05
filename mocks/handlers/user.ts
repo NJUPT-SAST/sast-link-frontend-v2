@@ -5,8 +5,9 @@ import type { UpdateProfileRequest } from "@/lib/api/types";
 import { bindTickets } from "../data/tickets";
 import { findUserByAccessToken, identity } from "../data/users";
 import { DEFAULT_AVATAR, MAX_AVATAR_UPLOAD_BYTES } from "@/lib/constants/profile";
+import { failEnvelope, okEnvelope } from "./respond";
 
-function ok<T>(data: T) { return HttpResponse.json({ code: 0, message: "ok", data }); }
+function ok<T>(data: T) { return okEnvelope(data); }
 function fail(status: number, code: number, message: string) { return HttpResponse.json({ code, message, data: null }, { status }); }
 function authenticated(request: Request) {
   const value = request.headers.get("Authorization");

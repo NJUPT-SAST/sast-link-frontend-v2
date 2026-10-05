@@ -3,12 +3,13 @@ import { http, HttpResponse } from "msw";
 import { API_BASE_URL } from "@/lib/config/public";
 import { badgeState } from "../data/badge";
 import { mockUsers, findUserByAccessToken } from "../data/users";
+import { failEnvelope, okEnvelope, withCors } from "./respond";
 
 function ok<T>(data: T) {
   return HttpResponse.json({ code: 0, message: "ok", data });
 }
 function fail(status: number, code: number, message: string) {
-  return HttpResponse.json({ code, message, data: null }, { status });
+  return failEnvelope(status, code, message);
 }
 function authenticated(request: Request) {
   const value = request.headers.get("Authorization");
@@ -69,7 +70,7 @@ export const badgeHandlers = [
     badgeState.enabledAt = new Date().toISOString();
     return HttpResponse.json(
       { code: 0, message: "ok", data: { enabled: true, key: badgeState.key, enabled_at: badgeState.enabledAt } },
-      { status: 201 },
+      { status: 201, headers: withCors() },
     );
   }),
 
@@ -105,12 +106,12 @@ export const badgeHandlers = [
 <text x="78" y="41" class="muted" font-size="14" font-family="${FONT_STACK}">徽标不存在或已关闭</text>
 <text x="312" y="16" text-anchor="end" class="muted" font-size="9" font-family="${FONT_STACK}" letter-spacing="1">SAST Link</text>
 </svg>`,
-        { status: 404, headers: { "Content-Type": "image/svg+xml; charset=utf-8" } },
+        { status: 404, headers: withCors({ "Content-Type": "image/svg+xml; charset=utf-8" }) },
       );
     }
     return new HttpResponse(
       previewSvg(url.searchParams.get("size") ?? "sm", theme),
-      { status: 200, headers: { "Content-Type": "image/svg+xml; charset=utf-8" } },
+      { status: 200, headers: withCors({ "Content-Type": "image/svg+xml; charset=utf-8" }) },
     );
   }),
 ];

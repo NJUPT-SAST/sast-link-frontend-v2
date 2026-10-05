@@ -121,7 +121,7 @@ import { resetTickets } from "@/mocks/data/tickets";
 import { resetUsers } from "@/mocks/data/users";
 import { resetBadgeState } from "@/mocks/data/badge";
 
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
 afterEach(() => {
   server.resetHandlers();
   resetTickets();

@@ -148,7 +148,11 @@ describe("AdminUsersPage selection across pages", () => {
 
     await waitFor(() => expect(window.location.search).toContain("page=2"));
     // within() keeps this from matching a row that happens to contain "2".
-    const pagination = screen.getByLabelText("跳转到页码");
+    // findBy: the pagination control re-renders a tick after the URL change —
+    // the SWR revalidation (and with it the control's value) settles later
+    // than the history update, and MSW v3's socket-level responses add that
+    // extra tick that v2's XHR patch used to hide.
+    const pagination = await screen.findByLabelText("跳转到页码");
     await waitFor(() => expect(pagination).toHaveValue("2"));
     expect(within(document.body).getByLabelText("跳转到页码")).toBe(pagination);
   });
