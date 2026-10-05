@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import * as publicConfig from "@/lib/config/public";
+
 /**
  * One-off diagnostic page for the Feishu in-client login-free entrance
  * (POST /oauth/lark/app-code, backend PR #105).
@@ -28,11 +30,17 @@ interface VersionReport {
   ver?: string;
 }
 
+interface RequestAccessReport {
+  phase: string;
+  result: string;
+}
+
 const VERSIONS = ["1.5.32", "1.5.40", "1.5.29"];
 const BASE_URL = "https://lf1-cdn-tos.bytegoofy.com/goofy/lark/op/h5-js-sdk";
 
 export default function H5ProbePage() {
   const [reports, setReports] = useState<VersionReport[]>([]);
+  const [requestAccessReport, setRequestAccessReport] = useState<RequestAccessReport | null>(null);
   const [envLine, setEnvLine] = useState<string>("");
 
   useEffect(() => {
@@ -106,6 +114,51 @@ export default function H5ProbePage() {
 
         update(report);
       }
+
+      // Live requestAccess call with the production app id — the version sweep
+      // above proves mounting; this proves the JSAPI actually answers. Reports
+      // the raw success/fail payload (errno and all) so a refused grant is
+      // distinguishable from an app-id or permission problem. Runs after the
+      // sweep on the already-mounted 1.5.32 instance.
+      const appId = publicConfig.FEISHU_CLIENT_ID;
+      const requestAccess = (
+        window as unknown as { tt?: { requestAccess?: (o: Record<string, unknown>) => void } }
+      ).tt?.requestAccess;
+      if (!appId) {
+        setRequestAccessReport({ phase: "requestAccess", result: "FEISHU_CLIENT_ID 未配置" });
+      } else if (!requestAccess) {
+        setRequestAccessReport({ phase: "requestAccess", result: "tt.requestAccess 不可用（非飞书容器？）" });
+      } else {
+        await new Promise<void>((resolve) => {
+          const timer = window.setTimeout(
+            () => {
+              setRequestAccessReport({ phase: "requestAccess", result: "超时（15s 无回调）" });
+              resolve();
+            },
+            15_000,
+          );
+          requestAccess({
+            appID: appId,
+            scopeList: [],
+            success: (res: { code?: string }) => {
+              window.clearTimeout(timer);
+              setRequestAccessReport({
+                phase: "requestAccess",
+                result: `success：${res.code ? `拿到预授权码（${res.code.slice(0, 8)}…）` : "但未携带 code"}`,
+              });
+              resolve();
+            },
+            fail: (err: unknown) => {
+              window.clearTimeout(timer);
+              setRequestAccessReport({
+                phase: "requestAccess",
+                result: `fail：${JSON.stringify(err)}`,
+              });
+              resolve();
+            },
+          });
+        });
+      }
     })();
 
     return () => {
@@ -115,7 +168,7 @@ export default function H5ProbePage() {
 
   return (
     <div className="min-h-screen bg-black p-6 text-left font-mono text-[13px] leading-5 text-white">
-      <h1 className="mb-4 text-base font-bold">H5 login probe v2</h1>
+      <h1 className="mb-4 text-base font-bold">H5 login probe v3</h1>
       <section className="mb-6">
         <h2 className="mb-2 font-bold text-link">environment</h2>
         <pre className="whitespace-pre-wrap break-all rounded border border-hairline bg-card p-3 text-foreground">
@@ -140,6 +193,12 @@ export default function H5ProbePage() {
           </pre>
         </section>
       ))}
+      <section className="mb-6">
+        <h2 className="mb-2 font-bold text-link">requestAccess（生产 appID 实调）</h2>
+        <pre className="whitespace-pre-wrap break-all rounded border border-hairline bg-card p-3 text-foreground">
+          {requestAccessReport ? JSON.stringify(requestAccessReport, null, 2) : "…"}
+        </pre>
+      </section>
     </div>
   );
 }

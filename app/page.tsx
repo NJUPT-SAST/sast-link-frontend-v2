@@ -130,9 +130,17 @@ export default function Home() {
             <p className="text-[13px] text-destructive" data-testid="lark-login-error">
               飞书登录失败：{larkLogin.error}
             </p>
-            <Button variant="outline" size="sm" onClick={larkLogin.retry}>
-              重试飞书登录
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={larkLogin.retry}>
+                重试飞书登录
+              </Button>
+              {/* The in-client failure path has no address bar to type a URL
+                  into, so the diagnostic page rides along here — one tap away
+                  without re-pointing the Feishu web-app home URL. */}
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/debug/h5">查看诊断探针</Link>
+              </Button>
+            </div>
           </div>
         )}
       </PageTransition>

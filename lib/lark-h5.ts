@@ -106,6 +106,15 @@ export function waitLarkH5Ready(timeoutMs: number): Promise<void> {
   });
 }
 
+/** Describe a JSAPI fail callback payload for an error message: the errno
+ *  (and errString when present) is what distinguishes "user declined" from
+ *  "wrong app id" from "client cannot serve this API" — a bare generic
+ *  message hid exactly that distinction during the rollout debugging. */
+function describeLarkError(err: { errno?: number; errString?: string } | undefined): string {
+  const errno = err?.errno;
+  const detail = typeof errno === "number" ? `（errno ${errno}${err?.errString ? `：${err.errString}` : ""}）` : "";
+  return `未获得飞书授权${detail}`;
+}
 /** One-shot timeout wrapper for the JSAPI callbacks: neither requestAccess
  *  nor requestAuthCode documents a guaranteed fail callback, so a hung bridge
  *  must not strand the login flow. */
@@ -152,7 +161,7 @@ export function requestLarkAppCode(appId: string, timeoutMs = 15_000): Promise<s
           if (err?.errno === ERRNO_NO_REQUEST_ACCESS && window.tt?.requestAuthCode) {
             requestAuthCode(window.tt.requestAuthCode, appId).then(resolve, reject);
           } else {
-            reject(new Error("未获得飞书授权"));
+            reject(new Error(describeLarkError(err)));
           }
         },
       });
@@ -173,7 +182,19 @@ function requestAuthCode(
         if (res.code) resolve(res.code);
         else reject(new Error("飞书未返回授权码"));
       },
-      fail: () => reject(new Error("未获得飞书授权")),
+      // The legacy API's fail payload shape is undocumented; treat anything
+      // object-shaped as the errno carrier and degrade gracefully otherwise.
+      fail: (err: unknown) => {
+        reject(
+          new Error(
+            describeLarkError(
+              err && typeof err === "object"
+                ? (err as { errno?: number; errString?: string })
+                : undefined,
+            ),
+          ),
+        );
+      },
     });
   });
 }
