@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -119,7 +119,14 @@ export default function RegisterDetailsForm({
     },
   });
 
+  // `disabled={loading}` cannot stop a same-frame double click (the state has
+  // not committed yet); a ref guard makes a repeat submit a no-op — a second
+  // request would spend the one-time register_ticket and fail with a
+  // misleading 40103.
+  const submittingRef = useRef(false);
   const onValid = async (values: RegisterDetailsFormValues) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     try {
       const response = await completeRegister(
@@ -163,6 +170,7 @@ export default function RegisterDetailsForm({
       setTicketInvalid(apiError.code === 40103);
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
@@ -170,6 +178,9 @@ export default function RegisterDetailsForm({
     scrollToFirstError(form.formState.errors, FIELD_ORDER);
   };
 
+  // The guard only runs in a submit handler, never during render; the rule
+  // cannot see through react-hook-form's handleSubmit wrapper.
+  // eslint-disable-next-line react-hooks/refs
   const submit = form.handleSubmit(onValid, onInvalid);
 
   return (

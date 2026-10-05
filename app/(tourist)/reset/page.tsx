@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -82,6 +82,10 @@ function ResetFlow() {
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // `disabled={submitting}` cannot stop a same-frame double click (the state
+  // has not committed yet); a ref guard makes a repeat submit a no-op so the
+  // reset request is never fired twice.
+  const submittingRef = useRef(false);
   const [accountError, setAccountError] = useState<string | undefined>(undefined);
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordFormSchema),
@@ -112,7 +116,12 @@ function ResetFlow() {
     }
   };
 
+  // The guard only runs in a submit handler, never during render; the rule
+  // cannot see through react-hook-form's handleSubmit wrapper.
+  // eslint-disable-next-line react-hooks/refs
   const submit = form.handleSubmit(async ({ code, password }) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       await resetPassword(loginEmail, code, password);
@@ -121,6 +130,7 @@ function ResetFlow() {
       form.setError("root", { message: toApiError(error).message });
     } finally {
       setSubmitting(false);
+      submittingRef.current = false;
     }
   });
 

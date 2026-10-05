@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import RegisterDetailsForm from "./register-details-form";
@@ -96,6 +96,24 @@ describe("RegisterDetailsForm consent gate", () => {
     expect(screen.getByRole("checkbox")).toBeChecked();
 
     await userEvent.click(screen.getByRole("button", { name: "创建账户" }));
+    expect(mockCompleteRegister).toHaveBeenCalledTimes(1);
+  });
+
+  // Two synchronous clicks land before `loading` commits, so only the ref
+  // guard can keep the second submit out; a duplicate would spend the
+  // one-time register_ticket and fail with a misleading 40103.
+  it("coalesces a same-frame double click into one submit", async () => {
+    renderForm();
+    await fillRequiredFields();
+    await userEvent.click(screen.getByRole("checkbox"));
+
+    const submit = screen.getByRole("button", { name: "创建账户" });
+    fireEvent.click(submit);
+    fireEvent.click(submit);
+
+    await waitFor(() => expect(mockCompleteRegister).toHaveBeenCalledTimes(1));
+    // Drain the second click's validation microtasks before asserting.
+    await act(async () => {});
     expect(mockCompleteRegister).toHaveBeenCalledTimes(1);
   });
 });
