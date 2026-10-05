@@ -88,6 +88,12 @@ jobs:
         continue-on-error: true
 
       - name: Build Next.js application
+        # The production build fails fast when NEXT_PUBLIC_API_BASE_URL is
+        # missing (lib/config/public.ts) — CI builds are not deployments, but
+        # they must exercise the same contract, so pin the same-origin default
+        # the deploy pipeline checks for.
+        env:
+          NEXT_PUBLIC_API_BASE_URL: /v2
         run: pnpm build
 
       - name: Check bundle size
