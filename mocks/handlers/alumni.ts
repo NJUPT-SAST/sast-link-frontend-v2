@@ -9,13 +9,14 @@ import type {
 import { alumniMockRequests } from "../data/alumni";
 import { findUserByAccessToken } from "../data/users";
 import { njuptLocalAllowed } from "./email-rule";
+import { failEnvelope, okEnvelope } from "./respond";
 
 function ok<T>(data: T, status = 200) {
-  return HttpResponse.json({ code: 0, message: "ok", data }, { status });
+  return okEnvelope(data, status);
 }
 
 function fail(status: number, code: number, message: string) {
-  return HttpResponse.json({ code, message, data: null }, { status });
+  return failEnvelope(status, code, message);
 }
 
 /** The whole admin surface is admin-only (backend gates listing and writes on

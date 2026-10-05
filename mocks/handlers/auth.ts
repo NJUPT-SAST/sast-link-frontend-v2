@@ -5,6 +5,7 @@ import type { RegisterRequest } from "@/lib/api/types";
 import { codes, emailForTicket, loginCodes, sendCode, verifyCode } from "../data/tickets";
 import { createMockUser, findUserByEmail, issueTokens, mockUsers } from "../data/users";
 import { MAX_LOGIN_EMAIL_LENGTH, njuptLocalAllowed } from "./email-rule";
+import { failEnvelope, okEnvelope, withCors } from "./respond";
 
 /** Read one cookie out of a Cookie request header (jsdom tests set the mock
  *  session cookie via document.cookie so the /auth/refresh handler can
@@ -15,7 +16,7 @@ function cookieValue(cookieHeader: string, name: string): string | null {
 }
 
 function ok<T>(data: T, status = 200) {
-  return HttpResponse.json({ code: 0, message: "ok", data }, { status });
+  return okEnvelope(data, status);
 }
 /** Like ok, but also sets the httpOnly `sl_session` cookie (value = the refresh
  *  token), mirroring the real backend. The Set-Cookie header is applied by the
@@ -27,14 +28,14 @@ function cookieOk<T>(data: T, refreshToken: string, status = 200) {
     { code: 0, message: "ok", data },
     {
       status,
-      headers: {
+      headers: withCors({
         "Set-Cookie": `sl_session=${refreshToken}; Path=/v2; HttpOnly; SameSite=Lax`,
-      },
+      }),
     },
   );
 }
 function fail(status: number, code: number, message: string) {
-  return HttpResponse.json({ code, message, data: null }, { status });
+  return failEnvelope(status, code, message);
 }
 function authUser(user: (typeof mockUsers)[number]) {
   const { id, login_email, name, role, state, email_type, created_at, profile_needs_completion, incomplete_fields } = user.profile;

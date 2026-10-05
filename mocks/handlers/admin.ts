@@ -16,13 +16,14 @@ import type {
 } from "@/lib/api/types";
 import { adminMockAuditLogs, adminMockOAuthClients } from "../data/admin";
 import { findUserByAccessToken, identity, mockUsers } from "../data/users";
+import { failEnvelope, okEnvelope } from "./respond";
 
 function ok<T>(data: T, status = 200) {
-  return HttpResponse.json({ code: 0, message: "ok", data }, { status });
+  return okEnvelope(data, status);
 }
 
 function fail(status: number, code: number, message: string) {
-  return HttpResponse.json({ code, message, data: null }, { status });
+  return failEnvelope(status, code, message);
 }
 
 interface AuthResult {

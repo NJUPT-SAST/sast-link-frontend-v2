@@ -1,5 +1,5 @@
 /**
- * Polyfill fetch API globals for Jest + jsdom + MSW v2.
+ * Polyfill fetch API globals for Jest + jsdom + MSW.
  *
  * This file runs in `setupFiles` (before jsdom loads), so Node built-in
  * globals are still available. We capture and re-define them as
@@ -9,6 +9,7 @@
  */
 
 import { TextDecoder, TextEncoder } from "node:util";
+import { setImmediate as nodeSetImmediate, clearImmediate as nodeClearImmediate } from "node:timers";
 
 // Capture Node built-in fetch globals before jsdom can remove them
 const nodeGlobals = {
@@ -31,4 +32,12 @@ Object.defineProperties(globalThis, {
   FormData: { value: nodeGlobals.FormData, configurable: true },
   Blob: { value: nodeGlobals.Blob, configurable: true },
   ReadableStream: { value: nodeGlobals.ReadableStream, configurable: true },
+  // MSW v3's unified HTTP interceptor schedules socket reads via
+  // setImmediate — a Node global the jsdom test environment does not
+  // provide (Jest 28+ dropped Node globals from jsdom), and every intercepted
+  // request would die with "setImmediate is not defined". The Node original
+  // is imported directly because by setupFiles time the jsdom environment has
+  // already stripped it from globalThis.
+  setImmediate: { value: nodeSetImmediate, writable: true, configurable: true },
+  clearImmediate: { value: nodeClearImmediate, writable: true, configurable: true },
 });

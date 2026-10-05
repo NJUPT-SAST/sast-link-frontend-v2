@@ -2,12 +2,14 @@ import { adminHandlers } from "./admin";
 import { alumniHandlers } from "./alumni";
 import { authHandlers } from "./auth";
 import { badgeHandlers } from "./badge";
+import { corsHandlers } from "./cors";
 import { departmentHandlers } from "./departments";
 import { healthHandlers } from "./health";
 import { oauthHandlers } from "./oauth";
 import { userHandlers } from "./user";
 
 export const handlers = [
+  ...corsHandlers,
   ...adminHandlers,
   ...alumniHandlers,
   ...authHandlers,
