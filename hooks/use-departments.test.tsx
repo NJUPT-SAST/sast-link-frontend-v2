@@ -4,6 +4,7 @@ import { SWRConfig } from "swr";
 
 import { server } from "@/mocks/server";
 import { API_BASE_URL } from "@/lib/config/public";
+import { withCors } from "@/mocks/handlers/respond";
 import {
   DEPARTMENT_FALLBACK_OPTIONS,
   useDepartmentOptions,
@@ -48,7 +49,7 @@ describe("useDepartmentOptions (GET /departments, backend PR #100)", () => {
     server.use(
       http.get(`${API_BASE_URL}/departments`, () => {
         requests += 1;
-        return HttpResponse.json({ code: 50000, message: "boom", data: null });
+        return HttpResponse.json({ code: 50000, message: "boom", data: null }, { headers: withCors() });
       }),
     );
     const { result } = renderFresh();

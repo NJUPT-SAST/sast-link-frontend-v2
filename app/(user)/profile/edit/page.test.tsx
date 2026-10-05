@@ -416,9 +416,15 @@ describe("EditPage", () => {
       expect(mockRouterPush).toHaveBeenCalledWith("/profile");
     });
 
-    const event = new Event("beforeunload", { cancelable: true });
-    window.dispatchEvent(event);
-    expect(event.defaultPrevented).toBe(false);
+    // The guard's listener detaches one effect-cleanup tick after the reset
+    // that follows the save — poll the outcome instead of probing once, or a
+    // slow machine races the assertion against the cleanup (seen on CI with
+    // react-hook-form 7.89 + msw v3's socket-level responses).
+    await waitFor(() => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    });
   });
 
   it("calls scrollToFirstError when validation fails", async () => {
