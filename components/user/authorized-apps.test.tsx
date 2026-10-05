@@ -24,7 +24,10 @@ jest.mock("@/lib/api/oauth", () => ({
   revokeGrant: (...args: unknown[]) => mockRevokeGrant(...args),
 }));
 
-jest.mock("@/lib/token", () => ({ getSession: () => mockGetSession() }));
+jest.mock("@/lib/token", () => ({
+  ...jest.requireActual("@/lib/token"),
+  getSession: () => mockGetSession(),
+}));
 
 jest.mock("@/lib/api/errors", () => ({
   toApiError: (error: { message?: string }) => ({

@@ -105,7 +105,10 @@ export function UserList({
           canManage ? GRID_COLS_MANAGE : GRID_COLS,
         )}
       >
-        {canManage && (
+        {/* A page of only non-writable rows (a manager viewing only admin
+            accounts) has nothing selectable — hide the whole-page toggle
+            instead of rendering a dead checkbox. */}
+        {canManage && selectable.length > 0 && (
           <input
             type="checkbox"
             aria-label="全选本页用户"

@@ -14,6 +14,7 @@ import { message } from "@/lib/message";
 import { COLLEGES, type RegisterRequest } from "@/lib/api/types";
 import { postAuthDestination } from "@/lib/auth-destination";
 import { createSession, setSession } from "@/lib/token";
+import { clearAccountDataCache } from "@/lib/api/session-keys";
 import { safeSessionStorage } from "@/lib/safe-session-storage";
 import { useUserListStore } from "@/store/use-user-list-store";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
@@ -135,6 +136,9 @@ export default function RegisterDetailsForm({
       const data = response.data.data;
       const session = createSession(data.access_token, data.expires_in);
       setSession(session);
+      // Registration is the fourth session-establishment leg: drop any
+      // previous account's SWR cache like login/logout/establish do.
+      void clearAccountDataCache();
       resetProfile();
       addAccount({
         userId: data.user.id,
