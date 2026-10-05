@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { UserList } from "./user-list";
 import type { AdminUserListItem } from "@/lib/api/types";
@@ -56,5 +56,57 @@ describe("UserList department column", () => {
     const { container } = render(<UserList users={[user()]} />);
 
     expect(departmentCell(container)).toHaveTextContent("-");
+  });
+});
+
+describe("UserList selection write guard", () => {
+  const memberRow = user({ id: 1, name: "张三", role: "member" });
+  const adminRow = user({ id: 2, name: "管理员甲", role: "admin" });
+
+  // A manager cannot write admin rows (403), so the row offers no checkbox,
+  // matching the edit button's visibility bar.
+  it("hides checkboxes on rows the manager cannot write", () => {
+    render(<UserList users={[adminRow, memberRow]} viewerRole="manager" />);
+
+    expect(screen.queryByLabelText("选择 管理员甲")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("选择 张三")).toBeInTheDocument();
+  });
+
+  it("selects only writable rows on select-all for a manager", () => {
+    const onToggleSelect = jest.fn();
+    render(
+      <UserList
+        users={[adminRow, memberRow]}
+        viewerRole="manager"
+        onToggleSelect={onToggleSelect}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("全选本页用户"));
+    expect(onToggleSelect).toHaveBeenCalledTimes(1);
+    expect(onToggleSelect).toHaveBeenCalledWith(1);
+  });
+
+  it("marks the header checked once every writable row is selected", () => {
+    render(
+      <UserList users={[adminRow, memberRow]} viewerRole="manager" selectedIds={new Set([1])} />,
+    );
+
+    // The admin row must not block the header's checked state.
+    expect(screen.getByLabelText("全选本页用户")).toBeChecked();
+  });
+
+  it("keeps whole-page selection for an admin viewer", () => {
+    const onToggleSelect = jest.fn();
+    render(
+      <UserList
+        users={[adminRow, memberRow]}
+        viewerRole="admin"
+        onToggleSelect={onToggleSelect}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("全选本页用户"));
+    expect(onToggleSelect).toHaveBeenCalledTimes(2);
   });
 });
