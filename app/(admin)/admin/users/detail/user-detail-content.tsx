@@ -102,8 +102,8 @@ export function AdminUserDetailContent() {
         onOpenChange={setConfirmOpen}
         title={isDeleted ? "确认恢复用户" : "确认注销用户"}
         description={isDeleted
-          ? `确定要恢复用户「${user.name}」吗？`
-          : `确定要注销用户「${user.name}」吗？注销后该用户将无法登录，但数据会被保留。`}
+          ? `确定要恢复用户「${user.name}」吗？仅宽限期内可恢复，超期后数据将被永久删除。`
+          : `确定要注销用户「${user.name}」吗？注销后该用户将无法登录；数据仅在宽限期（默认 30 天）内保留，超期后将被永久删除且不可恢复。`}
         confirmLabel={isDeleted ? "恢复" : "注销"}
         confirmVariant={isDeleted ? "default" : "destructive"}
         loading={mutationLoading}

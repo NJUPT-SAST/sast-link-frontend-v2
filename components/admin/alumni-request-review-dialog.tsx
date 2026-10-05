@@ -14,9 +14,11 @@ import {
   CODE_ALUMNI_ACCOUNT_MISSING,
   CODE_ALUMNI_BOUND_EMAIL_LIMIT,
   CODE_ALUMNI_REQUEST_REVIEWED,
+  CODE_STUDENT_ID_OCCUPIED,
 } from "@/lib/api/error-codes";
 import { message } from "@/lib/message";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { FormError } from "@/components/ui/form-error";
 import { Form, FormField, FormItem } from "@/components/ui/form";
@@ -34,7 +36,7 @@ interface AlumniRequestReviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onApprove: (id: number) => Promise<ApproveAlumniRequestData>;
-  onReject: (id: number, reason: string) => Promise<void>;
+  onReject: (id: number, reason: string, silent: boolean) => Promise<void>;
 }
 
 type Mode = "review" | "confirm-approve" | "reject" | "approved";
@@ -62,8 +64,9 @@ export function AlumniRequestReviewDialog({
 
   const rejectForm = useForm<AlumniRejectFormValues>({
     resolver: zodResolver(alumniRejectSchema),
-    defaultValues: { reject_reason: "" },
+    defaultValues: { reject_reason: "", silent: false },
   });
+  const silentChecked = rejectForm.watch("silent");
 
   // A recover approval binds a receivable mailbox onto a live account, so it
   // is deliberately two steps: the backlog UX and the consent wording differ
@@ -75,7 +78,7 @@ export function AlumniRequestReviewDialog({
     setLoading(false);
     setError(undefined);
     setResult(null);
-    rejectForm.reset({ reject_reason: "" });
+    rejectForm.reset({ reject_reason: "", silent: false });
   };
 
   const handleApprove = async () => {
@@ -107,6 +110,12 @@ export function AlumniRequestReviewDialog({
       }
       if (apiError.code === CODE_ALUMNI_BOUND_EMAIL_LIMIT) {
         setError("该账号的邮箱绑定数量已达上限（2 个），无法再绑定，建议驳回该申请");
+      } else if (apiError.code === CODE_STUDENT_ID_OCCUPIED) {
+        // The student id already has a live account — the classic mistaken
+        // submission (the applicant self-registered after filing). A mailed
+        // rejection would only confuse someone who already owns the account,
+        // so point at the silent path instead of a generic retry.
+        setError("该学号已被现有账号占用，无法再建号；如申请人已自行注册，请返回并使用静默驳回关闭本申请");
       } else if (apiError.message.includes("已注销")) {
         setError("该学号的账号已注销，无法恢复访问方式，建议驳回该申请");
       } else if (apiError.message.includes("登录邮箱不一致")) {
@@ -119,12 +128,12 @@ export function AlumniRequestReviewDialog({
     }
   };
 
-  const handleReject = rejectForm.handleSubmit(async ({ reject_reason }) => {
+  const handleReject = rejectForm.handleSubmit(async ({ reject_reason, silent }) => {
     if (!request) return;
     setLoading(true);
     setError(undefined);
     try {
-      await onReject(request.id, reject_reason);
+      await onReject(request.id, reject_reason, silent);
       onOpenChange(false);
     } catch (caught) {
       const apiError = toApiError(caught);
@@ -240,7 +249,9 @@ export function AlumniRequestReviewDialog({
             <DialogHeader>
               <DialogTitle className="type-title3">驳回申请</DialogTitle>
               <DialogDescription className="text-muted-foreground">
-                理由会原文发送给申请人，请写明需要补充或修正的内容。
+                {silentChecked
+                  ? "静默驳回：只记录结论，不向申请人发送任何邮件，适用于误提交（如申请人已自行注册）的工单。理由仍必填，作为工单与审计的解释。"
+                  : "理由会原文发送给申请人，请写明需要补充或修正的内容。"}
               </DialogDescription>
             </DialogHeader>
             <Form {...rejectForm}>
@@ -273,6 +284,30 @@ export function AlumniRequestReviewDialog({
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={rejectForm.control}
+                  name="silent"
+                  render={({ field }) => (
+                    <FormItem>
+                      <label
+                        htmlFor="reject_silent"
+                        className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-hairline bg-card p-3 text-[13px] leading-5 text-muted-foreground"
+                      >
+                        <Checkbox
+                          id="reject_silent"
+                          checked={field.value}
+                          onCheckedChange={(checked) => field.onChange(checked === true)}
+                          className="mt-0.5"
+                        />
+                        <span>
+                          静默驳回：不向申请人发送驳回邮件。
+                          适用于误提交的工单（如申请人已自行完成注册），
+                          一封驳回邮件只会给已有账号的申请人带来困惑。
+                        </span>
+                      </label>
+                    </FormItem>
+                  )}
+                />
                 <FormError message={error} />
                 <DialogFooter className="gap-2">
                   <Button
@@ -287,7 +322,7 @@ export function AlumniRequestReviewDialog({
                     返回
                   </Button>
                   <Button type="submit" variant="destructive" disabled={loading}>
-                    {loading ? <DotLoading /> : "确认驳回"}
+                    {loading ? <DotLoading /> : silentChecked ? "确认静默驳回" : "确认驳回"}
                   </Button>
                 </DialogFooter>
               </form>

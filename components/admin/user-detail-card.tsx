@@ -61,6 +61,13 @@ export function UserDetailCard({ user }: UserDetailCardProps) {
         <h2 className="type-tech mb-3 text-tertiary">身份与权限</h2>
         <Field label="角色" value={ROLE_LABELS[user.role] ?? user.role} />
         <Field label="状态" value={STATE_LABELS[user.state] ?? user.state} />
+        {user.deleted_at && (
+          <Field
+            label="注销时间"
+            value={`${formatAdminDate(user.deleted_at)}（超过宽限期后数据将被永久删除）`}
+            wrap
+          />
+        )}
         <Field
           label="资料状态"
           wrap

@@ -162,7 +162,33 @@ describe("alumniRejectSchema", () => {
 
   it("accepts a reason", () => {
     expect(
-      alumniRejectSchema.safeParse({ reject_reason: "档案中未找到该学号" }).success,
+      alumniRejectSchema.safeParse({
+        reject_reason: "档案中未找到该学号",
+        silent: false,
+      }).success,
     ).toBe(true);
+  });
+
+  // silent is the form's own checkbox state — the dialog seeds false, so an
+  // audible rejection is simply the flag left unchecked.
+  it("accepts an explicit silent rejection", () => {
+    const parsed = alumniRejectSchema.safeParse({
+      reject_reason: "学号已自行注册，无需建号",
+      silent: true,
+    });
+    expect(parsed.success).toBe(true);
+    expect(
+      alumniRejectSchema.safeParse({
+        reject_reason: "请补充材料",
+        silent: false,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("refuses a non-boolean silent flag", () => {
+    expect(
+      alumniRejectSchema.safeParse({ reject_reason: "请补充材料", silent: "yes" })
+        .success,
+    ).toBe(false);
   });
 });

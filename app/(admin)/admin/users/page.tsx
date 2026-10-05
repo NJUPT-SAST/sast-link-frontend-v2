@@ -287,8 +287,8 @@ function AdminUsersContent() {
         description={
           confirm.user
             ? confirm.action === "delete"
-              ? `确定要注销用户「${confirm.user.name}」吗？注销后该用户将无法登录，但数据会被保留。`
-              : `确定要恢复用户「${confirm.user.name}」吗？恢复后状态将变为「在校学生」。`
+              ? `确定要注销用户「${confirm.user.name}」吗？注销后该用户将无法登录；数据仅在宽限期（默认 30 天）内保留，超期后将被永久删除且不可恢复。`
+              : `确定要恢复用户「${confirm.user.name}」吗？恢复后状态将按角色与学号重新推导。`
             : ""
         }
         confirmLabel={confirm.action === "delete" ? "注销" : "恢复"}
