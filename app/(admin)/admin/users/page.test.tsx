@@ -3,6 +3,7 @@ import { SWRConfig } from "swr";
 import { http, HttpResponse } from "msw";
 
 import { server } from "@/mocks/server";
+import { withCors } from "@/mocks/handlers/respond";
 import { API_BASE_URL } from "@/lib/config/public";
 import AdminUsersPage from "./page";
 
@@ -165,11 +166,16 @@ describe("AdminUsersPage selection across pages", () => {
           id: String(params.id),
           body: (await request.json()) as Record<string, unknown>,
         });
-        return HttpResponse.json({
-          code: 0,
-          message: "ok",
-          data: { message: "用户信息更新成功", user: null },
-        });
+        return HttpResponse.json(
+          {
+            code: 0,
+            message: "ok",
+            data: { message: "用户信息更新成功", user: null },
+          },
+          // Test-local overrides bypass the shared envelope helpers, so the
+          // CORS headers msw v3 now needs (jsdom checks them) must ride along.
+          { headers: withCors() },
+        );
       }),
     );
 
