@@ -71,6 +71,12 @@ describe("Home Page", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "重试飞书登录" }));
     expect(mockLarkLogin.retry).toHaveBeenCalled();
+    // The diagnostic page is one tap away — the in-client failure path has no
+    // address bar to type a URL into.
+    expect(screen.getByRole("link", { name: "查看诊断探针" })).toHaveAttribute(
+      "href",
+      "/debug/h5",
+    );
     // The ordinary entrances stay reachable — the failure is not a dead end.
     expect(screen.getByRole("link", { name: "登录" })).toBeInTheDocument();
   });

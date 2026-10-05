@@ -121,10 +121,12 @@ export default function H5ProbePage() {
       // distinguishable from an app-id or permission problem. Runs after the
       // sweep on the already-mounted 1.5.32 instance.
       const appId = publicConfig.FEISHU_CLIENT_ID;
-      const tt = (window as unknown as { tt?: { requestAccess?: (o: Record<string, unknown>) => void } }).tt;
+      const requestAccess = (
+        window as unknown as { tt?: { requestAccess?: (o: Record<string, unknown>) => void } }
+      ).tt?.requestAccess;
       if (!appId) {
         setRequestAccessReport({ phase: "requestAccess", result: "FEISHU_CLIENT_ID 未配置" });
-      } else if (!tt?.requestAccess) {
+      } else if (!requestAccess) {
         setRequestAccessReport({ phase: "requestAccess", result: "tt.requestAccess 不可用（非飞书容器？）" });
       } else {
         await new Promise<void>((resolve) => {
@@ -135,7 +137,7 @@ export default function H5ProbePage() {
             },
             15_000,
           );
-          tt.requestAccess({
+          requestAccess({
             appID: appId,
             scopeList: [],
             success: (res: { code?: string }) => {
