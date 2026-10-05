@@ -48,9 +48,17 @@ function RecoverBadge() {
  *  undelivered one means the provisioning was wasted work — the account exists and
  *  its owner does not know. `notify_attempts > 0` with no `notified_at` is a
  *  delivery that was tried and failed; zero attempts means it never left the
- *  queue. Both need a human, so both surface. */
+ *  queue. Both need a human, so both surface.
+ *
+ *  Silent rejections are excluded on the flag rather than on `notified_at`:
+ *  the backend's rejecting transaction sets `notified_at` without any send, so
+ *  for those tickets `notified_at` means "nothing is owed", not "delivered". */
 function isNotifyPending(request: AlumniRequest): boolean {
-  return request.status !== "pending" && request.notified_at === null;
+  return (
+    request.status !== "pending" &&
+    request.notified_at === null &&
+    !request.silently_rejected
+  );
 }
 
 /** One request per card rather than a wide table: a request carries nine display
@@ -87,6 +95,11 @@ export function AlumniRequestList({
             <span className="type-tech text-xs text-tertiary">{request.student_id}</span>
             <StatusBadge status={request.status} />
             {request.intent === "recover" && <RecoverBadge />}
+            {request.status === "rejected" && request.silently_rejected && (
+              <span className="type-tech text-xs text-muted-foreground">
+                静默驳回（未通知申请人）
+              </span>
+            )}
             {isNotifyPending(request) && (
               <span className="type-tech text-xs text-destructive">通知未送达</span>
             )}

@@ -104,6 +104,12 @@ export const alumniRejectSchema = z.object({
     .trim()
     .min(1, "请填写驳回理由")
     .max(500, "最多 500 个字符"),
+  // Backend V022: a silent rejection records the verdict without emailing the
+  // applicant. The reason is mandatory in both modes (ticket + audit need it),
+  // so this flag changes only the delivery, never the validation. Required
+  // rather than defaulted: the form always seeds `silent: false`, and a plain
+  // boolean keeps the resolver's input/output types identical.
+  silent: z.boolean(),
 });
 
 export type AlumniRejectFormValues = z.infer<typeof alumniRejectSchema>;

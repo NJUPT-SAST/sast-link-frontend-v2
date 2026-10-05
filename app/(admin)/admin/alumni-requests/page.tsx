@@ -58,15 +58,21 @@ function AdminAlumniRequestsContent() {
   );
 
   const handleReject = useCallback(
-    async (id: number, reason: string) => {
-      const response = await rejectAlumniRequest(id, { reject_reason: reason });
-      // Rejection mails the reason too, so the same queue caveat applies as on
-      // approval: the verdict stands even when the notice did not get queued.
-      message[response.data.data.notify_enqueued ? "success" : "warning"](
-        response.data.data.notify_enqueued
-          ? "已驳回，通知邮件已进入发送队列"
-          : "已驳回，但通知邮件未能入队，请手动联系申请人",
-      );
+    async (id: number, reason: string, silent: boolean) => {
+      const response = await rejectAlumniRequest(id, { reject_reason: reason, silent });
+      // A silent rejection never enqueues anything by design (notify_enqueued
+      // is always false), so the queue caveat below belongs to audible
+      // rejections only: there the verdict stands even when the notice did not
+      // get queued.
+      if (silent) {
+        message.success("已静默驳回，未向申请人发送邮件");
+      } else {
+        message[response.data.data.notify_enqueued ? "success" : "warning"](
+          response.data.data.notify_enqueued
+            ? "已驳回，通知邮件已进入发送队列"
+            : "已驳回，但通知邮件未能入队，请手动联系申请人",
+        );
+      }
       refresh();
     },
     [refresh],

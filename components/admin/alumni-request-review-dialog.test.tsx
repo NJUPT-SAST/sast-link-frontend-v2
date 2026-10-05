@@ -19,6 +19,7 @@ const defaultRequest: AlumniRequest = {
   department_note: "软件研发部",
   note: "",
   status: "pending",
+  silently_rejected: false,
   reject_reason: "",
   created_user_id: null,
   reviewed_by: null,
@@ -127,8 +128,41 @@ describe("AlumniRequestReviewDialog", () => {
     await userEvent.click(screen.getByRole("button", { name: "确认驳回" }));
 
     await waitFor(() =>
-      expect(onReject).toHaveBeenCalledWith(7, "档案中未找到该学号"),
+      expect(onReject).toHaveBeenCalledWith(7, "档案中未找到该学号", false),
     );
+  });
+
+  // Backend V022: a silent rejection records the verdict without emailing the
+  // applicant — the only humane close for a mistaken submission whose
+  // applicant already self-registered.
+  it("rejects silently when the silent checkbox is checked", async () => {
+    const { onReject } = setup();
+    await userEvent.click(screen.getByRole("button", { name: "驳回" }));
+    expect(
+      screen.getByText(/理由会原文发送给申请人/),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("checkbox"));
+    expect(screen.getByText(/静默驳回：只记录结论/)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/驳回理由/), "学号已自行注册，无需建号");
+    await userEvent.click(screen.getByRole("button", { name: "确认静默驳回" }));
+
+    await waitFor(() =>
+      expect(onReject).toHaveBeenCalledWith(7, "学号已自行注册，无需建号", true),
+    );
+  });
+
+  // The reason is the ticket's and the audit's own explanation in silent mode
+  // too (backend keeps it mandatory), so an empty one blocks submission there.
+  it("still requires a reason for a silent rejection", async () => {
+    const { onReject } = setup();
+    await userEvent.click(screen.getByRole("button", { name: "驳回" }));
+    await userEvent.click(screen.getByRole("checkbox"));
+    await userEvent.click(screen.getByRole("button", { name: "确认静默驳回" }));
+
+    expect(await screen.findByText("请填写驳回理由")).toBeInTheDocument();
+    expect(onReject).not.toHaveBeenCalled();
   });
 
   // 42204 means a colleague ruled on this ticket first (or the button was double
@@ -235,5 +269,20 @@ describe("AlumniRequestReviewDialog", () => {
 
       expect(await screen.findByText(/绑定数量已达上限（2 个）/)).toBeInTheDocument();
     });
+  });
+
+  // 40902: the student id already rides a live account — the backend's fix
+  // (V022) is a silent rejection, and the console must point there instead of
+  // leaving a generic error the reviewer cannot act on.
+  it("points at the silent-reject path when the student id is occupied", async () => {
+    const onApprove = jest
+      .fn()
+      .mockRejectedValue(apiFailure(409, 40902, "该学号已被现有账号占用，无法再建号"));
+    setup({ onApprove });
+    await approveThroughConfirm("通过并建号", "确认通过");
+
+    expect(
+      await screen.findByText(/如申请人已自行注册，请返回并使用静默驳回/),
+    ).toBeInTheDocument();
   });
 });

@@ -138,6 +138,12 @@ export interface UserProfileData {
   /** Backend V014: whether state was manually set (pinned) or derived from
    *  role + student_id. Readable wherever state is (list/detail/batch). */
   state_manual: boolean;
+  /** Backend V023: set by the close transaction and cleared by restore — the
+   *  physical-purge clock. Past the retention grace window
+   *  (`RETENTION_DELETED_USER_AGE`, default 30d) the row is hard-deleted and
+   *  restore answers 404. Only the admin user read paths carry it; always
+   *  null/absent on active accounts. */
+  deleted_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -484,6 +490,13 @@ export interface AlumniRequest {
   department_note: string;
   note: string;
   status: AlumniRequestStatus;
+  /** Backend V022: the rejection chose not to email the applicant. The
+   *  rejecting transaction still sets `notified_at` (to close the delivery
+   *  story, not to claim a send), so this flag — not `notified_at` — is what
+   *  the console must read to render the ticket honestly; resend refuses
+   *  (42200) on silent tickets. `false` on everything that is not a silent
+   *  rejection. */
+  silently_rejected: boolean;
   reject_reason: string;
   /** Set once approved; nulled if that account is later deleted, so the request
    *  history outlives the account. */
@@ -541,4 +554,9 @@ export interface AlumniNotifyResult {
 
 export interface RejectAlumniRequestRequest {
   reject_reason: string;
+  /** Backend V022: reject without emailing the applicant — for mistaken
+   *  submissions (typically one whose applicant already self-registered).
+   *  `reject_reason` stays mandatory either way: it is the ticket's and the
+   *  audit's own explanation, not just the mail body. */
+  silent?: boolean;
 }

@@ -20,6 +20,7 @@ function makeRequest(overrides: Partial<AlumniRequest> = {}): AlumniRequest {
     department_note: "",
     note: "",
     status: "pending",
+    silently_rejected: false,
     reject_reason: "",
     created_user_id: null,
     reviewed_by: null,
@@ -133,6 +134,31 @@ describe("AlumniRequestList", () => {
       />,
     );
     expect(screen.getByRole("button", { name: "重发中…" })).toBeDisabled();
+  });
+
+  // Backend V022: a silent rejection sets notified_at in the rejecting
+  // transaction without any send, so the card must read the flag — otherwise
+  // the ticket would look "delivered" (or worse, offer a resend the backend
+  // refuses with 42200).
+  it("marks a silently rejected request as never-notified", () => {
+    render(
+      <AlumniRequestList
+        requests={[
+          makeRequest({
+            id: 1,
+            status: "rejected",
+            silently_rejected: true,
+            reject_reason: "学号已自行注册，无需建号",
+            notified_at: "2026-02-06T01:00:00Z",
+            notify_attempts: 0,
+          }),
+        ]}
+        onResend={jest.fn()}
+      />,
+    );
+    expect(screen.getByText("静默驳回（未通知申请人）")).toBeInTheDocument();
+    expect(screen.queryByText("通知未送达")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "重发通知" })).not.toBeInTheDocument();
   });
 
   it("shows the provisioned account id for an approved request", () => {

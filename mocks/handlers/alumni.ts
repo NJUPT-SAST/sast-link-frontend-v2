@@ -109,6 +109,7 @@ export const alumniHandlers = [
       department_note: body.department_note ?? "",
       note: body.note ?? "",
       status: "pending" as AlumniRequestStatus,
+      silently_rejected: false,
       reject_reason: "",
       created_user_id: null,
       reviewed_by: null,
@@ -200,6 +201,12 @@ export const alumniHandlers = [
       }
     }
 
+    // Provision approval failure: the student id already rides a live account
+    // (backend V022 pair — the fix is a silent rejection, not a mailed one).
+    if ((target.note ?? "").includes("!approve-occupied")) {
+      return fail(409, 40902, "该学号已被现有账号占用，无法再建号；如申请人已自行注册，请静默驳回");
+    }
+
     target.status = "approved";
     target.created_user_id = 9000 + target.id;
     target.reviewed_by = auth.user?.profile.id ?? 1;
@@ -231,6 +238,13 @@ export const alumniHandlers = [
     target.reviewed_by = auth.user?.profile.id ?? 1;
     target.reviewed_at = new Date().toISOString();
     target.updated_at = target.reviewed_at;
+    if (body.silent) {
+      // Backend V022: the verdict, the flag and notified_at land together in
+      // the rejecting transaction — attempts stay 0 because nothing was sent.
+      target.silently_rejected = true;
+      target.notified_at = target.reviewed_at;
+      return ok({ notify_enqueued: false });
+    }
     target.notify_attempts += 1;
     target.notified_at = target.reviewed_at;
 
@@ -247,6 +261,11 @@ export const alumniHandlers = [
       if (!target) return fail(404, 40403, "建号申请不存在");
       // Nothing to announce until there is a verdict.
       if (target.status === "pending") return fail(422, 42200, "申请尚未处理");
+      // Backend V022: silence was the reviewer's decision; the resend endpoint
+      // must not quietly undo it.
+      if (target.silently_rejected) {
+        return fail(422, 42200, "静默驳回的工单不会发送通知，不能补发");
+      }
 
       target.notify_attempts += 1;
       target.notified_at = new Date().toISOString();
