@@ -45,7 +45,13 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
   const [exchangeError, setExchangeError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const exchangedRef = useRef(false);
+  // The code stashed before the URL is stripped. Next's router patches
+  // history.replaceState, so stripping the URL also empties useSearchParams —
+  // without the stash, a failed exchange could never be retried (the effect
+  // would see no code) and the page would mis-report 缺少授权信息.
+  const [stashedCode, setStashedCode] = useState<string | null>(null);
   const code = searchParams.get("code");
+  const effectiveCode = code ?? stashedCode;
   // The provider bounces back with an `error` query when the user cancels the
   // consent step — treat that as a cancellation, not a stale link.
   const cancelled = searchParams.get("error") !== null;
@@ -58,7 +64,7 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
   const inputError = cancelled
     ? null
     : searchParams.get("error_description") ||
-      (!code && !searchParams.get("registration_state")
+      (!effectiveCode && !searchParams.get("registration_state")
         ? "缺少授权信息，请重新登录"
         : null);
 
@@ -70,21 +76,22 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
       return;
     }
 
-    if (!code) return;
+    if (!effectiveCode) return;
     if (uninitiated) return;
     if (exchangedRef.current) return;
     exchangedRef.current = true;
     setExchangeError(null);
+    // Stash before stripping: Next syncs useSearchParams with
+    // history.replaceState, so the retry below reads the code from the stash.
+    setStashedCode(effectiveCode);
     // The code must not linger in the URL: it leaks via Referer headers on
     // outbound requests and via shared history entries once exchanged.
-    // useSearchParams is unaffected by replaceState, so this render's `code`
-    // (already read above) stays valid for the exchange.
     window.history.replaceState(null, "", "/oauth/callback");
 
-    establishLoginCodeSession(code)
+    establishLoginCodeSession(effectiveCode)
       .then((destination) => router.replace(destination))
       .catch((reason) => setExchangeError(toApiError(reason).message));
-  }, [code, router, searchParams, retryCount, uninitiated]);
+  }, [effectiveCode, router, searchParams, retryCount, uninitiated]);
 
   const handleRetry = () => {
     exchangedRef.current = false;

@@ -111,6 +111,34 @@ describe("OAuthCallbackContent", () => {
     expect(mockEstablishLoginCodeSession).toHaveBeenCalledTimes(2);
   });
 
+  it("retries from the stash after the URL strip empties useSearchParams", async () => {
+    // Next's router patches history.replaceState to sync useSearchParams, so
+    // stripping the code empties the params the hook reports — mirror that
+    // here or the retry path is never exercised for real.
+    setup("code=lc_123");
+    seedLoginInitiation();
+    const replaceStateSpy = jest
+      .spyOn(window.history, "replaceState")
+      .mockImplementation(() => {
+        mockSearchParams = () => new URLSearchParams();
+      });
+    mockEstablishLoginCodeSession
+      .mockRejectedValueOnce({ message: "boom" })
+      .mockResolvedValueOnce("/home");
+
+    render(<OAuthCallbackContent provider={provider} />);
+
+    expect(await screen.findByText(/登录链接已失效/)).toBeInTheDocument();
+    // The stripped URL must not flip the page into 缺少授权信息 — the stash
+    // still holds the code.
+    expect(screen.queryByText(/缺少授权信息/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "重新尝试" }));
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/home"));
+    expect(mockEstablishLoginCodeSession).toHaveBeenCalledTimes(2);
+    replaceStateSpy.mockRestore();
+  });
+
   it("stops the auto exchange when this tab did not initiate the login", async () => {
     setup("code=lc_123");
 

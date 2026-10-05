@@ -6,6 +6,7 @@ import { useForm, Controller } from "react-hook-form";
 import Link from "next/link";
 
 import { beginOAuthLogin } from "@/lib/api/oauth";
+import { message } from "@/lib/message";
 import {
   type LoginAccountFormValues,
   loginAccountFormSchema,
@@ -85,12 +86,13 @@ export default function LoginAccountForm({ onNext, resetNotice }: LoginAccountFo
         icon: <GithubIcon />,
         // Click-time launch: the PKCE challenge is minted per jump and the
         // verifier stays in this tab's sessionStorage (backend PR #111).
-        onLaunch: () => void beginOAuthLogin("github"),
+        // A same-frame double click is absorbed by beginOAuthLogin itself.
+        onLaunch: () => beginOAuthLogin("github").catch(() => message.warning("登录发起失败，请重试")),
       },
       {
         describe: "飞书",
         icon: <LarkIcon />,
-        onLaunch: () => void beginOAuthLogin("lark"),
+        onLaunch: () => beginOAuthLogin("lark").catch(() => message.warning("登录发起失败，请重试")),
       },
     ],
     [],

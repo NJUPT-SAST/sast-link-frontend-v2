@@ -7,10 +7,10 @@ import { useEffect, useState, type ComponentType } from "react";
  *
  * The probe loads third-party CDN scripts and fires a live requestAccess with
  * the production app id — exactly what should never run for end users. The
- * runtime flag arrives as a prop from the server page (inlined at build
- * time), so a production build folds the import branch away; the bundler
- * still emits the async chunk before dead-code elimination runs, which is
- * why scripts/strip-dev-probe.mjs removes the orphan after `next build`. */
+ * runtime flag arrives as a prop from the server page, so in production the
+ * gate never fetches the probe chunk at runtime; the bundler still emits it
+ * (the chunk graph precedes dead-code elimination), which is why
+ * scripts/strip-dev-probe.mjs removes the orphan after `next build`. */
 export default function H5ProbeClient({ dev }: { dev: boolean }) {
   const [Probe, setProbe] = useState<ComponentType | null>(null);
 

@@ -80,7 +80,9 @@ export function OAuthErrorContent() {
               href="#"
               onClick={(event) => {
                 event.preventDefault();
-                void beginOAuthLogin(provider);
+                void beginOAuthLogin(provider).catch(() =>
+                  message.warning("登录发起失败，请重试"),
+                );
               }}
             >
               {RESTART_LABELS[provider]}

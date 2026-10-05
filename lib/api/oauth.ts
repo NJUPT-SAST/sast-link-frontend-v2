@@ -68,15 +68,27 @@ export function clearPKCEVerifier(): void {
  *  the initiator (the callback's stop-page guard), and leave for the backend's
  *  authorize URL with the challenge — never the verifier — in the query. The
  *  URL must be built at click time, so callers wire this into onClick rather
- *  than a pre-rendered href. */
+ *  than a pre-rendered href. A same-frame double click is a no-op: the second
+ *  run would stage a second verifier while the first redirect is already
+ *  leaving, mismatching the URL's challenge against the stored verifier.
+ *  (Storage-disabled browsers lose login here by design — the backend refuses
+ *  a verifier-less exchange anyway, so the stamp/verifier can only live in
+ *  sessionStorage.) */
+let launchInFlight = false;
 export async function beginOAuthLogin(provider: OAuthProvider): Promise<void> {
-  const challenge = await stagePKCEVerifier();
-  markOAuthLoginInitiated(provider);
-  redirectTo(
-    `${publicConfig.API_BASE_URL}/oauth/${provider}` +
-      `?code_challenge=${encodeURIComponent(challenge)}` +
-      `&code_challenge_method=S256`,
-  );
+  if (launchInFlight) return;
+  launchInFlight = true;
+  try {
+    const challenge = await stagePKCEVerifier();
+    markOAuthLoginInitiated(provider);
+    redirectTo(
+      `${publicConfig.API_BASE_URL}/oauth/${provider}` +
+        `?code_challenge=${encodeURIComponent(challenge)}` +
+        `&code_challenge_method=S256`,
+    );
+  } finally {
+    launchInFlight = false;
+  }
 }
 
 export function exchangeLoginCode(code: string, codeVerifier: string) {
@@ -216,19 +228,19 @@ export function markOAuthLoginInitiated(provider: OAuthProvider): void {
 }
 
 /** Whether any provider's login redirect was initiated from this tab recently
- *  enough for its callback to be worth auto-redeeming. Expired stamps can
- *  never become valid again, so they are removed on sight. */
+ *  enough for its callback to be worth auto-redeeming. A pure read — no key
+ *  removal — because the callers run it during render; expired stamps are
+ *  simply ignored (the next initiation overwrites its provider's slot and
+ *  the tab close clears the rest). */
 export function hasRecentOAuthLoginInitiation(): boolean {
   const now = Date.now();
   for (const provider of OAUTH_PROVIDERS) {
-    const key = `${LOGIN_INITIATED_KEY}:${provider}`;
-    const raw = safeSessionStorage.getItem(key);
+    const raw = safeSessionStorage.getItem(`${LOGIN_INITIATED_KEY}:${provider}`);
     if (raw === null) continue;
     const stampedAt = Number(raw);
     if (Number.isFinite(stampedAt) && now - stampedAt < LOGIN_INITIATED_TTL_MS) {
       return true;
     }
-    safeSessionStorage.removeItem(key);
   }
   return false;
 }

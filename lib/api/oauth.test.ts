@@ -161,13 +161,14 @@ describe("lib/api/oauth v2", () => {
     expect(hasRecentOAuthLoginInitiation()).toBe(true);
   });
 
-  it("rejects an expired initiation stamp and clears the stale key", () => {
+  it("ignores an expired initiation stamp (pure read, no removal)", () => {
     sessionStorage.setItem(
       `${LOGIN_INITIATED_KEY}:lark`,
       String(Date.now() - 16 * 60 * 1000),
     );
     expect(hasRecentOAuthLoginInitiation()).toBe(false);
-    expect(sessionStorage.getItem(`${LOGIN_INITIATED_KEY}:lark`)).toBeNull();
+    // The function runs during render, so it must not mutate storage.
+    expect(sessionStorage.getItem(`${LOGIN_INITIATED_KEY}:lark`)).not.toBeNull();
   });
 
   it("reports no initiation when nothing was stamped", () => {
