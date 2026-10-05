@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/error-codes";
 import {
   buildOAuthLoginUrl,
+  markOAuthLoginInitiated,
   type OAuthProvider,
 } from "@/lib/api/oauth";
 
@@ -75,8 +76,12 @@ export function OAuthErrorContent() {
                 OAuth entry, outside the static-export router. No ?redirect=
                 is attached — this page cannot know the pre-login page, and the
                 login-page buttons send none either, so the backend falls back
-                to its default post-login address. */}
-            <a href={buildOAuthLoginUrl(provider)}>
+                to its default post-login address. The click also stamps this
+                tab as having initiated the jump, arming the callback guard. */}
+            <a
+              href={buildOAuthLoginUrl(provider)}
+              onClick={() => markOAuthLoginInitiated(provider)}
+            >
               {RESTART_LABELS[provider]}
             </a>
           </Button>

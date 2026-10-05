@@ -8,6 +8,9 @@ interface OtherLoginItem {
   target: string;
   describe: string;
   icon: ReactNode;
+  /** Fired at click time for entries with a target, so the caller can stamp
+   *  that this tab genuinely initiated the provider jump. */
+  onNavigate?: () => void;
 }
 
 export function OtherLoginList({ list }: { list: OtherLoginItem[] }) {
@@ -20,6 +23,7 @@ export function OtherLoginList({ list }: { list: OtherLoginItem[] }) {
             href={item.target || undefined}
             onClick={() => {
               if (!item.target) message.warning("暂未开放");
+              else item.onNavigate?.();
             }}
             className="flex h-12 cursor-pointer select-none items-center justify-center gap-2 rounded-lg border border-input px-3 text-sm font-medium text-foreground transition-colors hover:bg-recessed [&_img]:size-[18px] [&_svg]:size-[18px]"
           >

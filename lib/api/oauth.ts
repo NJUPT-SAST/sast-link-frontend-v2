@@ -113,6 +113,52 @@ function bindSettings(provider: OAuthProvider): {
 /** sessionStorage key holding the pending bind `state` for one provider. */
 const BIND_STATE_KEY = "sast:oauth-bind:state";
 
+/** sessionStorage key holding the time this tab initiated one provider's
+ *  login redirect. The callback `?code=` (login_code) is a pure bearer
+ *  one-time code with no browser binding — anyone holding the URL can redeem
+ *  it — so the callback page only auto-redeems when the redirect was started
+ *  from this very tab. That confines the "auto-redeem" carrier to a browser
+ *  whose own tab jumped, cutting off link-drop / login-CSRF payloads that
+ *  hand victims a prebaked callback URL. sessionStorage (per-tab) survives
+ *  the cross-origin provider round trip within the tab.
+ *
+ *  Backend-side browser binding for exchange-code is still the real fix; this
+ *  is a frontend mitigation until it ships. */
+const LOGIN_INITIATED_KEY = "sast:oauth-login-init";
+/** Backend OAuth state TTL is 10 minutes; the window keeps a margin so a slow
+ *  consent round trip is not mistaken for a link from elsewhere. */
+const LOGIN_INITIATED_TTL_MS = 15 * 60 * 1000;
+
+const OAUTH_PROVIDERS: readonly OAuthProvider[] = ["github", "lark"];
+
+/** Stamp the moment this tab is about to leave for a provider login page.
+ *  Must be called at click time, not on page load, so only genuinely
+ *  user-initiated jumps arm the callback guard. */
+export function markOAuthLoginInitiated(provider: OAuthProvider): void {
+  safeSessionStorage.setItem(
+    `${LOGIN_INITIATED_KEY}:${provider}`,
+    String(Date.now()),
+  );
+}
+
+/** Whether any provider's login redirect was initiated from this tab recently
+ *  enough for its callback to be worth auto-redeeming. Expired stamps can
+ *  never become valid again, so they are removed on sight. */
+export function hasRecentOAuthLoginInitiation(): boolean {
+  const now = Date.now();
+  for (const provider of OAUTH_PROVIDERS) {
+    const key = `${LOGIN_INITIATED_KEY}:${provider}`;
+    const raw = safeSessionStorage.getItem(key);
+    if (raw === null) continue;
+    const stampedAt = Number(raw);
+    if (Number.isFinite(stampedAt) && now - stampedAt < LOGIN_INITIATED_TTL_MS) {
+      return true;
+    }
+    safeSessionStorage.removeItem(key);
+  }
+  return false;
+}
+
 export function buildBindOAuthUrl(provider: OAuthProvider): string | null {
   const { clientId, redirectUri } = bindSettings(provider);
   if (!clientId || !redirectUri) return null;

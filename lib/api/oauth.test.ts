@@ -17,11 +17,14 @@ import {
   buildOAuthLoginUrl,
   consumeBindState,
   exchangeLoginCode,
+  hasRecentOAuthLoginInitiation,
   larkAppCodeLogin,
+  markOAuthLoginInitiated,
 } from "./oauth";
 import * as publicConfig from "@/lib/config/public";
 
 const BIND_STATE_KEY = "sast:oauth-bind:state";
+const LOGIN_INITIATED_KEY = "sast:oauth-login-init";
 
 describe("lib/api/oauth v2", () => {
   beforeEach(() => {
@@ -106,5 +109,26 @@ describe("lib/api/oauth v2", () => {
     sessionStorage.setItem(`${BIND_STATE_KEY}:lark`, "abc");
     expect(consumeBindState("lark", "wrong")).toBe(false);
     expect(consumeBindState("lark", null)).toBe(false);
+  });
+
+  it("reports a fresh initiation stamp as recent", () => {
+    markOAuthLoginInitiated("github");
+    expect(
+      Number(sessionStorage.getItem(`${LOGIN_INITIATED_KEY}:github`)),
+    ).toBeLessThanOrEqual(Date.now());
+    expect(hasRecentOAuthLoginInitiation()).toBe(true);
+  });
+
+  it("rejects an expired initiation stamp and clears the stale key", () => {
+    sessionStorage.setItem(
+      `${LOGIN_INITIATED_KEY}:lark`,
+      String(Date.now() - 16 * 60 * 1000),
+    );
+    expect(hasRecentOAuthLoginInitiation()).toBe(false);
+    expect(sessionStorage.getItem(`${LOGIN_INITIATED_KEY}:lark`)).toBeNull();
+  });
+
+  it("reports no initiation when nothing was stamped", () => {
+    expect(hasRecentOAuthLoginInitiation()).toBe(false);
   });
 });

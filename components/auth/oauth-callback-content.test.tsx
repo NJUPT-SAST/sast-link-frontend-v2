@@ -22,6 +22,14 @@ let mockSearchParams: () => URLSearchParams;
 
 const provider = { name: "GitHub", icon: null };
 
+// Mirrors the sessionStorage stamp the login buttons write at click time
+// (see markOAuthLoginInitiated); the exchange path only runs with it present.
+const LOGIN_INITIATED_KEY = "sast:oauth-login-init:github";
+
+function seedLoginInitiation() {
+  sessionStorage.setItem(LOGIN_INITIATED_KEY, String(Date.now()));
+}
+
 function setup(params: string) {
   mockSearchParams = () => new URLSearchParams(params);
   mockReplace.mockClear();
@@ -30,6 +38,10 @@ function setup(params: string) {
 }
 
 describe("OAuthCallbackContent", () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
+
   it("forwards new-account callbacks to register with oauth_state intact", async () => {
     setup(
       "registration_state=rs&oauth_state=os&name=Alice&provider=github",
@@ -49,6 +61,7 @@ describe("OAuthCallbackContent", () => {
 
   it("exchanges the login code and redirects to home", async () => {
     setup("code=lc_123");
+    seedLoginInitiation();
     mockEstablishLoginCodeSession.mockResolvedValue("/home");
 
     render(<OAuthCallbackContent provider={provider} />);
@@ -84,6 +97,7 @@ describe("OAuthCallbackContent", () => {
 
   it("retries the exchange after a transient failure", async () => {
     setup("code=lc_123");
+    seedLoginInitiation();
     mockEstablishLoginCodeSession
       .mockRejectedValueOnce({ message: "boom" })
       .mockResolvedValueOnce("/home");
@@ -95,5 +109,34 @@ describe("OAuthCallbackContent", () => {
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/home"));
     expect(mockEstablishLoginCodeSession).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops the auto exchange when this tab did not initiate the login", async () => {
+    setup("code=lc_123");
+
+    render(<OAuthCallbackContent provider={provider} />);
+
+    expect(await screen.findByText("登录已停止")).toBeInTheDocument();
+    expect(
+      screen.getByText(/该链接不是从本站发起的登录/),
+    ).toBeInTheDocument();
+    expect(mockEstablishLoginCodeSession).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: "返回登录" }));
+    expect(mockReplace).toHaveBeenCalledWith("/login");
+  });
+
+  it("strips the login code from the URL once it has been read", async () => {
+    setup("code=lc_123");
+    seedLoginInitiation();
+    const replaceStateSpy = jest.spyOn(window.history, "replaceState");
+
+    render(<OAuthCallbackContent provider={provider} />);
+
+    await waitFor(() =>
+      expect(mockEstablishLoginCodeSession).toHaveBeenCalledTimes(1),
+    );
+    expect(replaceStateSpy).toHaveBeenCalledWith(null, "", "/oauth/callback");
+    replaceStateSpy.mockRestore();
   });
 });

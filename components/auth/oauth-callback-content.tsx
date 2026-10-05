@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { toApiError } from "@/lib/api/errors";
+import { hasRecentOAuthLoginInitiation } from "@/lib/api/oauth";
 import { establishLoginCodeSession } from "@/lib/login-session";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,12 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
   // The provider bounces back with an `error` query when the user cancels the
   // consent step — treat that as a cancellation, not a stale link.
   const cancelled = searchParams.get("error") !== null;
+  // login_code is a bearer one-time code with no browser binding: a callback
+  // URL whose redirect was never initiated from this tab is a planted
+  // link-drop / login-CSRF payload. No recent initiation stamp (see
+  // markOAuthLoginInitiated) → render the stop page and skip the exchange.
+  const uninitiated =
+    code !== null && !cancelled && !hasRecentOAuthLoginInitiation();
   const inputError = cancelled
     ? null
     : searchParams.get("error_description") ||
@@ -64,14 +71,20 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
     }
 
     if (!code) return;
+    if (uninitiated) return;
     if (exchangedRef.current) return;
     exchangedRef.current = true;
     setExchangeError(null);
+    // The code must not linger in the URL: it leaks via Referer headers on
+    // outbound requests and via shared history entries once exchanged.
+    // useSearchParams is unaffected by replaceState, so this render's `code`
+    // (already read above) stays valid for the exchange.
+    window.history.replaceState(null, "", "/oauth/callback");
 
     establishLoginCodeSession(code)
       .then((destination) => router.replace(destination))
       .catch((reason) => setExchangeError(toApiError(reason).message));
-  }, [code, router, searchParams, retryCount]);
+  }, [code, router, searchParams, retryCount, uninitiated]);
 
   const handleRetry = () => {
     exchangedRef.current = false;
@@ -92,6 +105,17 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
           <Steps failed={false} cancelled />
           <p className="max-w-[360px] text-[15px] leading-[22px] text-muted-foreground">
             你已手动取消，{provider.name}登录未完成。
+          </p>
+          <div className="mt-2">
+            <Button onClick={() => router.replace("/login")}>返回登录</Button>
+          </div>
+        </>
+      ) : uninitiated ? (
+        <>
+          <h1 className="type-title3">登录已停止</h1>
+          <Steps failed />
+          <p className="max-w-[360px] text-[15px] leading-[22px] text-muted-foreground">
+            该链接不是从本站发起的登录，为防止他人冒充已停止自动登录。请回到登录页重新发起。
           </p>
           <div className="mt-2">
             <Button onClick={() => router.replace("/login")}>返回登录</Button>

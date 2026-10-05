@@ -1,39 +1,19 @@
-"use client";
-
 import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
 
-import { OAuthCallbackContent } from "@/components/auth/oauth-callback-content";
-import { GithubIcon, LarkIcon } from "@/components/icons/brand-icons";
+import CallbackClient from "./callback-client";
 
-/** Fallback provider display for the shared landing page. */
-function useProviderMeta() {
-  const searchParams = useSearchParams();
-  switch (searchParams.get("provider")) {
-    case "lark":
-      return { name: "飞书", icon: <LarkIcon /> };
-    case "github":
-      return { name: "GitHub", icon: <GithubIcon /> };
-    default:
-      return { name: "第三方", icon: null };
-  }
-}
-
-function OAuthCallbackPage() {
-  const provider = useProviderMeta();
-  return (
-    <div className="grid min-h-screen w-full place-items-center px-6">
-      <Suspense>
-        <OAuthCallbackContent provider={provider} />
-      </Suspense>
-    </div>
-  );
-}
-
+/** Server page. The referrer policy must be in the prerendered HTML (the
+ *  login_code rides in the URL query and the page must never leak it as a
+ *  Referer), so it is rendered here — a server pass React hoists into the
+ *  head — instead of inside the client tree, which static export prerenders
+ *  as a suspending shell. */
 export default function Page() {
   return (
-    <Suspense>
-      <OAuthCallbackPage />
-    </Suspense>
+    <>
+      <meta name="referrer" content="no-referrer" />
+      <Suspense fallback={null}>
+        <CallbackClient />
+      </Suspense>
+    </>
   );
 }

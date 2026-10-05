@@ -47,4 +47,43 @@ describe("OtherLoginList", () => {
     await user.click(qqLink);
     expect(message.warning).toHaveBeenCalledWith("暂未开放");
   });
+
+  it("fires onNavigate when a navigable item is clicked", async () => {
+    const user = userEvent.setup();
+    const onNavigate = jest.fn();
+    render(
+      <OtherLoginList
+        list={[
+          {
+            target: "/oauth/github",
+            describe: "GH-Nav",
+            icon: <span>GH</span>,
+            onNavigate,
+          },
+        ]}
+      />,
+    );
+
+    const link = screen.getByTitle("GH-Nav");
+    link.addEventListener("click", (event) => event.preventDefault());
+    await user.click(link);
+
+    expect(onNavigate).toHaveBeenCalledTimes(1);
+  });
+
+  it("never fires onNavigate for unavailable items", async () => {
+    const user = userEvent.setup();
+    const onNavigate = jest.fn();
+    render(
+      <OtherLoginList
+        list={[
+          { target: "", describe: "QQ-Nav", icon: <span>QQ</span>, onNavigate },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByTitle("QQ-Nav"));
+
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
 });
