@@ -72,8 +72,14 @@ export function useTurnstileScript(): TurnstileState {
 
   useEffect(() => {
     if (!TURNSTILE_SITE_KEY) return;
-    // Already resolved by the initializer, or resolved by a previous run.
-    if (window.turnstile) return;
+    if (window.turnstile) {
+      // The initializer can miss a script that finished loading between first
+      // render and this effect; correct the state instead of returning silently.
+      // One-shot correction for a state the initializer could not know yet.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setState((prev) => (prev === "loading" ? "ready" : prev));
+      return;
+    }
 
     let settled = false;
     const finish = (next: TurnstileState) => {
