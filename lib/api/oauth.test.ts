@@ -1,3 +1,7 @@
+jest.mock("./redirect", () => ({
+  redirectTo: jest.fn(),
+}));
+
 jest.mock("./client", () => ({
   apiClient: { post: jest.fn() },
 }));
@@ -12,15 +16,21 @@ jest.mock("@/lib/config/public", () => ({
 }));
 
 import { apiClient } from "./client";
+import { redirectTo } from "./redirect";
 import {
+  beginOAuthLogin,
   buildBindOAuthUrl,
-  buildOAuthLoginUrl,
+  clearPKCEVerifier,
   consumeBindState,
   exchangeLoginCode,
   hasRecentOAuthLoginInitiation,
   larkAppCodeLogin,
   markOAuthLoginInitiated,
+  pkceChallengeS256,
+  readPKCEVerifier,
+  stagePKCEVerifier,
 } from "./oauth";
+
 import * as publicConfig from "@/lib/config/public";
 
 const BIND_STATE_KEY = "sast:oauth-bind:state";
@@ -36,22 +46,54 @@ describe("lib/api/oauth v2", () => {
     (publicConfig as Record<string, unknown>).GITHUB_BIND_REDIRECT_URI = undefined;
   });
 
-  it("uses same-origin provider login routes", () => {
-    expect(buildOAuthLoginUrl("github")).toBe("http://localhost:8080/oauth/github");
-    expect(buildOAuthLoginUrl("lark")).toBe("http://localhost:8080/oauth/lark");
+  it("starts a provider login with a fresh S256 challenge per click", async () => {
+    await beginOAuthLogin("github");
+    expect(redirectTo).toHaveBeenCalledTimes(1);
+    const url = jest.mocked(redirectTo).mock.calls[0][0] as string;
+    expect(url.startsWith("http://localhost:8080/oauth/github?code_challenge=")).toBe(true);
+    const challenge = url.split("code_challenge=")[1].split("&")[0];
+    expect(challenge).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(url.endsWith("&code_challenge_method=S256")).toBe(true);
+    // The verifier for that challenge is staged for the exchange leg, and the
+    // initiation stamp for the callback's stop-page guard is armed.
+    expect(readPKCEVerifier()).toMatch(/^[A-Za-z0-9-._~]{64}$/);
+    expect(hasRecentOAuthLoginInitiation()).toBe(true);
   });
 
-  it("exchanges the one-time login code", () => {
-    exchangeLoginCode("login-code");
+  it("hashes S256 challenges per RFC 7636 appendix B", async () => {
+    // The spec's own test vector: this verifier must hash to exactly this
+    // challenge, pinning the implementation to the standard.
+    await expect(
+      pkceChallengeS256("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"),
+    ).resolves.toBe("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
+  });
+
+  it("stages a verifier and returns its 43-char S256 challenge", async () => {
+    const challenge = await stagePKCEVerifier();
+    expect(challenge).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(readPKCEVerifier()).toMatch(/^[A-Za-z0-9-._~]{64}$/);
+  });
+
+  it("clears the staged verifier", async () => {
+    await stagePKCEVerifier();
+    expect(readPKCEVerifier()).not.toBe("");
+    clearPKCEVerifier();
+    expect(readPKCEVerifier()).toBe("");
+  });
+
+  it("exchanges the one-time login code with its PKCE verifier", () => {
+    exchangeLoginCode("login-code", "the-verifier");
     expect(apiClient.post).toHaveBeenCalledWith("/oauth/exchange-code", {
       code: "login-code",
+      code_verifier: "the-verifier",
     });
   });
 
-  it("submits the JSAPI pre-authorization code to the app-code entrance", () => {
-    larkAppCodeLogin("pre-auth-code");
+  it("submits the JSAPI pre-authorization code with its PKCE challenge", () => {
+    larkAppCodeLogin("pre-auth-code", "the-challenge");
     expect(apiClient.post).toHaveBeenCalledWith("/oauth/lark/app-code", {
       code: "pre-auth-code",
+      code_challenge: "the-challenge",
     });
   });
 

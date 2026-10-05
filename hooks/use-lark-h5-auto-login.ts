@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import * as publicConfig from "@/lib/config/public";
 import { toApiError } from "@/lib/api/errors";
-import { larkAppCodeLogin } from "@/lib/api/oauth";
+import { larkAppCodeLogin, stagePKCEVerifier } from "@/lib/api/oauth";
 import { isLarkUserAgent, loadLarkH5Sdk, requestLarkAppCode, waitLarkH5Ready } from "@/lib/lark-h5";
 import { establishLoginCodeSession } from "@/lib/login-session";
 import type { AuthSessionStatus } from "@/hooks/use-auth-session";
@@ -88,7 +88,11 @@ export function useLarkH5AutoLogin(sessionStatus: AuthSessionStatus): LarkH5Auto
       await raceTimeout(loadLarkH5Sdk(), SDK_LOAD_TIMEOUT_MS, "无法加载飞书 JSSDK");
       await waitLarkH5Ready(SDK_READY_TIMEOUT_MS);
       const preAuthCode = await requestLarkAppCode(publicConfig.FEISHU_CLIENT_ID as string);
-      const data = (await larkAppCodeLogin(preAuthCode)).data.data;
+      // Stage the PKCE pair before posting: the login_code a bound identity
+      // buys is redeemable only against this tab's verifier (backend PR
+      // #111), so the challenge must be in the app-code request body.
+      const codeChallenge = await stagePKCEVerifier();
+      const data = (await larkAppCodeLogin(preAuthCode, codeChallenge)).data.data;
       if (data.bound && data.login_code) {
         const destination = await establishLoginCodeSession(data.login_code);
         router.replace(destination);

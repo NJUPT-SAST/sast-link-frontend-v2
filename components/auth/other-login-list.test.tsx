@@ -48,42 +48,41 @@ describe("OtherLoginList", () => {
     expect(message.warning).toHaveBeenCalledWith("暂未开放");
   });
 
-  it("fires onNavigate when a navigable item is clicked", async () => {
+  it("launches a click-built entry and prevents the anchor default", async () => {
     const user = userEvent.setup();
-    const onNavigate = jest.fn();
+    const onLaunch = jest.fn();
     render(
       <OtherLoginList
         list={[
           {
-            target: "/oauth/github",
-            describe: "GH-Nav",
+            describe: "GH-Launch",
             icon: <span>GH</span>,
-            onNavigate,
+            onLaunch,
           },
         ]}
       />,
     );
 
-    const link = screen.getByTitle("GH-Nav");
-    link.addEventListener("click", (event) => event.preventDefault());
+    const link = screen.getByTitle("GH-Launch");
+    expect(link).toHaveAttribute("href", "#");
     await user.click(link);
 
-    expect(onNavigate).toHaveBeenCalledTimes(1);
+    expect(onLaunch).toHaveBeenCalledTimes(1);
   });
 
-  it("never fires onNavigate for unavailable items", async () => {
+  it("keeps the placeholder warning for unavailable items", async () => {
     const user = userEvent.setup();
-    const onNavigate = jest.fn();
+    const onLaunch = jest.fn();
     render(
       <OtherLoginList
         list={[
-          { target: "", describe: "QQ-Nav", icon: <span>QQ</span>, onNavigate },
+          { target: "", describe: "QQ-Nav", icon: <span>QQ</span> },
         ]}
       />,
     );
 
     await user.click(screen.getByTitle("QQ-Nav"));
 
-    expect(onNavigate).not.toHaveBeenCalled();
+    expect(onLaunch).not.toHaveBeenCalled();
   });
 });

@@ -108,6 +108,22 @@ jest.mock('next/navigation', () => ({
   },
 }));
 
+// jsdom's crypto object exposes getRandomValues but not subtle — production
+// browsers carry both. Node's webcrypto provides the complete Crypto
+// interface, so tests run the real S256 code path (RFC 7636 vectors
+// included) instead of mocking the digest. Replacing the object wholesale
+// keeps getRandomValues and subtle consistent; a hand-built hybrid would
+// fail jsdom's WebIDL brand checks.
+import { webcrypto } from "node:crypto";
+
+if (!globalThis.crypto?.subtle) {
+  Object.defineProperty(globalThis, "crypto", {
+    value: webcrypto,
+    configurable: true,
+    writable: true,
+  });
+}
+
 // Suppress console errors in tests (optional)
 // global.console = {
 //   ...console,

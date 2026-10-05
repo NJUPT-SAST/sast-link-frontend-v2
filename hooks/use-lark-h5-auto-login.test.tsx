@@ -20,6 +20,10 @@ jest.mock("@/lib/lark-h5", () => ({
 
 jest.mock("@/lib/api/oauth", () => ({
   larkAppCodeLogin: (...args: unknown[]) => mockLarkAppCodeLogin(...args),
+  stagePKCEVerifier: async () => {
+    sessionStorage.setItem("sast:oauth-pkce-verifier", "test-verifier");
+    return "test-challenge";
+  },
 }));
 
 jest.mock("@/lib/login-session", () => ({
@@ -89,7 +93,7 @@ describe("useLarkH5AutoLogin", () => {
     expect(result.current.status).toBe("running");
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith("/home"));
     expect(mockRequestLarkAppCode).toHaveBeenCalledWith("cli_app");
-    expect(mockLarkAppCodeLogin).toHaveBeenCalledWith("pre_auth_code");
+    expect(mockLarkAppCodeLogin).toHaveBeenCalledWith("pre_auth_code", "test-challenge");
     expect(mockEstablishLoginCodeSession).toHaveBeenCalledWith("lc_1");
   });
 

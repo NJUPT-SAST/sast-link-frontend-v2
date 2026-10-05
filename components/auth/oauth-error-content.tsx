@@ -10,11 +10,8 @@ import {
   CODE_RATE_LIMITED,
   CODE_VALIDATION,
 } from "@/lib/api/error-codes";
-import {
-  buildOAuthLoginUrl,
-  markOAuthLoginInitiated,
-  type OAuthProvider,
-} from "@/lib/api/oauth";
+import { beginOAuthLogin, type OAuthProvider } from "@/lib/api/oauth";
+import { message } from "@/lib/message";
 
 /**
  * Codes worth retrying as-is: the user did nothing wrong and a second attempt
@@ -76,11 +73,15 @@ export function OAuthErrorContent() {
                 OAuth entry, outside the static-export router. No ?redirect=
                 is attached — this page cannot know the pre-login page, and the
                 login-page buttons send none either, so the backend falls back
-                to its default post-login address. The click also stamps this
-                tab as having initiated the jump, arming the callback guard. */}
+                to its default post-login address. The restart mints a fresh
+                PKCE challenge at click time — the verifier never leaves this
+                tab (backend PR #111). */}
             <a
-              href={buildOAuthLoginUrl(provider)}
-              onClick={() => markOAuthLoginInitiated(provider)}
+              href="#"
+              onClick={(event) => {
+                event.preventDefault();
+                void beginOAuthLogin(provider);
+              }}
             >
               {RESTART_LABELS[provider]}
             </a>

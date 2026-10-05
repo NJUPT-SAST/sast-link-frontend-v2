@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import Link from "next/link";
 
-import { buildOAuthLoginUrl, markOAuthLoginInitiated } from "@/lib/api/oauth";
+import { beginOAuthLogin } from "@/lib/api/oauth";
 import {
   type LoginAccountFormValues,
   loginAccountFormSchema,
@@ -81,18 +81,16 @@ export default function LoginAccountForm({ onNext, resetNotice }: LoginAccountFo
   const oauthList = useMemo(
     () => [
       {
-        target: buildOAuthLoginUrl("github"),
         describe: "GitHub",
         icon: <GithubIcon />,
-        // Stamp at click time: the callback page only auto-redeems codes
-        // whose jump this tab started (bearer login_code mitigation).
-        onNavigate: () => markOAuthLoginInitiated("github"),
+        // Click-time launch: the PKCE challenge is minted per jump and the
+        // verifier stays in this tab's sessionStorage (backend PR #111).
+        onLaunch: () => void beginOAuthLogin("github"),
       },
       {
-        target: buildOAuthLoginUrl("lark"),
         describe: "飞书",
         icon: <LarkIcon />,
-        onNavigate: () => markOAuthLoginInitiated("lark"),
+        onLaunch: () => void beginOAuthLogin("lark"),
       },
     ],
     [],

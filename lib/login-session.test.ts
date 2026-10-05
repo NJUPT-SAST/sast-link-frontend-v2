@@ -1,5 +1,7 @@
 jest.mock("@/lib/api/oauth", () => ({
   exchangeLoginCode: (...args: unknown[]) => mockExchangeLoginCode(...args),
+  readPKCEVerifier: () => mockReadPKCEVerifier(),
+  clearPKCEVerifier: (...args: unknown[]) => mockClearPKCEVerifier(...args),
 }));
 
 jest.mock("@/lib/token", () => ({
@@ -32,6 +34,8 @@ const mockExchangeLoginCode = jest.fn();
 const mockSetSession = jest.fn();
 const mockAddAccount = jest.fn();
 const mockResetProfile = jest.fn();
+const mockReadPKCEVerifier = jest.fn();
+const mockClearPKCEVerifier = jest.fn();
 
 function authResult(overrides: Record<string, unknown> = {}) {
   return {
@@ -49,14 +53,16 @@ function authResult(overrides: Record<string, unknown> = {}) {
 describe("establishLoginCodeSession", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockReadPKCEVerifier.mockReturnValue("staged-verifier");
   });
 
-  it("redeems the code, caches the session, registers the account", async () => {
+  it("redeems the code with the staged verifier and clears it on success", async () => {
     mockExchangeLoginCode.mockResolvedValue(authResult());
 
     const destination = await establishLoginCodeSession("lc_1");
 
-    expect(mockExchangeLoginCode).toHaveBeenCalledWith("lc_1");
+    expect(mockExchangeLoginCode).toHaveBeenCalledWith("lc_1", "staged-verifier");
+    expect(mockClearPKCEVerifier).toHaveBeenCalledTimes(1);
     expect(mockSetSession).toHaveBeenCalledWith({ accessToken: "at", expiresAt: 3600 });
     expect(mockResetProfile).toHaveBeenCalled();
     expect(mockAddAccount).toHaveBeenCalledWith(
@@ -83,5 +89,8 @@ describe("establishLoginCodeSession", () => {
     mockExchangeLoginCode.mockRejectedValue(new Error("bad code"));
     await expect(establishLoginCodeSession("lc_1")).rejects.toThrow("bad code");
     expect(mockSetSession).not.toHaveBeenCalled();
+    // A transient failure (the code may be unconsumed server-side) keeps the
+    // verifier staged so the retry can prove it.
+    expect(mockClearPKCEVerifier).not.toHaveBeenCalled();
   });
 });
