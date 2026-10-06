@@ -64,7 +64,11 @@ export const adminUpdateUserSchema = z
       .regex(/^\d{5,20}$/, "请输入正确的 QQ 号")
       .optional(),
     college: z.enum(COLLEGES).optional(),
-    major: z.string().trim().min(1, "专业不可为空").max(50, "专业最多 50 个字符").optional(),
+    // Backend PUT /admin/users/:id takes major as an OptionalField where ""
+    // legitimately clears it (the one column an administrator may blank), and
+    // existing accounts already carry no major — so unlike student_id a blank
+    // must pass here, or those accounts lock the whole edit form.
+    major: z.string().trim().max(50, "专业最多 50 个字符").optional(),
     student_id: z.string().trim().min(1, "学号不可为空").max(50, "学号最多 50 个字符").optional(),
     login_email: z.string().trim().email("请输入有效的邮箱").max(255, "邮箱最多 255 个字符").optional(),
     role: userRoleSchema.optional(),

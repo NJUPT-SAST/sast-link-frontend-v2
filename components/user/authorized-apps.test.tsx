@@ -17,10 +17,16 @@ const mockGrants = [
 
 const mockGetGrants = jest.fn();
 const mockRevokeGrant = jest.fn();
+const mockGetSession = jest.fn();
 
 jest.mock("@/lib/api/oauth", () => ({
   getGrants: (...args: unknown[]) => mockGetGrants(...args),
   revokeGrant: (...args: unknown[]) => mockRevokeGrant(...args),
+}));
+
+jest.mock("@/lib/token", () => ({
+  ...jest.requireActual("@/lib/token"),
+  getSession: () => mockGetSession(),
 }));
 
 jest.mock("@/lib/api/errors", () => ({
@@ -42,12 +48,21 @@ import { message } from "@/lib/message";
 
 const mockMessageSuccess = message.success as jest.Mock;
 
+// EdDSA-style JWT: the header is account-independent, the payload carries the
+// account id (`sub`) that the SWR key fingerprints.
+const SESSION = {
+  accessToken:
+    "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiI0MiJ9.sig",
+  expiresAt: 0,
+};
+
 describe("AuthorizedApps", () => {
   beforeEach(() => {
     mockGetGrants.mockReset();
     mockGetGrants.mockResolvedValue({ data: { data: { grants: mockGrants } } });
     mockRevokeGrant.mockReset();
     mockMessageSuccess.mockClear();
+    mockGetSession.mockReturnValue(SESSION);
   });
 
   it("renders the list of authorized apps", async () => {
@@ -58,6 +73,14 @@ describe("AuthorizedApps", () => {
       screen.getByText("openid · 身份标识（OpenID） · profile · 基本资料（昵称、姓名、签名等）"),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "查看" })).toBeInTheDocument();
+  });
+
+  it("fetches nothing while there is no session", async () => {
+    mockGetSession.mockReturnValue(null);
+    render(<AuthorizedApps />);
+
+    expect(await screen.findByText("你还没有授权任何应用")).toBeInTheDocument();
+    expect(mockGetGrants).not.toHaveBeenCalled();
   });
 
   it("requires confirmation before revoking from the list", async () => {

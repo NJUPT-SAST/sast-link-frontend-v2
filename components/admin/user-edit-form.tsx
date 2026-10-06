@@ -254,6 +254,7 @@ export function UserEditForm({
                     label="专业"
                     invalid={fieldState.invalid}
                     error={fieldState.error?.message}
+                    description="留空即清除专业"
                   />
                 </FormItem>
               )}

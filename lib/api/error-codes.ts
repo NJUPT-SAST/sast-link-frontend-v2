@@ -13,6 +13,12 @@ export const CODE_VALIDATION = 40000;
  *  fresh token, so the user should try again. */
 export const CODE_CAPTCHA_FAILED = 40021;
 
+/** Sensitive-operation (e.g. third-party unbind) password check failed. The
+ *  backend offers no set-initial-password endpoint, so the email-code reset
+ *  flow (/reset, which can target `other_mail`) is the only passwordless exit
+ *  for a forgotten password. */
+export const CODE_PASSWORD_INVALID = 40105;
+
 /** An email address is already taken. The alumni flow reuses this for both
  *  `login_email` and `personal_email` — the outcome a client must handle is the
  *  same, so the backend deliberately did not mint a second code. It follows that
@@ -39,6 +45,20 @@ export const CODE_ALUMNI_REQUEST_PENDING = 40906;
 /** A verdict was already recorded — typically a double click, or a colleague who
  *  ruled on the same ticket first. */
 export const CODE_ALUMNI_REQUEST_REVIEWED = 42204;
+
+/** Rate limiting — the request limiter and account lockout share this one code
+ *  because the client's duty is identical: back off. The response carries HTTP
+ *  429 plus a `Retry-After` header. */
+export const CODE_RATE_LIMITED = 42900;
+
+/** Unhandled backend failure. A retry as-is is meaningful — the user did
+ *  nothing wrong and a second attempt can succeed. */
+export const CODE_INTERNAL = 50000;
+
+/** A backend dependency is unreachable. Distinct from
+ *  CODE_ALUMNI_REQUEST_UNAVAILABLE (50301), which covers only the alumni
+ *  request channel's captcha secret / Cloudflare. */
+export const CODE_DEPENDENCY_UNAVAILABLE = 50300;
 
 /** The request channel cannot accept submissions at all: no captcha secret is
  *  configured, or Cloudflare is unreachable.

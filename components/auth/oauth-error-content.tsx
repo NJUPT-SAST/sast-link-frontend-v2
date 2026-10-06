@@ -5,6 +5,12 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import {
+  CODE_DEPENDENCY_UNAVAILABLE,
+  CODE_INTERNAL,
+  CODE_RATE_LIMITED,
+  CODE_VALIDATION,
+} from "@/lib/api/error-codes";
+import {
   buildOAuthLoginUrl,
   type OAuthProvider,
 } from "@/lib/api/oauth";
@@ -13,9 +19,12 @@ import {
  * Codes worth retrying as-is: the user did nothing wrong and a second attempt
  * can succeed. Anything else (a deleted account, a foreign tenant, an occupied
  * identity) will fail again identically, so the page says to contact an admin
- * instead.
+ * instead. The backend redirects back with the code as an ?error= string, so
+ * the set is keyed on the String() form of the constants.
  */
-const RETRYABLE_CODES = new Set(["40000", "42900", "50000", "50300"]);
+const RETRYABLE_CODES = new Set(
+  [CODE_VALIDATION, CODE_RATE_LIMITED, CODE_INTERNAL, CODE_DEPENDENCY_UNAVAILABLE].map(String),
+);
 
 /** Full restart-button copy per provider (backend PR #103's error
  *  redirect carries ?provider=). CJK needs no padding around 飞书, while the

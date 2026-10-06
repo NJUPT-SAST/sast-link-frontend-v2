@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,6 +14,7 @@ import { message } from "@/lib/message";
 import { COLLEGES, type RegisterRequest } from "@/lib/api/types";
 import { postAuthDestination } from "@/lib/auth-destination";
 import { createSession, setSession } from "@/lib/token";
+import { clearAccountDataCache } from "@/lib/api/session-keys";
 import { safeSessionStorage } from "@/lib/safe-session-storage";
 import { useUserListStore } from "@/store/use-user-list-store";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
@@ -119,7 +120,14 @@ export default function RegisterDetailsForm({
     },
   });
 
+  // `disabled={loading}` cannot stop a same-frame double click (the state has
+  // not committed yet); a ref guard makes a repeat submit a no-op — a second
+  // request would spend the one-time register_ticket and fail with a
+  // misleading 40103.
+  const submittingRef = useRef(false);
   const onValid = async (values: RegisterDetailsFormValues) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     try {
       const response = await completeRegister(
@@ -128,6 +136,9 @@ export default function RegisterDetailsForm({
       const data = response.data.data;
       const session = createSession(data.access_token, data.expires_in);
       setSession(session);
+      // Registration is the fourth session-establishment leg: drop any
+      // previous account's SWR cache like login/logout/establish do.
+      void clearAccountDataCache();
       resetProfile();
       addAccount({
         userId: data.user.id,
@@ -163,6 +174,7 @@ export default function RegisterDetailsForm({
       setTicketInvalid(apiError.code === 40103);
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
@@ -170,6 +182,9 @@ export default function RegisterDetailsForm({
     scrollToFirstError(form.formState.errors, FIELD_ORDER);
   };
 
+  // The guard only runs in a submit handler, never during render; the rule
+  // cannot see through react-hook-form's handleSubmit wrapper.
+  // eslint-disable-next-line react-hooks/refs
   const submit = form.handleSubmit(onValid, onInvalid);
 
   return (

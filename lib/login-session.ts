@@ -1,4 +1,5 @@
 import { exchangeLoginCode } from "@/lib/api/oauth";
+import { clearAccountDataCache } from "@/lib/api/session-keys";
 import { postAuthDestination } from "@/lib/auth-destination";
 import { createSession, setSession } from "@/lib/token";
 import { useUserListStore } from "@/store/use-user-list-store";
@@ -18,6 +19,9 @@ export async function establishLoginCodeSession(loginCode: string): Promise<stri
   const data = response.data.data;
   const session = createSession(data.access_token, data.expires_in);
   setSession(session);
+  // The account just changed: drop the previous account's SWR cache
+  // (identities/grants/badge) so the new account never renders its data.
+  void clearAccountDataCache();
   useUserProfileStore.getState().resetProfile();
   useUserListStore.getState().addAccount({
     userId: data.user.id,

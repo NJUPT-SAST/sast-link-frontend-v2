@@ -25,7 +25,6 @@ interface UserListProps {
   onRestore?: (user: AdminUserListItem) => void;
   selectedIds?: Set<number>;
   onToggleSelect?: (id: number) => void;
-  onToggleSelectAll?: (checked: boolean) => void;
 }
 
 const ROLE_BADGE: Record<string, string> = {
@@ -81,7 +80,6 @@ export function UserList({
   onRestore,
   selectedIds = new Set(),
   onToggleSelect,
-  onToggleSelectAll,
 }: UserListProps) {
   if (users.length === 0) {
     return (
@@ -91,7 +89,13 @@ export function UserList({
     );
   }
 
-  const allSelected = canManage && users.length > 0 && users.every((u) => selectedIds.has(u.id));
+  // Same bar as the row's edit button: a manager may not write admin rows, so
+  // "this page" for selection is only the writable subset.
+  const selectable = canManage
+    ? users.filter((u) => canWriteTargetUser(viewerRole, u.role))
+    : [];
+
+  const allSelected = selectable.length > 0 && selectable.every((u) => selectedIds.has(u.id));
 
   return (
     <div className="border-t border-hairline">
@@ -101,12 +105,27 @@ export function UserList({
           canManage ? GRID_COLS_MANAGE : GRID_COLS,
         )}
       >
-        {canManage && (
+        {/* A page of only non-writable rows (a manager viewing only admin
+            accounts) has nothing selectable — hide the whole-page toggle
+            instead of rendering a dead checkbox. */}
+        {canManage && selectable.length > 0 && (
           <input
             type="checkbox"
             aria-label="全选本页用户"
             checked={allSelected}
-            onChange={(event) => onToggleSelectAll?.(event.target.checked)}
+            onChange={(event) => {
+              // Add/remove only writable ids: selecting through per-row toggles
+              // keeps the selection free of ids the backend would refuse.
+              if (event.target.checked) {
+                selectable.forEach((u) => {
+                  if (!selectedIds.has(u.id)) onToggleSelect?.(u.id);
+                });
+              } else {
+                selectable.forEach((u) => {
+                  if (selectedIds.has(u.id)) onToggleSelect?.(u.id);
+                });
+              }
+            }}
             className="size-4 accent-foreground"
           />
         )}
@@ -130,7 +149,7 @@ export function UserList({
               selected && "bg-accent/40",
             )}
           >
-            {canManage && (
+            {canManage && canWriteTargetUser(viewerRole, user.role) && (
               <input
                 type="checkbox"
                 aria-label={`选择 ${user.name}`}

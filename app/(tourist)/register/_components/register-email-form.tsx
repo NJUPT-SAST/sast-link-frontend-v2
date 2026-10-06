@@ -40,6 +40,11 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
   // Guard against a same-frame double Enter double-sending the code; `sending`
   // state cannot commit fast enough to stop it.
   const sendingRef = useRef(false);
+  // `disabled={verifying}` cannot stop a same-frame double click (the state has
+  // not committed yet); a ref guard makes a repeat verify a no-op — the code is
+  // single-use and a second call would burn the register_ticket for a
+  // misleading 40103.
+  const verifyingRef = useRef(false);
 
   // Prefill the domain capsule from the carried email (e.g. back from the
   // details step with an @sast.fun account should keep showing @sast.fun). A
@@ -125,7 +130,9 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
     }
   };
 
-  const handleVerify = form.handleSubmit(async ({ code }) => {
+  const onVerify = async ({ code }: RegisterVerifyFormValues) => {
+    if (verifyingRef.current) return;
+    verifyingRef.current = true;
     setVerifying(true);
     const loginEmail = buildLoginEmail();
     try {
@@ -136,8 +143,13 @@ export default function RegisterEmailForm({ defaultEmail = "", onVerified }: Reg
       form.setError("code", { message: toApiError(error).message });
     } finally {
       setVerifying(false);
+      verifyingRef.current = false;
     }
-  });
+  };
+  // The guard only runs in a submit handler, never during render; the rule
+  // cannot see through react-hook-form's handleSubmit wrapper.
+  // eslint-disable-next-line react-hooks/refs
+  const handleVerify = form.handleSubmit(onVerify);
 
   return (
     <div className="flex w-full flex-col">

@@ -177,6 +177,22 @@ describe("adminUpdateUserSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  // The backend takes major as an OptionalField where "" legitimately clears
+  // it, and existing accounts can carry no major at all — a blank update must
+  // pass, or those accounts lock the whole edit form.
+  it("accepts a blank major like the backend's clearable OptionalField", () => {
+    expect(adminUpdateUserSchema.safeParse({ ...base, major: "" }).success).toBe(true);
+  });
+
+  it("still rejects an over-long major", () => {
+    const result = adminUpdateUserSchema.safeParse({ ...base, major: "计".repeat(51) });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find((i) => i.path[0] === "major");
+      expect(issue?.message).toBe("专业最多 50 个字符");
+    }
+  });
+
   it("still allows omitting phone_number/qq_number for a partial update", () => {
     expect(adminUpdateUserSchema.safeParse({ name: "李四" }).success).toBe(true);
   });

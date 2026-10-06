@@ -1,8 +1,12 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+import { unbindIdentity } from "@/lib/api/user";
 
 import { IdentityList } from "./identity-list";
 
 const mockMutate = jest.fn();
+const mockUnbindIdentity = jest.mocked(unbindIdentity);
 let mockIdentities: unknown[] = [];
 let mockIsLoading = false;
 
@@ -35,6 +39,7 @@ describe("IdentityList", () => {
     mockIdentities = [];
     mockIsLoading = false;
     mockMutate.mockClear();
+    mockUnbindIdentity.mockClear();
   });
 
   it("renders bound status for each provider when loaded", () => {
@@ -65,5 +70,41 @@ describe("IdentityList", () => {
     expect(screen.getByText("已绑定")).toBeInTheDocument();
     expect(screen.getByText("未绑定")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "解绑" })).toBeInTheDocument();
+  });
+
+  // 40105 means the unbind password check failed. The backend has no
+  // set-initial-password endpoint, so the email-code reset flow is the only
+  // passwordless exit — the dialog must point there, not leave a retry loop.
+  it("links to the email-code reset flow when the password check fails (40105)", async () => {
+    mockIdentities = [{ id: 1, provider: "github", provider_id: "octocat" }];
+    mockUnbindIdentity.mockRejectedValueOnce({ code: 40105, message: "密码错误" });
+
+    render(<IdentityList actionable />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "解绑" }));
+    await user.type(screen.getByLabelText("当前密码"), "wrong-password");
+    await user.click(screen.getByRole("button", { name: "确认解绑" }));
+
+    expect(await screen.findByText("密码错误")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "通过邮箱验证码重置" })).toHaveAttribute(
+      "href",
+      "/reset",
+    );
+  });
+
+  it("offers no reset link for unbind failures other than 40105", async () => {
+    mockIdentities = [{ id: 1, provider: "github", provider_id: "octocat" }];
+    mockUnbindIdentity.mockRejectedValueOnce({ code: 40905, message: "绑定数量已达上限" });
+
+    render(<IdentityList actionable />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "解绑" }));
+    await user.type(screen.getByLabelText("当前密码"), "correct-password");
+    await user.click(screen.getByRole("button", { name: "确认解绑" }));
+
+    expect(await screen.findByText("绑定数量已达上限")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "通过邮箱验证码重置" }),
+    ).not.toBeInTheDocument();
   });
 });

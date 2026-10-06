@@ -74,21 +74,6 @@ function AdminUsersContent() {
     });
   }, []);
 
-  const handleToggleSelectAll = useCallback(
-    (checked: boolean) => {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        if (checked) {
-          data?.users.forEach((u) => next.add(u.id));
-        } else {
-          data?.users.forEach((u) => next.delete(u.id));
-        }
-        return next;
-      });
-    },
-    [data],
-  );
-
   const handleBatchConfirm = async (fields: BatchEditFields) => {
     const ids = Array.from(selectedIds);
     // `fields.department === ""` is a clear command (backend PR #100), not an
@@ -267,7 +252,6 @@ function AdminUsersContent() {
             onRestore={handleRestore}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
-            onToggleSelectAll={handleToggleSelectAll}
           />
           <Pagination
             page={data.page}

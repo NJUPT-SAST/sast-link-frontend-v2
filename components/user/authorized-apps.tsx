@@ -5,9 +5,11 @@ import useSWR from "swr";
 
 import { getGrants, revokeGrant, type OAuthGrant } from "@/lib/api/oauth";
 import { toApiError } from "@/lib/api/errors";
+import { sessionAccountKey } from "@/lib/api/session-keys";
 import { message } from "@/lib/message";
 import { describeOAuthScopes } from "@/lib/constants/oauth";
 import { CLIENT_TYPE_LABELS } from "@/lib/constants/admin";
+import { getSession } from "@/lib/token";
 import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
 import {
@@ -31,8 +33,16 @@ function Field({ label, value }: { label: string; value?: string }) {
 /** "已授权应用" — the applications the user signed into via SAST Link's OAuth,
  *  with a detail view and a one-tap revoke. */
 export function AuthorizedApps() {
-  const { data, mutate } = useSWR("user:oauth:grants", () =>
-    getGrants().then((r) => r.data.data.grants),
+  // Function key gated on the session (null → no fetch), fingerprinted by the
+  // JWT sub (account id) so switching accounts invalidates the previous
+  // account's grant list instead of flashing it.
+  const { data, mutate } = useSWR(
+    () => {
+      const session = getSession();
+      if (!session) return null;
+      return `user:oauth:grants:${sessionAccountKey(session)}`;
+    },
+    () => getGrants().then((r) => r.data.data.grants),
   );
   const [detail, setDetail] = useState<OAuthGrant | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<{
