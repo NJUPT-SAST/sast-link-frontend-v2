@@ -9,8 +9,12 @@ RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 WORKDIR /app
 
 # The frontend talks to the backend directly. The API base URL is injected at
-# build time so the same image can move between environments.
-ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+# build time so the same image can move between environments. The default is
+# the same-origin /v2 (served by the host Caddy reverse proxy): a bare
+# `docker build` then produces a working image, and the container CSP's
+# `connect-src 'self'` cannot silently kill the API — the previous localhost
+# default combined into an image that built fine and failed every request.
+ARG NEXT_PUBLIC_API_BASE_URL=/v2
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
 # OAuth bind runs entirely in the browser: the authorize URL is assembled from

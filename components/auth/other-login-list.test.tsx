@@ -47,4 +47,42 @@ describe("OtherLoginList", () => {
     await user.click(qqLink);
     expect(message.warning).toHaveBeenCalledWith("暂未开放");
   });
+
+  it("launches a click-built entry and prevents the anchor default", async () => {
+    const user = userEvent.setup();
+    const onLaunch = jest.fn();
+    render(
+      <OtherLoginList
+        list={[
+          {
+            describe: "GH-Launch",
+            icon: <span>GH</span>,
+            onLaunch,
+          },
+        ]}
+      />,
+    );
+
+    const link = screen.getByTitle("GH-Launch");
+    expect(link).toHaveAttribute("href", "#");
+    await user.click(link);
+
+    expect(onLaunch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the placeholder warning for unavailable items", async () => {
+    const user = userEvent.setup();
+    const onLaunch = jest.fn();
+    render(
+      <OtherLoginList
+        list={[
+          { target: "", describe: "QQ-Nav", icon: <span>QQ</span> },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByTitle("QQ-Nav"));
+
+    expect(onLaunch).not.toHaveBeenCalled();
+  });
 });

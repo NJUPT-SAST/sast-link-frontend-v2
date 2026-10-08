@@ -5,7 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import Link from "next/link";
 
-import { buildOAuthLoginUrl } from "@/lib/api/oauth";
+import { beginOAuthLogin } from "@/lib/api/oauth";
+import { message } from "@/lib/message";
 import {
   type LoginAccountFormValues,
   loginAccountFormSchema,
@@ -81,14 +82,17 @@ export default function LoginAccountForm({ onNext, resetNotice }: LoginAccountFo
   const oauthList = useMemo(
     () => [
       {
-        target: buildOAuthLoginUrl("github"),
         describe: "GitHub",
         icon: <GithubIcon />,
+        // Click-time launch: the PKCE challenge is minted per jump and the
+        // verifier stays in this tab's sessionStorage (backend PR #111).
+        // A same-frame double click is absorbed by beginOAuthLogin itself.
+        onLaunch: () => beginOAuthLogin("github").catch(() => message.warning("登录发起失败，请重试")),
       },
       {
-        target: buildOAuthLoginUrl("lark"),
         describe: "飞书",
         icon: <LarkIcon />,
+        onLaunch: () => beginOAuthLogin("lark").catch(() => message.warning("登录发起失败，请重试")),
       },
     ],
     [],

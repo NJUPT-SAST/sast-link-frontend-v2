@@ -3,10 +3,12 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("@/lib/api/oauth", () => ({
-  buildOAuthLoginUrl: (provider: string) => `http://backend.test/oauth/${provider}`,
+  beginOAuthLogin: jest.fn().mockResolvedValue(undefined),
 }));
 
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beginOAuthLogin } from "@/lib/api/oauth";
 import { OAuthErrorContent } from "./oauth-error-content";
 
 let mockSearchParams: () => URLSearchParams;
@@ -71,12 +73,16 @@ describe("OAuthErrorContent", () => {
     expect(screen.queryByText(/请联系管理员/)).not.toBeInTheDocument();
   });
 
-  it("offers a one-click restart when the backend names the provider", () => {
+  it("offers a one-click restart when the backend names the provider", async () => {
     setup("error=40000&error_description=%E7%99%BB%E5%BD%95%E5%B7%B2%E4%B8%AD%E6%96%AD&provider=github");
     render(<OAuthErrorContent />);
 
-    expect(screen.getByRole("link", { name: "重试 GitHub 登录" }))
-      .toHaveAttribute("href", "http://backend.test/oauth/github");
+    const restart = screen.getByRole("link", { name: "重试 GitHub 登录" });
+    // The restart builds its target at click time (fresh PKCE challenge), so
+    // the anchor carries no backend href — it launches via the module call.
+    expect(restart).toHaveAttribute("href", "#");
+    await userEvent.click(restart);
+    expect(beginOAuthLogin).toHaveBeenCalledWith("github");
     // The way back to the password flow stays available as the secondary action.
     expect(screen.getByRole("link", { name: "返回登录" })).toHaveAttribute(
       "href",
@@ -84,12 +90,13 @@ describe("OAuthErrorContent", () => {
     );
   });
 
-  it("labels the restart button per provider (lark)", () => {
+  it("labels the restart button per provider (lark)", async () => {
     setup("error=50300&provider=lark");
     render(<OAuthErrorContent />);
 
-    expect(screen.getByRole("link", { name: "重试飞书登录" }))
-      .toHaveAttribute("href", "http://backend.test/oauth/lark");
+    const restart = screen.getByRole("link", { name: "重试飞书登录" });
+    await userEvent.click(restart);
+    expect(beginOAuthLogin).toHaveBeenCalledWith("lark");
   });
 
   it("degrades to the plain display for an unknown provider", () => {

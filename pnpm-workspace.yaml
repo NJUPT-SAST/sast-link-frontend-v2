@@ -11,6 +11,11 @@ onlyBuiltDependencies:
 
 overrides:
   '@babel/core@<=7.29.0': 7.29.6
+  # NOTE: braces (GHSA-vfj7-8cjw-p6xm, stack-exhaustion DoS) has no floor
+  # here — the advisory's patched range starts at 3.0.4, which the npm
+  # registry has never published (latest is 3.0.3), so an override cannot
+  # resolve. Dev-only path via eslint-config-next > fast-glob > micromatch;
+  # re-floor once braces >3.0.3 actually ships.
   'esbuild@>=0.27.3 <0.28.1': 0.28.1
   # fast-uri/brace-expansion floors track the open dependabot alerts
   # (fast-uri ReDoS, brace-expansion ReDoS) — each bump is the first patched

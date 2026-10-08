@@ -1,4 +1,19 @@
+/** True only under `next dev` — NODE_ENV is inlined at build time, so a
+ *  production bundle folds every `DEV_RUNTIME` consumer's dev-only branch
+ *  away and dev-only surfaces never ship (see /debug/h5). */
+export const DEV_RUNTIME = process.env.NODE_ENV === "development";
+
 const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+
+// Every other NEXT_PUBLIC_* degrades to "feature off" when missing, but a
+// missing API base would silently point every request at a developer's
+// localhost. Static export bakes the value in at build time, so a production
+// build without it is unrecoverable — fail the build instead.
+if (process.env.NODE_ENV === "production" && !configuredApiBaseUrl) {
+  throw new Error(
+    "NEXT_PUBLIC_API_BASE_URL is not set: a production build must pin the backend base (/v2 or an absolute URL) instead of falling back to a developer localhost default.",
+  );
+}
 
 export const API_BASE_URL = configuredApiBaseUrl || "http://localhost:8080";
 

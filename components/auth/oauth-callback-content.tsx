@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
 import { toApiError } from "@/lib/api/errors";
+import { hasRecentOAuthLoginInitiation } from "@/lib/api/oauth";
 import { establishLoginCodeSession } from "@/lib/login-session";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -44,14 +45,26 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
   const [exchangeError, setExchangeError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const exchangedRef = useRef(false);
+  // The code stashed before the URL is stripped. Next's router patches
+  // history.replaceState, so stripping the URL also empties useSearchParams —
+  // without the stash, a failed exchange could never be retried (the effect
+  // would see no code) and the page would mis-report 缺少授权信息.
+  const [stashedCode, setStashedCode] = useState<string | null>(null);
   const code = searchParams.get("code");
+  const effectiveCode = code ?? stashedCode;
   // The provider bounces back with an `error` query when the user cancels the
   // consent step — treat that as a cancellation, not a stale link.
   const cancelled = searchParams.get("error") !== null;
+  // login_code is a bearer one-time code with no browser binding: a callback
+  // URL whose redirect was never initiated from this tab is a planted
+  // link-drop / login-CSRF payload. No recent initiation stamp (see
+  // markOAuthLoginInitiated) → render the stop page and skip the exchange.
+  const uninitiated =
+    code !== null && !cancelled && !hasRecentOAuthLoginInitiation();
   const inputError = cancelled
     ? null
     : searchParams.get("error_description") ||
-      (!code && !searchParams.get("registration_state")
+      (!effectiveCode && !searchParams.get("registration_state")
         ? "缺少授权信息，请重新登录"
         : null);
 
@@ -63,15 +76,22 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
       return;
     }
 
-    if (!code) return;
+    if (!effectiveCode) return;
+    if (uninitiated) return;
     if (exchangedRef.current) return;
     exchangedRef.current = true;
     setExchangeError(null);
+    // Stash before stripping: Next syncs useSearchParams with
+    // history.replaceState, so the retry below reads the code from the stash.
+    setStashedCode(effectiveCode);
+    // The code must not linger in the URL: it leaks via Referer headers on
+    // outbound requests and via shared history entries once exchanged.
+    window.history.replaceState(null, "", "/oauth/callback");
 
-    establishLoginCodeSession(code)
+    establishLoginCodeSession(effectiveCode)
       .then((destination) => router.replace(destination))
       .catch((reason) => setExchangeError(toApiError(reason).message));
-  }, [code, router, searchParams, retryCount]);
+  }, [effectiveCode, router, searchParams, retryCount, uninitiated]);
 
   const handleRetry = () => {
     exchangedRef.current = false;
@@ -92,6 +112,17 @@ export function OAuthCallbackContent({ provider }: OAuthCallbackContentProps) {
           <Steps failed={false} cancelled />
           <p className="max-w-[360px] text-[15px] leading-[22px] text-muted-foreground">
             你已手动取消，{provider.name}登录未完成。
+          </p>
+          <div className="mt-2">
+            <Button onClick={() => router.replace("/login")}>返回登录</Button>
+          </div>
+        </>
+      ) : uninitiated ? (
+        <>
+          <h1 className="type-title3">登录已停止</h1>
+          <Steps failed />
+          <p className="max-w-[360px] text-[15px] leading-[22px] text-muted-foreground">
+            该链接不是从本站发起的登录，为防止他人冒充已停止自动登录。请回到登录页重新发起。
           </p>
           <div className="mt-2">
             <Button onClick={() => router.replace("/login")}>返回登录</Button>

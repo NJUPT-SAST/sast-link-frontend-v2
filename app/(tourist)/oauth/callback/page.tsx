@@ -1,39 +1,20 @@
-"use client";
-
+import type { Metadata } from "next";
 import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
 
-import { OAuthCallbackContent } from "@/components/auth/oauth-callback-content";
-import { GithubIcon, LarkIcon } from "@/components/icons/brand-icons";
+import CallbackClient from "./callback-client";
 
-/** Fallback provider display for the shared landing page. */
-function useProviderMeta() {
-  const searchParams = useSearchParams();
-  switch (searchParams.get("provider")) {
-    case "lark":
-      return { name: "飞书", icon: <LarkIcon /> };
-    case "github":
-      return { name: "GitHub", icon: <GithubIcon /> };
-    default:
-      return { name: "第三方", icon: null };
-  }
-}
-
-function OAuthCallbackPage() {
-  const provider = useProviderMeta();
-  return (
-    <div className="grid min-h-screen w-full place-items-center px-6">
-      <Suspense>
-        <OAuthCallbackContent provider={provider} />
-      </Suspense>
-    </div>
-  );
-}
+/** The login_code rides in the URL query, so this page must never act as a
+ *  Referer for outbound requests. The metadata API resolves at prerender time
+ *  and lands in the exported HTML's head — an inline <meta> in the JSX would
+ *  only appear after hydration (static export suspends the whole tree on
+ *  useSearchParams), and the host's site-wide strict-origin-when-cross-origin
+ *  already limits cross-origin leaks to the origin. */
+export const metadata: Metadata = { referrer: "no-referrer" };
 
 export default function Page() {
   return (
-    <Suspense>
-      <OAuthCallbackPage />
+    <Suspense fallback={null}>
+      <CallbackClient />
     </Suspense>
   );
 }

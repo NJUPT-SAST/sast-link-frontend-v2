@@ -1,4 +1,8 @@
-import { exchangeLoginCode } from "@/lib/api/oauth";
+import {
+  clearPKCEVerifier,
+  exchangeLoginCode,
+  readPKCEVerifier,
+} from "@/lib/api/oauth";
 import { clearAccountDataCache } from "@/lib/api/session-keys";
 import { postAuthDestination } from "@/lib/auth-destination";
 import { createSession, setSession } from "@/lib/token";
@@ -12,10 +16,15 @@ import { useUserProfileStore } from "@/store/use-user-profile-store";
  *
  * Both OAuth entrances share this leg — the authorize-page callback
  * (/oauth/callback) and the Feishu in-client app-code login — so their
- * session semantics cannot drift apart.
+ * session semantics cannot drift apart. The PKCE verifier staged at
+ * initiation rides along (the backend, PR #111, refuses redemption without
+ * it). It is peeked rather than consumed: a transient network failure leaves
+ * the code unconsumed server-side and the retry needs the same verifier; it
+ * is cleared only after definitive success.
  */
 export async function establishLoginCodeSession(loginCode: string): Promise<string> {
-  const response = await exchangeLoginCode(loginCode);
+  const response = await exchangeLoginCode(loginCode, readPKCEVerifier());
+  clearPKCEVerifier();
   const data = response.data.data;
   const session = createSession(data.access_token, data.expires_in);
   setSession(session);

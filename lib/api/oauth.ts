@@ -2,16 +2,99 @@ import * as publicConfig from "@/lib/config/public";
 import { safeSessionStorage } from "@/lib/safe-session-storage";
 import type { ApiEnvelope, AuthResultData } from "./types";
 import { apiClient } from "./client";
+import { redirectTo } from "./redirect";
 
 export type OAuthProvider = "github" | "lark";
 
-export function buildOAuthLoginUrl(provider: OAuthProvider) {
-  return `${publicConfig.API_BASE_URL}/oauth/${provider}`;
+/** sessionStorage slot holding the PKCE verifier for the OAuth login this tab
+ *  has in flight (backend PR #111, RFC 7636). One slot is race-free: a tab can
+ *  have only one provider round trip in flight — a second initiation replaces
+ *  the first (whose login_code simply expires unredeemable), and cross-tab
+ *  traffic is isolated by sessionStorage itself. */
+const PKCE_VERIFIER_KEY = "sast:oauth-pkce-verifier";
+
+/** RFC 7636 unreserved charset [A-Za-z0-9-._~]; 64 chars is comfortably inside
+ *  the allowed 43..128 band. */
+const PKCE_VERIFIER_ALPHABET =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+const PKCE_VERIFIER_LENGTH = 64;
+
+function createPKCEVerifier(): string {
+  // crypto.getRandomValues exists in every supported browser and in jsdom.
+  const bytes = new Uint8Array(PKCE_VERIFIER_LENGTH);
+  crypto.getRandomValues(bytes);
+  let verifier = "";
+  for (const byte of bytes) {
+    verifier += PKCE_VERIFIER_ALPHABET[byte % PKCE_VERIFIER_ALPHABET.length];
+  }
+  return verifier;
 }
 
-export function exchangeLoginCode(code: string) {
+/** base64url(SHA-256(verifier)) — the S256 code challenge. Exported for the
+ *  RFC 7636 appendix-B spec-vector test. */
+export async function pkceChallengeS256(verifier: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+  let binary = "";
+  for (const byte of new Uint8Array(digest)) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** Create and store a fresh verifier, returning its S256 challenge. Used by
+ *  both initiation legs — the authorize-page redirect and the Feishu embedded
+ *  page's app-code post — so the login_code either leg buys is bound to this
+ *  tab's verifier and cannot be redeemed from anywhere the URL leaks. */
+export async function stagePKCEVerifier(): Promise<string> {
+  const verifier = createPKCEVerifier();
+  safeSessionStorage.setItem(PKCE_VERIFIER_KEY, verifier);
+  return pkceChallengeS256(verifier);
+}
+
+/** Peek the staged verifier without clearing it: a transient exchange
+ *  failure (network error before the backend consumed the code) must be
+ *  retryable, and the retry needs the same verifier. */
+export function readPKCEVerifier(): string {
+  return safeSessionStorage.getItem(PKCE_VERIFIER_KEY) ?? "";
+}
+
+/** Drop the staged verifier once its login_code is definitively redeemed or
+ *  burned — the slot is single-use by design. */
+export function clearPKCEVerifier(): void {
+  safeSessionStorage.removeItem(PKCE_VERIFIER_KEY);
+}
+
+/** Start a provider login from a click: stage the verifier, stamp this tab as
+ *  the initiator (the callback's stop-page guard), and leave for the backend's
+ *  authorize URL with the challenge — never the verifier — in the query. The
+ *  URL must be built at click time, so callers wire this into onClick rather
+ *  than a pre-rendered href. A same-frame double click is a no-op: the second
+ *  run would stage a second verifier while the first redirect is already
+ *  leaving, mismatching the URL's challenge against the stored verifier.
+ *  (Storage-disabled browsers lose login here by design — the backend refuses
+ *  a verifier-less exchange anyway, so the stamp/verifier can only live in
+ *  sessionStorage.) */
+let launchInFlight = false;
+export async function beginOAuthLogin(provider: OAuthProvider): Promise<void> {
+  if (launchInFlight) return;
+  launchInFlight = true;
+  try {
+    const challenge = await stagePKCEVerifier();
+    markOAuthLoginInitiated(provider);
+    redirectTo(
+      `${publicConfig.API_BASE_URL}/oauth/${provider}` +
+        `?code_challenge=${encodeURIComponent(challenge)}` +
+        `&code_challenge_method=S256`,
+    );
+  } finally {
+    launchInFlight = false;
+  }
+}
+
+export function exchangeLoginCode(code: string, codeVerifier: string) {
   return apiClient.post<ApiEnvelope<AuthResultData>>("/oauth/exchange-code", {
     code,
+    code_verifier: codeVerifier,
   });
 }
 
@@ -32,10 +115,13 @@ export interface LarkAppCodeLoginData {
 
 /** Redeem the JSAPI pre-authorization code obtained inside the Feishu client
  *  (tt.requestAccess / tt.requestAuthCode). Same identity gate and the same
- *  login/register split as the authorize-page callback. */
-export function larkAppCodeLogin(code: string) {
+ *  login/register split as the authorize-page callback. The PKCE challenge
+ *  (from stagePKCEVerifier) is required: the login_code this buys is bound to
+ *  the tab's verifier. */
+export function larkAppCodeLogin(code: string, codeChallenge: string) {
   return apiClient.post<ApiEnvelope<LarkAppCodeLoginData>>("/oauth/lark/app-code", {
     code,
+    code_challenge: codeChallenge,
   });
 }
 
@@ -112,6 +198,52 @@ function bindSettings(provider: OAuthProvider): {
 
 /** sessionStorage key holding the pending bind `state` for one provider. */
 const BIND_STATE_KEY = "sast:oauth-bind:state";
+
+/** sessionStorage key holding the time this tab initiated one provider's
+ *  login redirect. The callback `?code=` (login_code) is a pure bearer
+ *  one-time code with no browser binding — anyone holding the URL can redeem
+ *  it — so the callback page only auto-redeems when the redirect was started
+ *  from this very tab. That confines the "auto-redeem" carrier to a browser
+ *  whose own tab jumped, cutting off link-drop / login-CSRF payloads that
+ *  hand victims a prebaked callback URL. sessionStorage (per-tab) survives
+ *  the cross-origin provider round trip within the tab.
+ *
+ *  Backend-side browser binding for exchange-code is still the real fix; this
+ *  is a frontend mitigation until it ships. */
+const LOGIN_INITIATED_KEY = "sast:oauth-login-init";
+/** Backend OAuth state TTL is 10 minutes; the window keeps a margin so a slow
+ *  consent round trip is not mistaken for a link from elsewhere. */
+const LOGIN_INITIATED_TTL_MS = 15 * 60 * 1000;
+
+const OAUTH_PROVIDERS: readonly OAuthProvider[] = ["github", "lark"];
+
+/** Stamp the moment this tab is about to leave for a provider login page.
+ *  Must be called at click time, not on page load, so only genuinely
+ *  user-initiated jumps arm the callback guard. */
+export function markOAuthLoginInitiated(provider: OAuthProvider): void {
+  safeSessionStorage.setItem(
+    `${LOGIN_INITIATED_KEY}:${provider}`,
+    String(Date.now()),
+  );
+}
+
+/** Whether any provider's login redirect was initiated from this tab recently
+ *  enough for its callback to be worth auto-redeeming. A pure read — no key
+ *  removal — because the callers run it during render; expired stamps are
+ *  simply ignored (the next initiation overwrites its provider's slot and
+ *  the tab close clears the rest). */
+export function hasRecentOAuthLoginInitiation(): boolean {
+  const now = Date.now();
+  for (const provider of OAUTH_PROVIDERS) {
+    const raw = safeSessionStorage.getItem(`${LOGIN_INITIATED_KEY}:${provider}`);
+    if (raw === null) continue;
+    const stampedAt = Number(raw);
+    if (Number.isFinite(stampedAt) && now - stampedAt < LOGIN_INITIATED_TTL_MS) {
+      return true;
+    }
+  }
+  return false;
+}
 
 export function buildBindOAuthUrl(provider: OAuthProvider): string | null {
   const { clientId, redirectUri } = bindSettings(provider);

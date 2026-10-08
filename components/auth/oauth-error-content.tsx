@@ -10,10 +10,8 @@ import {
   CODE_RATE_LIMITED,
   CODE_VALIDATION,
 } from "@/lib/api/error-codes";
-import {
-  buildOAuthLoginUrl,
-  type OAuthProvider,
-} from "@/lib/api/oauth";
+import { beginOAuthLogin, type OAuthProvider } from "@/lib/api/oauth";
+import { message } from "@/lib/message";
 
 /**
  * Codes worth retrying as-is: the user did nothing wrong and a second attempt
@@ -75,8 +73,18 @@ export function OAuthErrorContent() {
                 OAuth entry, outside the static-export router. No ?redirect=
                 is attached — this page cannot know the pre-login page, and the
                 login-page buttons send none either, so the backend falls back
-                to its default post-login address. */}
-            <a href={buildOAuthLoginUrl(provider)}>
+                to its default post-login address. The restart mints a fresh
+                PKCE challenge at click time — the verifier never leaves this
+                tab (backend PR #111). */}
+            <a
+              href="#"
+              onClick={(event) => {
+                event.preventDefault();
+                void beginOAuthLogin(provider).catch(() =>
+                  message.warning("登录发起失败，请重试"),
+                );
+              }}
+            >
               {RESTART_LABELS[provider]}
             </a>
           </Button>
