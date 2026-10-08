@@ -159,7 +159,7 @@ export function LoginAccountField({
               onEnter();
             }
           }}
-          className="w-full pr-36 bg-transparent text-[15px] text-foreground placeholder:text-tertiary outline-none disabled:cursor-not-allowed disabled:text-muted-foreground"
+          className="w-full pr-36 bg-transparent text-base text-foreground placeholder:text-tertiary outline-none disabled:cursor-not-allowed disabled:text-muted-foreground"
         />
         {!atResolved && (
           <DropdownMenu>

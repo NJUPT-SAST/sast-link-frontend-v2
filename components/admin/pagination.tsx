@@ -104,7 +104,10 @@ export function Pagination({
             }}
             onBlur={commit}
             className={cn(
-              "type-tech h-8 w-[5ch] rounded border border-input bg-card px-1 text-center text-sm text-foreground",
+              // No type-tech here: it is unlayered CSS (font: 11px) that beats
+              // utilities, and any input under 16px makes iOS zoom the page on
+              // focus.
+              "h-8 w-[5ch] rounded border border-input bg-card px-1 text-center text-base text-foreground",
               "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25",
             )}
           />

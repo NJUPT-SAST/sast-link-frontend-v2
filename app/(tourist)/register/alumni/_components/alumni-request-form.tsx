@@ -43,7 +43,7 @@ import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Select } from "@/components/ui/select";
 
 const selectClass =
-  "h-12 w-full rounded-lg border border-input bg-card px-3.5 text-[15px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
+  "h-12 w-full rounded-lg border border-input bg-card px-3.5 text-base focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
 
 const INTENT_OPTIONS: {
   value: AlumniIntent;
@@ -577,7 +577,7 @@ export default function AlumniRequestForm() {
                 {...field}
                 id="note"
                 rows={3}
-                className="w-full rounded-lg border border-input bg-card px-3.5 py-3 text-[15px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
+                className="w-full rounded-lg border border-input bg-card px-3.5 py-3 text-base focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
                 placeholder="可写明可证明身份的信息，如当年负责的项目、可联系的社团成员等。"
               />
               <div className="min-h-4 text-xs">

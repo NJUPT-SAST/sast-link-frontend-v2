@@ -19,7 +19,7 @@ import { DotLoading } from "@/components/ui/dot-loading";
 import { Select } from "@/components/ui/select";
 
 const controlClass =
-  "h-11 w-full rounded-lg border border-input bg-card px-3 text-[15px] placeholder:text-tertiary focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
+  "h-11 w-full rounded-lg border border-input bg-card px-3 text-base placeholder:text-tertiary focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
 
 const STATUS_OPTIONS = [
   { value: "", label: "全部状态" },
