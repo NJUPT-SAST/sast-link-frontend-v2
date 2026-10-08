@@ -215,6 +215,7 @@ function ResetFlow() {
                         ref={field.ref}
                         label="新密码"
                         type="password"
+                        autoComplete="new-password"
                         required
                         description="至少 8 位，建议混合字母与数字。"
                       />
@@ -234,6 +235,7 @@ function ResetFlow() {
                         ref={field.ref}
                         label="确认新密码"
                         type="password"
+                        autoComplete="new-password"
                         required
                         invalid={!!fieldState.error}
                       />

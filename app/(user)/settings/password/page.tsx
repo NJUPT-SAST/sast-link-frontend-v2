@@ -76,6 +76,7 @@ export default function SettingsPasswordPage() {
             id="oldPassword"
             label="当前密码"
             type="password"
+            autoComplete="current-password"
             {...register("oldPassword", { required: "请输入当前密码" })}
             invalid={!!errors.oldPassword}
             error={errors.oldPassword?.message}
@@ -84,6 +85,7 @@ export default function SettingsPasswordPage() {
             id="newPassword"
             label="新密码"
             type="password"
+            autoComplete="new-password"
             {...register("newPassword", { required: true })}
             invalid={!!errors.newPassword}
             error={errors.newPassword?.message}
@@ -92,6 +94,7 @@ export default function SettingsPasswordPage() {
             id="confirmPassword"
             label="确认新密码"
             type="password"
+            autoComplete="new-password"
             {...register("confirmPassword", { required: true })}
             invalid={!!errors.confirmPassword}
             error={errors.confirmPassword?.message}
