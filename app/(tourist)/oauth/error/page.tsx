@@ -15,7 +15,7 @@ import { OAuthErrorContent } from "@/components/auth/oauth-error-content";
  */
 export default function OAuthErrorPage() {
   return (
-    <div className="grid min-h-screen w-full place-items-center px-6">
+    <div className="grid min-h-dvh w-full place-items-center px-6">
       <Suspense>
         <OAuthErrorContent />
       </Suspense>

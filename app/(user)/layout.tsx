@@ -37,7 +37,7 @@ export default function UserLayout({
   // shell before the /auth/refresh cookie probe resolves.
   if (status !== "authenticated") {
     return (
-      <div className="grid min-h-screen place-items-center">
+      <div className="grid min-h-dvh place-items-center">
         <DotLoading />
       </div>
     );

@@ -3,5 +3,5 @@ export default function TouristLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <main className="flex min-h-screen flex-col">{children}</main>;
+  return <main className="flex min-h-dvh flex-col">{children}</main>;
 }

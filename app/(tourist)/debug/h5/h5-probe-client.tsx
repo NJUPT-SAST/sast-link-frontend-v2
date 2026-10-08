@@ -27,7 +27,7 @@ export default function H5ProbeClient({ dev }: { dev: boolean }) {
 
   if (!Probe) {
     return (
-      <main className="grid min-h-screen place-items-center px-6">
+      <main className="grid min-h-dvh place-items-center px-6">
         <p className="text-sm text-tertiary">
           {dev ? "正在加载诊断探针…" : "诊断探针仅在开发环境可用（pnpm dev）。"}
         </p>

@@ -169,7 +169,7 @@ export function H5Probe() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black p-6 text-left font-mono text-[13px] leading-5 text-white">
+    <div className="min-h-dvh bg-black p-6 text-left font-mono text-[13px] leading-5 text-white">
       <h1 className="mb-4 text-base font-bold">H5 login probe v3</h1>
       <section className="mb-6">
         <h2 className="mb-2 font-bold text-link">environment</h2>
