@@ -14,7 +14,9 @@ export function Select({
 }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div className="relative">
-      <select {...props} className={cn("w-full appearance-none", className)}>
+      {/* pr-9 keeps text clear of the absolutely-positioned chevron
+          (right-3 + size-4) — same 2.25rem the old global CSS arrow used. */}
+      <select {...props} className={cn("w-full appearance-none pr-9", className)}>
         {children}
       </select>
       <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-foreground/50" />

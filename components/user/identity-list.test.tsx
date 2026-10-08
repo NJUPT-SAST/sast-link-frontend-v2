@@ -107,4 +107,37 @@ describe("IdentityList", () => {
       screen.queryByRole("link", { name: "通过邮箱验证码重置" }),
     ).not.toBeInTheDocument();
   });
+
+  // Unbinding the only third-party identity still succeeds on the backend
+  // (login email is enough), so the dialog must warn instead of blocking.
+  it("warns when unbinding the only bound third-party identity", async () => {
+    mockIdentities = [{ id: 1, provider: "github", provider_id: "octocat" }];
+
+    render(<IdentityList actionable />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "解绑" }));
+
+    expect(
+      await screen.findByText(
+        "这是当前唯一的第三方绑定，解绑后将只能使用邮箱密码登录。",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("does not warn when multiple third-party identities are bound", async () => {
+    mockIdentities = [
+      { id: 1, provider: "github", provider_id: "octocat" },
+      { id: 2, provider: "lark", provider_id: "feishu" },
+    ];
+
+    render(<IdentityList actionable />);
+    const user = userEvent.setup();
+    await user.click(screen.getAllByRole("button", { name: "解绑" })[0]);
+
+    expect(
+      screen.queryByText(
+        "这是当前唯一的第三方绑定，解绑后将只能使用邮箱密码登录。",
+      ),
+    ).not.toBeInTheDocument();
+  });
 });
