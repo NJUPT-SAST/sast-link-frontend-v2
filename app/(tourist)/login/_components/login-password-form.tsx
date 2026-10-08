@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { passwordLogin } from "@/lib/api/auth";
+import { CODE_PASSWORD_INVALID } from "@/lib/api/error-codes";
 import { toApiError } from "@/lib/api/errors";
 import { clearAccountDataCache } from "@/lib/api/session-keys";
 import { createSession, setSession } from "@/lib/token";
@@ -21,6 +22,7 @@ import {
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { Button } from "@/components/ui/button";
+import { FormError } from "@/components/ui/form-error";
 import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { PageTransition } from "@/components/animation/page-transition";
 
@@ -85,7 +87,15 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
       safeSessionStorage.removeItem(LOGIN_ACCOUNT_KEY);
       router.replace(postAuthDestination(data, "/home"));
     } catch (error) {
-      form.setError("password", { message: toApiError(error).message });
+      const apiError = toApiError(error);
+      // Only a wrong password belongs under the password field; network
+      // failures, rate limits and 5xx are not "wrong password" and must not
+      // make the user retype a password that was correct.
+      if (apiError.code === CODE_PASSWORD_INVALID) {
+        form.setError("password", { message: apiError.message });
+      } else {
+        form.setError("root", { message: apiError.message });
+      }
     } finally {
       setLoading(false);
       submittingRef.current = false;
@@ -119,6 +129,9 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
                   label="密码"
                   type="password"
                   autoComplete="current-password"
+                  // Step switch remounts this component; focus lands on the
+                  // field the user is here to fill.
+                  autoFocus
                   invalid={!!fieldState.error}
                 />
                 <div className="mt-1.5 flex justify-end">
@@ -134,6 +147,7 @@ export default function LoginPasswordForm({ loginEmail, onBack }: LoginPasswordF
               </FormItem>
             )}
           />
+          <FormError message={form.formState.errors.root?.message} />
           <div className="mt-2 flex flex-col gap-3">
             <Button type="submit" disabled={loading} className="w-full">
               {loading ? <DotLoading /> : "登录 SAST Link"}

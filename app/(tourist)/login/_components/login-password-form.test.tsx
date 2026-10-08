@@ -39,4 +39,30 @@ describe("LoginPasswordForm", () => {
     // pre-fill it.
     expect(sessionStorage.getItem("sast:reset-account")).toBe("alice@njupt.edu.cn");
   });
+
+  it("maps code 40105 to the password field", async () => {
+    (passwordLogin as jest.Mock).mockRejectedValueOnce({
+      response: { status: 401, data: { code: 40105, message: "密码错误" } },
+    });
+    render(<LoginPasswordForm loginEmail="alice@njupt.edu.cn" onBack={jest.fn()} />);
+    await userEvent.type(screen.getByLabelText("密码"), "WrongPass123");
+    await userEvent.click(screen.getByRole("button", { name: "登录 SAST Link" }));
+
+    await waitFor(() => expect(screen.getByText("密码错误")).toBeInTheDocument());
+    // A field-level error marks the input invalid; a root error must not.
+    expect(screen.getByLabelText("密码")).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("shows non-40105 failures at form level, not as a wrong password", async () => {
+    (passwordLogin as jest.Mock).mockRejectedValueOnce({
+      response: { status: 429, data: { code: 42900, message: "请求过于频繁" } },
+    });
+    render(<LoginPasswordForm loginEmail="alice@njupt.edu.cn" onBack={jest.fn()} />);
+    await userEvent.type(screen.getByLabelText("密码"), "Password123");
+    await userEvent.click(screen.getByRole("button", { name: "登录 SAST Link" }));
+
+    await waitFor(() => expect(screen.getByText("请求过于频繁")).toBeInTheDocument());
+    expect(screen.getAllByText("请求过于频繁")).toHaveLength(1);
+    expect(screen.getByLabelText("密码")).toHaveAttribute("aria-invalid", "false");
+  });
 });

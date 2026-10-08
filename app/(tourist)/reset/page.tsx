@@ -191,6 +191,9 @@ function ResetFlow() {
                         maxLength={6}
                         inputMode="numeric"
                         autoComplete="one-time-code"
+                        // Step two mounts only after the code is sent; focus
+                        // lands straight on the code the user just received.
+                        autoFocus
                         suffix={
                           <VerificationCodeInput
                             onResend={async () => {

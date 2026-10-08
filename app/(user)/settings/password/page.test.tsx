@@ -66,4 +66,40 @@ describe("SettingsPasswordPage", () => {
       expect(mockChangePassword).toHaveBeenCalledWith("OldPass123", "NewPass123"),
     );
   });
+
+  it("maps code 40105 to the current-password field", async () => {
+    mockChangePassword.mockRejectedValueOnce({
+      response: { status: 401, data: { code: 40105, message: "密码错误" } },
+    });
+    render(<SettingsPasswordPage />);
+    fireEvent.change(screen.getByLabelText("当前密码"), { target: { value: "OldPass123" } });
+    fireEvent.change(screen.getByLabelText("新密码"), { target: { value: "NewPass123" } });
+    fireEvent.change(screen.getByLabelText("确认新密码"), { target: { value: "NewPass123" } });
+    fireEvent.click(screen.getByRole("button", { name: "更新密码" }));
+
+    await waitFor(() => expect(screen.getByText("密码错误")).toBeInTheDocument());
+    // The field must own the failure: its describedby points at the alert.
+    const describedBy = screen
+      .getByLabelText("当前密码")
+      .getAttribute("aria-describedby");
+    expect(describedBy).toBe("oldPassword-message");
+    const messageNode = document.getElementById("oldPassword-message");
+    expect(messageNode).toHaveAttribute("role", "alert");
+    expect(messageNode).toHaveTextContent("密码错误");
+  });
+
+  it("shows non-40105 failures at form level, not as a wrong password", async () => {
+    mockChangePassword.mockRejectedValueOnce({
+      response: { status: 500, data: { code: 50000, message: "服务器内部错误" } },
+    });
+    render(<SettingsPasswordPage />);
+    fireEvent.change(screen.getByLabelText("当前密码"), { target: { value: "OldPass123" } });
+    fireEvent.change(screen.getByLabelText("新密码"), { target: { value: "NewPass123" } });
+    fireEvent.change(screen.getByLabelText("确认新密码"), { target: { value: "NewPass123" } });
+    fireEvent.click(screen.getByRole("button", { name: "更新密码" }));
+
+    await waitFor(() => expect(screen.getByText("服务器内部错误")).toBeInTheDocument());
+    // Nothing may be attributed to the password field itself.
+    expect(screen.getByLabelText("当前密码")).not.toHaveAttribute("aria-describedby");
+  });
 });
