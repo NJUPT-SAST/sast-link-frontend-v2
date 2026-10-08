@@ -45,7 +45,7 @@ const COMPLETION_OPTIONS = [
 // stays aligned; AuthFormField cannot be used here because it hardcodes a taller
 // h-12 input and a different label size.
 const controlClass =
-  "h-11 w-full rounded-lg border border-input bg-card px-3 text-[15px] placeholder:text-tertiary focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
+  "h-11 w-full rounded-lg border border-input bg-card px-3 text-base placeholder:text-tertiary focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
 const selectClass = cn(controlClass, "appearance-none");
 const labelClass = "mb-1.5 block text-xs text-muted-foreground";
 // At xl the buttons sit next to labelled controls, so they need the label's height

@@ -365,3 +365,24 @@ select {
   background-size: 1rem;
   padding-right: 2.25rem;
 }
+
+/* Double-tap zoom defeats rapid taps on buttons (pagination dots, submit
+ * double-presses) on touch devices. `manipulation` keeps panning and pinch
+ * zoom while disabling the double-tap gesture — zoom stays available for
+ * accessibility via pinch. */
+a,
+button,
+[role="button"],
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+/* Overscroll containment for overlay surfaces: without it, momentum from a
+ * dialog's inner scroller chains to the page behind it on iOS (worst inside
+ * the WeChat/Feishu webviews), dragging the locked page under the overlay. */
+[data-slot="dialog-content"],
+[data-slot="popover-content"] {
+  overscroll-behavior: contain;
+}

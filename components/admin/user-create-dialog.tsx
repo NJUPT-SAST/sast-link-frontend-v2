@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/dialog";
 
 const selectClass =
-  "h-12 w-full rounded-lg border border-input bg-card px-3.5 text-[15px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
+  "h-12 w-full rounded-lg border border-input bg-card px-3.5 text-base focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
 
 // Reuse the shared label tables (single source of truth); create never offers
 // is_deleted — a fresh account is not a deletion. A manager cannot create an

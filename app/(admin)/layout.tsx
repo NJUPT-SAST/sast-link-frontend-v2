@@ -53,7 +53,7 @@ export default function AdminLayout({
   // and this shell is what the visitor sees — never a role-gated page.
   if (status !== "authenticated" || isLoading) {
     return (
-      <div className="grid min-h-screen place-items-center">
+      <div className="grid min-h-dvh place-items-center">
         <DotLoading />
       </div>
     );
@@ -64,7 +64,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <TopBar />
       <div className="pt-16">
         <AdminNav />

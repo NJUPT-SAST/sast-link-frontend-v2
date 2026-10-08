@@ -64,7 +64,7 @@ export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
             aria-label={label}
             aria-invalid={invalid}
             className={cn(
-              "h-12 w-full rounded-lg border bg-card px-3.5 text-[15px] transition-colors placeholder:text-tertiary focus-visible:outline-none",
+              "h-12 w-full rounded-lg border bg-card px-3.5 text-base transition-colors placeholder:text-tertiary focus-visible:outline-none",
               "[&:-webkit-autofill]:[box-shadow:inset_0_0_0_100px_var(--card)]",
               "[&:-webkit-autofill]:[-webkit-text-fill-color:var(--foreground)]",
               invalid
@@ -86,7 +86,9 @@ export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
               aria-label={passwordVisible ? "隐藏密码" : "显示密码"}
               aria-pressed={passwordVisible}
               onClick={() => setPasswordVisible((visible) => !visible)}
-              className="absolute right-3.5 top-1/2 z-10 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+              // size-8 lifts the touch target well past the 17px icon — a
+              // bare icon button is unreachable with a thumb.
+              className="absolute right-2.5 top-1/2 z-10 grid size-8 -translate-y-1/2 place-items-center rounded text-muted-foreground transition-colors hover:text-foreground"
             >
               {passwordVisible ? <EyeOff size={17} /> : <Eye size={17} />}
             </button>

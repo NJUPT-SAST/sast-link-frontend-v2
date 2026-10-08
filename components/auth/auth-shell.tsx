@@ -26,7 +26,7 @@ export function AuthShell({ children, className, wide = false }: AuthShellProps)
   // the app-level provider (e.g. when AuthShell is rendered in isolation).
   return (
     <TooltipProvider delayDuration={500}>
-    <section className="flex min-h-screen w-full flex-col overflow-y-auto text-foreground">
+    <section className="flex min-h-dvh w-full flex-col overflow-y-auto text-foreground">
       <div className="absolute left-5 top-5 sm:left-8 sm:top-7">
         {/* Plain text — an SVG logo's fixed width leaves a gap under the
             cursor's four-corner bracket, which reads as empty space. */}

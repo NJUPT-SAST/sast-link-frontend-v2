@@ -41,7 +41,7 @@ interface RegisterDetailsFormProps {
 }
 
 const selectClass =
-  "h-12 w-full rounded-lg border border-input bg-card px-3.5 text-[15px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
+  "h-12 w-full rounded-lg border border-input bg-card px-3.5 text-base focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
 
 const FIELD_ORDER = [
   "password",

@@ -276,7 +276,7 @@ export function AlumniRequestReviewDialog({
                         {...field}
                         id="reject_reason"
                         rows={4}
-                        className="w-full rounded-lg border border-input bg-card px-3.5 py-3 text-[15px] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
+                        className="w-full rounded-lg border border-input bg-card px-3.5 py-3 text-base focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25"
                       />
                       <div className="min-h-4 text-xs">
                         <FormError message={fieldState.error?.message} />

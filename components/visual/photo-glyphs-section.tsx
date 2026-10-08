@@ -7,7 +7,7 @@ export function PhotoGlyphsSection() {
   return (
     <section
       aria-hidden="true"
-      className="relative flex min-h-screen items-center justify-center"
+      className="relative flex min-h-dvh items-center justify-center"
     >
       <div className="mx-auto flex w-full max-w-3xl items-center justify-center px-6 py-16">
         <PhotoGlyphs className="block w-full" />

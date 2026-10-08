@@ -66,7 +66,7 @@ export function Pagination({
             value={pageSize}
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
             aria-label="每页条数"
-            className="h-8 rounded border border-input bg-card px-2 text-sm"
+            className="h-8 rounded border border-input bg-card px-2 text-base"
           >
             {pageSizeOptions.map((size) => (
               <option key={size} value={size}>
@@ -104,7 +104,10 @@ export function Pagination({
             }}
             onBlur={commit}
             className={cn(
-              "type-tech h-8 w-[5ch] rounded border border-input bg-card px-1 text-center text-sm text-foreground",
+              // No type-tech here: it is unlayered CSS (font: 11px) that beats
+              // utilities, and any input under 16px makes iOS zoom the page on
+              // focus.
+              "h-8 w-[5ch] rounded border border-input bg-card px-1 text-center text-base text-foreground",
               "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25",
             )}
           />

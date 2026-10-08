@@ -118,7 +118,7 @@ export default function ProfileCompletePage() {
 
   if (isLoading || (profile.id === 0 && !done)) {
     return (
-      <main className="grid min-h-screen place-items-center">
+      <main className="grid min-h-dvh place-items-center">
         <DotLoading />
       </main>
     );

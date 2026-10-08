@@ -22,7 +22,7 @@ describe("AuthShell", () => {
     );
 
     const section = container.querySelector("section");
-    expect(section).toHaveClass("flex", "min-h-screen", "overflow-y-auto");
+    expect(section).toHaveClass("flex", "min-h-dvh", "overflow-y-auto");
     // First child is the absolute top-left logo; second is the centered panel.
     expect(section?.children[1]).toHaveClass("m-auto", "items-center");
   });

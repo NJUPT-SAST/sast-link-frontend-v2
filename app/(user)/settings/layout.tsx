@@ -9,7 +9,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
   useFetchProfile();
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <TopBar />
       <div className="pt-16">{children}</div>
     </div>

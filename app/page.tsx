@@ -44,11 +44,15 @@ export default function Home() {
   }, [router, status, larkLogin.status]);
 
   // Restrained parallax: the title tilts a few degrees toward the cursor.
-  // Runs once the landing is actually shown.
+  // Runs once the landing is actually shown. Coarse-pointer devices never
+  // fire pointermove for it, so the loop would spin at 60fps writing a
+  // transform nothing drives — gate it off entirely (same condition the
+  // custom cursor uses).
   useEffect(() => {
     const el = titleRef.current;
     if (!el) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!window.matchMedia("(pointer: fine)").matches) return;
 
     let raf = 0;
     const target = { x: 0, y: 0 };
@@ -95,7 +99,7 @@ export default function Home() {
   }
 
   // Fade, not the default slide: this page's transition container is the
-  // full-viewport landing itself, and slide's translate on a min-h-screen
+  // full-viewport landing itself, and slide's translate on a min-h-dvh
   // element pushes it past the viewport edge mid-animation, flashing a
   // scrollbar that only disappears once the transform settles. Fade has no
   // transform, so no scrollbar.
@@ -103,7 +107,7 @@ export default function Home() {
     <>
       <PageTransition
         variant="fade"
-        className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center"
+        className="relative flex min-h-dvh flex-col items-center justify-center px-6 text-center"
       >
         <h1
           ref={titleRef}
