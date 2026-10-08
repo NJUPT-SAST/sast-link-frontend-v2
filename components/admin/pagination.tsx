@@ -66,7 +66,7 @@ export function Pagination({
             value={pageSize}
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
             aria-label="每页条数"
-            className="h-8 rounded border border-input bg-card px-2 text-sm"
+            className="h-8 rounded border border-input bg-card px-2 text-base"
           >
             {pageSizeOptions.map((size) => (
               <option key={size} value={size}>

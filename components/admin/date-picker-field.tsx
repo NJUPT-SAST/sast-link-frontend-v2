@@ -43,7 +43,7 @@ interface DatePickerFieldProps {
 }
 
 const PICKER_BUTTON_CLASS =
-  "h-11 w-full justify-start gap-2 rounded-lg border bg-card px-3.5 text-[15px] font-normal text-foreground shadow-none hover:bg-card hover:text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25";
+  "h-11 w-full justify-start gap-2 rounded-lg border bg-card px-3.5 text-base font-normal text-foreground shadow-none hover:bg-card hover:text-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25";
 
 /**
  * 单日日期选择器：样弹层日历代替手动输入。
