@@ -60,6 +60,14 @@ describe("lib/api/oauth v2", () => {
     expect(hasRecentOAuthLoginInitiation()).toBe(true);
   });
 
+  it("absorbs a same-frame double click into one launch", async () => {
+    // Two begins racing in the same frame would stage two verifiers — the
+    // URL could then carry the first challenge while the second verifier is
+    // what survives in storage, and the backend would refuse the exchange.
+    await Promise.all([beginOAuthLogin("github"), beginOAuthLogin("github")]);
+    expect(jest.mocked(redirectTo)).toHaveBeenCalledTimes(1);
+  });
+
   it("hashes S256 challenges per RFC 7636 appendix B", async () => {
     // The spec's own test vector: this verifier must hash to exactly this
     // challenge, pinning the implementation to the standard.
