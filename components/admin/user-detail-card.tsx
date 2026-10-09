@@ -1,6 +1,6 @@
 import type { UserProfileData } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
-import { ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
+import { ADMIN_ROLE_LABELS as ROLE_LABELS, ADMIN_STATE_LABELS as STATE_LABELS } from "@/lib/constants/admin";
 import { DEPARTMENT_LABELS, formatAdminDate } from "@/lib/constants/admin";
 
 interface FieldProps {

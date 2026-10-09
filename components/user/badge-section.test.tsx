@@ -6,6 +6,7 @@ import { BadgeSection } from "./badge-section";
 const mockMutate = jest.fn();
 let mockBadge: unknown = undefined;
 let mockIsLoading = true;
+let mockError: Error | undefined;
 let mockProfile: { blogUrl: string | null; githubUrl: string | null } = {
   blogUrl: null,
   githubUrl: null,
@@ -16,6 +17,7 @@ jest.mock("@/hooks/use-badge", () => ({
     badge: mockBadge,
     isLoading: mockIsLoading,
     mutate: mockMutate,
+    error: mockError,
   }),
 }));
 
@@ -64,6 +66,7 @@ describe("BadgeSection", () => {
   beforeEach(() => {
     mockBadge = undefined;
     mockIsLoading = true;
+    mockError = undefined;
     mockProfile = { blogUrl: null, githubUrl: null };
     mockMutate.mockClear();
     enableBadge.mockReset();
@@ -75,6 +78,30 @@ describe("BadgeSection", () => {
   it("shows a loading state while resolving", () => {
     render(<BadgeSection />);
     expect(screen.getByText("正在加载徽标状态…")).toBeInTheDocument();
+  });
+
+  it("makes the exact link selectable when clipboard permission fails", async () => {
+    mockIsLoading = false;
+    mockBadge = { enabled: true, key: "abc" };
+    clipboardWrite.mockRejectedValue(new Error("denied"));
+    const user = setupUserWithClipboard();
+    render(<BadgeSection />);
+    await user.click(screen.getByRole("button", { name: "复制链接" }));
+    const link = await screen.findByRole("textbox", { name: "徽标分享链接" });
+    expect(link).toHaveValue("http://localhost/v2/badge/abc.svg?size=sm&theme=auto&target=blog");
+    expect(link).toHaveAttribute("readonly");
+  });
+
+  it("offers retry when the badge state cannot load", async () => {
+    mockIsLoading = false;
+    mockError = new Error("网络失败");
+    mockMutate.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<BadgeSection />);
+    expect(screen.getByText("徽标状态加载失败")).toBeInTheDocument();
+    expect(screen.queryByText("已关闭")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "重试" }));
+    expect(mockMutate).toHaveBeenCalled();
   });
 
   it("shows the closed state with inert controls and no preview", () => {

@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { canManageUsers, canWriteTargetUser } from "@/components/admin/permissions";
 import { UserEditForm } from "@/components/admin/user-edit-form";
+import { UserLoadError } from "@/components/admin/user-load-error";
 import { BackButton } from "@/components/navigation/back-button";
-import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { useAdminMutations } from "@/hooks/use-admin-mutations";
 import { useAdminUser } from "@/hooks/use-admin-users";
@@ -22,7 +23,7 @@ export function AdminUserEditContent() {
   // Carried over from the list so 返回/保存后跳转 keeps the same filtered page.
   const listQuery = parseAdminUsersListQuery(searchParams);
   const listHref = adminUsersListHref(listQuery);
-  const { data: user, isLoading } = useAdminUser(id);
+  const { data: user, isLoading, error, mutate } = useAdminUser(id);
   const { updateUser, isLoading: mutationLoading } = useAdminMutations();
   const viewerRole = useUserProfileStore((state) => state.profile.role);
   const canManage = canManageUsers(viewerRole);
@@ -48,12 +49,9 @@ export function AdminUserEditContent() {
     return <div className="flex h-64 items-center justify-center text-sm text-tertiary">正在跳转…</div>;
   }
 
-  if (id === null || !user && !isLoading) {
+  if (id === null || error || !user && !isLoading) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-4">
-        <p className="text-tertiary">用户不存在或链接无效</p>
-        <Button variant="outline" asChild><Link href={listHref}>返回用户列表</Link></Button>
-      </div>
+      <UserLoadError error={error} listHref={listHref} onRetry={() => void mutate().catch(() => undefined)} />
     );
   }
 

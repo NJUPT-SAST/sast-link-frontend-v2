@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { TopBar } from "@/components/layout/top-bar";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { DotLoading } from "@/components/ui/dot-loading";
-import { ADMIN_NAV_ITEMS } from "@/lib/constants/admin";
+import { canAccessAdminPath } from "@/components/admin/permissions";
+import { AdminErrorState } from "@/components/admin/error-state";
+import { Button } from "@/components/ui/button";
 import { stashAuthNext } from "@/lib/auth-next";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useFetchProfile } from "@/hooks/use-fetch-profile";
@@ -21,15 +24,12 @@ export default function AdminLayout({
   const pathname = usePathname();
   const role = useUserProfileStore((state) => state.profile.role);
   const status = useAuthSession();
-  const { isLoading, error } = useFetchProfile();
+  const { isLoading, error, mutate } = useFetchProfile();
   // Mirrors AdminNav's visibility rule: a role may only open routes its nav
   // entries allow. lecturer can reach /admin/users (read-only) but a direct URL
   // to /admin/oauth-clients must not render a page that will 403.
-  const canAccessPath = ADMIN_NAV_ITEMS.some(
-    (item) =>
-      item.roles.includes(role) &&
-      (pathname === item.href || pathname.startsWith(`${item.href}/`)),
-  );
+  const canAccessPath = canAccessAdminPath(pathname, role);
+  const canOpenUsers = canAccessAdminPath("/admin/users", role);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -39,14 +39,7 @@ export default function AdminLayout({
       router.replace("/login");
       return;
     }
-    if (
-      status === "authenticated" &&
-      !isLoading &&
-      (!canAccessPath || error)
-    ) {
-      router.replace("/home");
-    }
-  }, [router, status, isLoading, canAccessPath, error]);
+  }, [router, status]);
 
   // Profile fetch only fires once the session exists (profileKey() returns null
   // otherwise), so while the session bootstrap is in flight isLoading stays true
@@ -59,10 +52,6 @@ export default function AdminLayout({
     );
   }
 
-  if (!canAccessPath || error) {
-    return null;
-  }
-
   return (
     <div className="min-h-dvh">
       <TopBar />
@@ -72,7 +61,16 @@ export default function AdminLayout({
           key={pathname}
           className="stagger-rise mx-auto max-w-[1200px] px-5 pb-20 pt-8 sm:px-8"
         >
-          {children}
+          {error ? <AdminErrorState onRetry={() => void mutate()} /> : canAccessPath ? children : (
+            <div className="flex h-64 flex-col items-center justify-center gap-4">
+              <p role="alert" className="text-tertiary">当前账号无权访问此管理页面</p>
+              <Button variant="outline" asChild>
+                <Link href={canOpenUsers ? "/admin/users" : "/home"}>
+                  {canOpenUsers ? "返回用户管理" : "返回首页"}
+                </Link>
+              </Button>
+            </div>
+          )}
         </main>
       </div>
     </div>

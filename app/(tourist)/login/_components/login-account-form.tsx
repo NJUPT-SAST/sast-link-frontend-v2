@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, Controller } from "react-hook-form";
 import Link from "next/link";
@@ -62,6 +62,7 @@ interface LoginAccountFormProps {
 }
 
 export default function LoginAccountForm({ onNext, resetNotice }: LoginAccountFormProps) {
+  const accountInput = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const form = useForm<LoginAccountFormValues>({
     resolver: zodResolver(loginAccountFormSchema),
@@ -98,7 +99,7 @@ export default function LoginAccountForm({ onNext, resetNotice }: LoginAccountFo
     [],
   );
 
-  const handleSubmit = form.handleSubmit(({ account }) => {
+  const handleValid = ({ account }: LoginAccountFormValues) => {
     setLoading(true);
     try {
       const localPart = account.localPart.trim().toLowerCase();
@@ -115,7 +116,10 @@ export default function LoginAccountForm({ onNext, resetNotice }: LoginAccountFo
     } finally {
       setLoading(false);
     }
-  });
+  };
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    void form.handleSubmit(handleValid, () => accountInput.current?.focus())(event);
+  };
 
   return (
     <PageTransition className="flex w-full flex-col">
@@ -140,6 +144,7 @@ export default function LoginAccountForm({ onNext, resetNotice }: LoginAccountFo
               return (
                 <FormItem>
                   <LoginAccountField
+                    inputRef={accountInput}
                     value={field.value}
                     onChange={field.onChange}
                     error={errorMessage}

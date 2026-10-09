@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Settings, User } from "lucide-react";
@@ -24,13 +25,18 @@ export function TopBar() {
   const adminHref = ADMIN_NAV_ITEMS.find((item) => item.roles.includes(role))?.href;
   const homeLabel = pathname === "/home" ? "首页" : "返回首页";
 
-  const isHidden = scrollDirection === "down";
+  const [focusWithin, setFocusWithin] = useState(false);
+  const isHidden = scrollDirection === "down" && !focusWithin;
 
   return (
     <TooltipProvider delayDuration={500}>
       <header
-        className="fixed inset-x-0 top-0 z-10 flex h-16 items-center justify-between px-5 transition-transform duration-300 sm:px-8"
-        style={{ transform: isHidden ? "translateY(-100%)" : "translateY(0)" }}
+        onFocusCapture={() => setFocusWithin(true)}
+        onBlurCapture={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) setFocusWithin(false);
+        }}
+        className="site-top-bar fixed inset-x-0 top-0 z-10 flex h-16 items-center justify-between bg-background/95 px-3 transition-transform duration-300 sm:px-8"
+        style={{ transform: isHidden ? "translateY(-100%)" : "translateY(0)", transitionDuration: focusWithin ? "0ms" : undefined }}
       >
         <Tooltip>
           <TooltipTrigger asChild>
@@ -44,14 +50,15 @@ export function TopBar() {
           </TooltipTrigger>
           <TooltipContent>{homeLabel}</TooltipContent>
         </Tooltip>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
           <ThemeToggle />
           <Tooltip>
             <TooltipTrigger asChild>
               <Link
                 href="/profile"
+                aria-current={pathname.startsWith("/profile") ? "page" : undefined}
                 aria-label="个人资料"
-                className="grid size-10 place-items-center text-foreground/70 transition-[opacity,transform] hover:-translate-y-px hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
+                className="flex size-11 items-center justify-center text-foreground/70 aria-[current=page]:text-foreground aria-[current=page]:border-b aria-[current=page]:border-foreground transition-[opacity,transform] hover:-translate-y-px hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
               >
                 <User className="size-5" />
               </Link>
@@ -63,8 +70,9 @@ export function TopBar() {
               <TooltipTrigger asChild>
                 <Link
                   href={adminHref}
+                  aria-current={pathname.startsWith("/admin") ? "page" : undefined}
                   aria-label="管理面板"
-                  className="grid size-10 place-items-center text-foreground/70 transition-[opacity,transform] hover:-translate-y-px hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
+                  className="flex size-11 items-center justify-center text-foreground/70 aria-[current=page]:text-foreground aria-[current=page]:border-b aria-[current=page]:border-foreground transition-[opacity,transform] hover:-translate-y-px hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
                 >
                   <LayoutDashboard className="size-5" />
                 </Link>
@@ -76,8 +84,9 @@ export function TopBar() {
             <TooltipTrigger asChild>
               <Link
                 href="/settings"
+                aria-current={pathname.startsWith("/settings") ? "page" : undefined}
                 aria-label="设置"
-                className="grid size-10 place-items-center text-foreground/70 transition-[opacity,transform] hover:-translate-y-px hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
+                className="flex size-11 items-center justify-center text-foreground/70 aria-[current=page]:text-foreground aria-[current=page]:border-b aria-[current=page]:border-foreground transition-[opacity,transform] hover:-translate-y-px hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2"
               >
                 <Settings className="size-5" />
               </Link>

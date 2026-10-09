@@ -10,11 +10,7 @@ jest.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 
-// canManageUsers reads the role off the profile store; admin unlocks the actions.
-jest.mock("@/store/use-user-profile-store", () => ({
-  useUserProfileStore: (selector: (state: { profile: { role: string } }) => unknown) =>
-    selector({ profile: { role: "admin" } }),
-}));
+import { initialProfile, useUserProfileStore } from "@/store/use-user-profile-store";
 
 // MSW handlers authorize on the access-<id>- token shape.
 jest.mock("@/lib/token", () => ({
@@ -38,6 +34,7 @@ describe("AdminUserEditPage closed account", () => {
   if (!deleted) throw new Error("mock data has no soft-deleted user to test with");
 
   beforeEach(() => {
+    useUserProfileStore.setState({ profile: { ...initialProfile, id: 2, role: "admin" }, profileDraft: null });
     window.history.replaceState(null, "", `/admin/users/edit?id=${deleted.profile.id}`);
   });
 

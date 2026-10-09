@@ -1,3 +1,14 @@
+import { ADMIN_NAV_ITEMS } from "@/lib/constants/admin";
+
+/** Overview is exact-only; deeper sections use their own most-specific rule. */
+export function canAccessAdminPath(pathname: string, role?: string): boolean {
+  const route = ADMIN_NAV_ITEMS
+    .filter((item) => pathname === item.href ||
+      (item.href !== "/admin" && pathname.startsWith(`${item.href}/`)))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  return route?.roles.some((allowed) => allowed === role) ?? false;
+}
+
 /**
  * Whether the given role may manage (write) users. Lecturers have read-only
  * access to user management; admins and managers can edit / delete /

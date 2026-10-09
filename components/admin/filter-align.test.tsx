@@ -45,7 +45,7 @@ function expectUniformRow(ids: string[]) {
     expect(control?.className).toMatch(/\bh-11\b/);
     expect(control?.className).not.toMatch(/\bh-12\b/);
     // Same label metrics, so the labels sit on one baseline.
-    expect(label?.className).toBe(LABEL_CLASS);
+    expect(label).toHaveClass(...LABEL_CLASS.split(" "));
   }
 }
 

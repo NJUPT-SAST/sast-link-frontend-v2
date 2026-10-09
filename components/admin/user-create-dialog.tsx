@@ -11,7 +11,7 @@ import {
   adminCreateUserSchema,
   type AdminCreateUserFormValues,
 } from "@/lib/validations/admin";
-import { ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
+import { ADMIN_ROLE_LABELS as ROLE_LABELS, ADMIN_STATE_LABELS as STATE_LABELS } from "@/lib/constants/admin";
 import { scrollToFirstError } from "@/lib/form";
 import { toApiError } from "@/lib/api/errors";
 import { message } from "@/lib/message";
@@ -92,14 +92,12 @@ export function UserCreateDialog({ open, onOpenChange, onCreate, viewerRole = "a
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AdminCreateUserData | null>(null);
   const [copied, setCopied] = useState(false);
-  // Bumped on every close so an in-flight create that settles after the dialog
-  // was closed discards its result/error instead of leaking into the next open.
-  const submitIdRef = useRef(0);
+  const submittingRef = useRef(false);
 
   const reset = () => {
-    submitIdRef.current += 1;
     form.reset(createEmptyValues());
     setResult(null);
+    setCopied(false);
     setLoading(false);
   };
 
@@ -126,21 +124,21 @@ export function UserCreateDialog({ open, onOpenChange, onCreate, viewerRole = "a
   };
 
   const handleValid = async (values: AdminCreateUserFormValues) => {
-    const submitId = submitIdRef.current;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     try {
       const created = await onCreate(toRequest(values));
-      if (submitId !== submitIdRef.current) return; // closed mid-flight — discard
       setResult(created);
       form.clearErrors("root");
     } catch (error) {
-      if (submitId !== submitIdRef.current) return;
       // Server-side failures (duplicate login_email / student_id / bound
       // personal email) render in the form's root instead of a toast, matching
       // the edit form.
       form.setError("root", { message: toApiError(error).message });
     } finally {
-      if (submitId === submitIdRef.current) setLoading(false);
+      submittingRef.current = false;
+      setLoading(false);
     }
   };
 
@@ -169,18 +167,22 @@ export function UserCreateDialog({ open, onOpenChange, onCreate, viewerRole = "a
     }
   };
 
-  // Every close path here (我知道了 / X / overlay) flows through onOpenChange, so
-  // resetting there — not in an open-prop effect — is the single reset point,
-  // matching how the last submit's fields/result must not leak into the next open.
+  const changeOpen = (next: boolean) => {
+    // Creating the account cannot be cancelled locally: its response contains
+    // the only copy of the initial password, so keep the result reachable.
+    if (!next && submittingRef.current) return;
+    if (!next) reset();
+    onOpenChange(next);
+  };
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) reset();
-        onOpenChange(next);
-      }}
-    >
-      <DialogContent className="sm:max-w-lg">
+    <Dialog open={open} onOpenChange={changeOpen}>
+      <DialogContent
+        className="sm:max-w-lg"
+        showCloseButton={!loading}
+        onEscapeKeyDown={(event) => { if (loading) event.preventDefault(); }}
+        onInteractOutside={(event) => { if (loading) event.preventDefault(); }}
+      >
         {result ? (
           <>
             <DialogHeader>
@@ -218,7 +220,7 @@ export function UserCreateDialog({ open, onOpenChange, onCreate, viewerRole = "a
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" onClick={() => onOpenChange(false)} className="w-full">
+              <Button type="button" onClick={() => changeOpen(false)} className="w-full">
                 我知道了
               </Button>
             </DialogFooter>
@@ -420,8 +422,9 @@ export function UserCreateDialog({ open, onOpenChange, onCreate, viewerRole = "a
                   )}
                 />
                 <FormError message={form.formState.errors.root?.message} />
+                {loading && <p role="status" className="text-sm text-muted-foreground">正在创建账号，请稍候…</p>}
                 <DialogFooter className="gap-2">
-                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+                  <Button type="button" variant="outline" onClick={() => changeOpen(false)} disabled={loading}>
                     取消
                   </Button>
                   <Button type="submit" disabled={loading}>

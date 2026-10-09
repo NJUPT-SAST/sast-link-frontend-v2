@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -11,10 +11,10 @@ import { updateUserProfile } from "@/lib/api/user";
 import { toApiError } from "@/lib/api/errors";
 import { mapProfile } from "@/lib/api/mappers";
 import { profileKey } from "@/lib/api/profile";
-import { COLLEGES, type UpdateProfileRequest } from "@/lib/api/types";
+import { COLLEGES, type UpdateProfileRequest, type UserProfileType } from "@/lib/api/types";
 import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
 import { avatarFallbackChar, DEFAULT_AVATAR } from "@/lib/constants/profile";
-import { useUserProfileStore } from "@/store/use-user-profile-store";
+import { useUserProfileStore, type ProfileDraft } from "@/store/use-user-profile-store";
 import { useAvatarUpload } from "@/hooks/use-avatar-upload";
 import { useDepartmentOptions } from "@/hooks/use-departments";
 import { message } from "@/lib/message";
@@ -40,7 +40,7 @@ import {
 const selectClass =
   "h-12 w-full rounded-lg border border-input bg-card px-3.5 text-base focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/25";
 
-const FIELD_ORDER = [
+const FIELD_ORDER: (keyof ProfileDraft)[] = [
   "nickname",
   "name",
   "intro",
@@ -100,6 +100,21 @@ const stripUrlScheme = (value: string) => value.replace(/^https?:\/\//i, "");
 const withHttpsScheme = (value: string) =>
   value === "" || /^https?:\/\//i.test(value) ? value : `https://${value}`;
 
+function toFormValues(profile: UserProfileType): ProfileEditFormValues {
+  return {
+    nickname: profile.nickname,
+    name: profile.name,
+    intro: profile.intro ?? "",
+    phoneNumber: profile.phoneNumber ?? "",
+    qqNumber: profile.qqNumber ?? "",
+    college: profile.college ?? "",
+    major: profile.major ?? "",
+    department: profile.department ?? "",
+    blogUrl: stripUrlScheme(profile.blogUrl ?? ""),
+    githubUrl: stripUrlScheme(profile.githubUrl ?? ""),
+  };
+}
+
 function toUpdateRequest(
   values: ProfileEditFormValues,
   canEditDepartment: boolean,
@@ -127,10 +142,17 @@ function toUpdateRequest(
 
 export default function EditPage() {
   const profile = useUserProfileStore((s) => s.profile);
+  return <ProfileEditor key={profile.id} profile={profile} />;
+}
+
+function ProfileEditor({ profile }: { profile: UserProfileType }) {
   const setProfile = useUserProfileStore((s) => s.setProfile);
+  const setProfileDraft = useUserProfileStore((s) => s.setProfileDraft);
   const { mutate } = useSWRConfig();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const saving = useRef(false);
+  const mounted = useRef(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const handleAvatarUploaded = useAvatarUpload();
   const departmentOptions = useDepartmentOptions();
@@ -142,50 +164,50 @@ export default function EditPage() {
 
   const form = useForm<ProfileEditFormValues>({
     resolver: zodResolver(profileEditSchema),
-    defaultValues: {
-      nickname: profile.nickname,
-      name: profile.name,
-      intro: profile.intro ?? "",
-      phoneNumber: profile.phoneNumber ?? "",
-      qqNumber: profile.qqNumber ?? "",
-      college: profile.college ?? "",
-      major: profile.major ?? "",
-      department: profile.department ?? "",
-      blogUrl: stripUrlScheme(profile.blogUrl ?? ""),
-      githubUrl: stripUrlScheme(profile.githubUrl ?? ""),
-    },
+    defaultValues: toFormValues(profile),
+    disabled: loading || profile.id === 0,
   });
   const guard = useDirtyGuard(form.formState.isDirty);
 
-  // profile loads async after mount - reseed the form once it arrives so a
-  // direct visit/refresh to /profile/edit isn't stuck on empty defaults.
-  // keepDirtyValues prevents a background SWR revalidation from overwriting
-  // edits the user is currently making.
   useEffect(() => {
-    if (profile.id === 0) return;
-    form.reset(
-      {
-        nickname: profile.nickname,
-        name: profile.name,
-        intro: profile.intro ?? "",
-        phoneNumber: profile.phoneNumber ?? "",
-        qqNumber: profile.qqNumber ?? "",
-        college: profile.college ?? "",
-        major: profile.major ?? "",
-        department: profile.department ?? "",
-        blogUrl: stripUrlScheme(profile.blogUrl ?? ""),
-        githubUrl: stripUrlScheme(profile.githubUrl ?? ""),
-      },
-      { keepDirtyValues: true },
-    );
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  // Drafts contain only edited fields. Refresh untouched values from the server,
+  // then restore edits against that baseline so dirty tracking remains accurate.
+  useEffect(() => {
+    const defaults = toFormValues(profile);
+    const draft = useUserProfileStore.getState().profileDraft;
+    form.reset(defaults);
+    if (draft) form.reset({ ...defaults, ...draft }, { keepDefaultValues: true });
   }, [profile, form]);
 
+  const preserveDraft = () => {
+    const values = form.getValues();
+    const defaults = toFormValues(profile);
+    const draft = Object.fromEntries(
+      FIELD_ORDER.filter((name) => values[name] !== defaults[name])
+        .map((name) => [name, values[name]]),
+    ) as ProfileDraft;
+    setProfileDraft(profile.id, Object.keys(draft).length ? draft : null);
+  };
+
+  const discardDraft = () => {
+    setProfileDraft(profile.id, null);
+    form.reset(toFormValues(profile));
+  };
+
   const onValid = async (values: ProfileEditFormValues) => {
+    if (saving.current || profile.id === 0) return;
+    saving.current = true;
     setLoading(true);
     try {
       const response = await updateUserProfile(
         toUpdateRequest(values, canEditDepartment),
       );
+      if (!mounted.current || useUserProfileStore.getState().profile.id !== profile.id) return;
+      setProfileDraft(profile.id, null);
       setProfile(mapProfile(response.data.data.user));
       const key = profileKey();
       if (key) mutate(key);
@@ -195,9 +217,10 @@ export default function EditPage() {
       message.success("修改成功");
       router.push("/profile");
     } catch (error) {
-      form.setError("root", { message: toApiError(error).message });
+      if (mounted.current) form.setError("root", { message: toApiError(error).message });
     } finally {
-      setLoading(false);
+      saving.current = false;
+      if (mounted.current) setLoading(false);
     }
   };
 
@@ -205,7 +228,9 @@ export default function EditPage() {
     scrollToFirstError(form.formState.errors, FIELD_ORDER);
   };
 
-  const submit = form.handleSubmit(onValid, onInvalid);
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    void form.handleSubmit(onValid, onInvalid)(event);
+  };
 
   const textFields = [
     { name: "nickname" as const, label: "昵称", required: true },
@@ -227,7 +252,7 @@ export default function EditPage() {
   ];
 
   return (
-    <main className="pt-transition mx-auto flex w-full max-w-[760px] flex-col gap-14 px-5 pb-20 pt-14 sm:px-8">
+    <main data-profile-editor className="pt-transition mx-auto flex w-full max-w-[760px] flex-col gap-8 sm:gap-14 px-5 pb-20 pt-6 sm:pt-14 sm:px-8">
       <Button
         variant="ghost"
         size="sm"
@@ -245,14 +270,14 @@ export default function EditPage() {
         返回
       </Button>
 
-      <section aria-label="头像" className="flex flex-col items-start gap-4">
+      <section aria-label="头像" className="flex items-center gap-4 sm:flex-col sm:items-start">
         <button
           type="button"
           onClick={() => setAvatarOpen(true)}
           aria-label="更换头像"
           className="group relative rounded-full transition-transform hover:scale-[1.02] active:scale-[.98]"
         >
-          <Avatar className="size-24 border border-foreground">
+          <Avatar className="size-16 border border-foreground sm:size-24">
             <AvatarImage src={profile.avatar ?? DEFAULT_AVATAR} alt={profile.nickname} />
             <AvatarFallback className="text-3xl">{avatarFallbackChar(profile)}</AvatarFallback>
           </Avatar>
@@ -264,7 +289,7 @@ export default function EditPage() {
       </section>
 
       <Form {...form}>
-        <form onSubmit={submit} noValidate className="flex flex-col gap-14">
+        <form data-profile-form onSubmit={submit} onChange={preserveDraft} noValidate className="flex flex-col gap-8 sm:gap-14">
           {/* Basic info */}
           <section aria-label="基本资料">
             <h2 className="type-tech mb-3 text-tertiary">基本资料</h2>
@@ -328,13 +353,14 @@ export default function EditPage() {
                       学院
                     </label>
                     <Select id="college" {...field} className={selectClass}>
-                      <option value="">未选择</option>
+                      <option value="" disabled={!!profile.college}>未选择</option>
                       {COLLEGES.map((c) => (
                         <option key={c} value={c}>
                           {c}
                         </option>
                       ))}
                     </Select>
+                    {profile.college && <p className="text-xs text-tertiary">已设置的学院可更换，不能清空。</p>}
                     <div className="min-h-4 text-xs [&_p]:text-destructive">
                       <FormMessage />
                     </div>
@@ -465,10 +491,22 @@ export default function EditPage() {
 
           <FormError message={form.formState.errors.root?.message} />
 
-          <div>
-            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-              {loading ? <DotLoading /> : "保存修改"}
-            </Button>
+          <div className="sticky bottom-0 z-10 flex flex-col gap-3 border-t border-hairline bg-background py-4 sm:static sm:border-0">
+            {form.formState.isDirty && (
+              <p role="status" className="text-sm text-muted-foreground">
+                有未保存的修改，暂时离开此页面后可继续编辑。刷新或关闭页面前请先保存。
+              </p>
+            )}
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button type="submit" disabled={loading || profile.id === 0} className="w-full sm:w-auto">
+                {loading ? <DotLoading /> : "保存修改"}
+              </Button>
+              {form.formState.isDirty && (
+                <Button type="button" variant="ghost" disabled={loading} onClick={discardDraft}>
+                  放弃修改
+                </Button>
+              )}
+            </div>
           </div>
         </form>
       </Form>

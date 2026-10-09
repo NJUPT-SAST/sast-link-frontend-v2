@@ -143,30 +143,38 @@ describe("UserCreateDialog", () => {
     expect(screen.getByRole("button", { name: "创建账号" })).toBeInTheDocument();
   });
 
-  it("discards a create that settles after the dialog was closed mid-flight", async () => {
+  it("keeps a pending create open until its one-time password is available", async () => {
     let resolveCreate!: (data: AdminCreateUserData) => void;
-    const onCreate = jest.fn(
-      () =>
-        new Promise<AdminCreateUserData>((resolve) => {
-          resolveCreate = resolve;
-        }),
-    );
+    const onCreate = jest.fn(() => new Promise<AdminCreateUserData>((resolve) => {
+      resolveCreate = resolve;
+    }));
     render(<Harness onCreate={onCreate} />);
     fillRequiredFields();
     fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
-    await waitFor(() => expect(onCreate).toHaveBeenCalled());
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "关闭" })).not.toBeInTheDocument();
+    await act(async () => { resolveCreate(created); });
+    expect(await screen.findByDisplayValue(created.initial_password)).toBeInTheDocument();
+  });
 
-    // Close (X → onOpenChange(false) → reset) while the create is still in-flight.
-    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
-    // The late success must be discarded, not landed onto the closed dialog.
-    await act(async () => {
-      resolveCreate(created);
-    });
-
-    // Reopen must show a fresh form — never the previous user's success screen.
+  it("starts a fresh creation after acknowledging the previous result", async () => {
+    render(<Harness onCreate={jest.fn().mockResolvedValue(created)} />);
+    fillRequiredFields();
+    fireEvent.click(screen.getByRole("button", { name: "创建账号" }));
+    fireEvent.click(await screen.findByRole("button", { name: "我知道了" }));
     fireEvent.click(screen.getByRole("button", { name: "reopen" }));
-    expect(await screen.findByRole("heading", { name: "创建账号" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "创建成功" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "创建账号" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "姓名" })).toHaveValue("");
     expect(screen.queryByDisplayValue(created.initial_password)).not.toBeInTheDocument();
+  });
+
+  it("discards a cancelled form through the same close path", () => {
+    render(<Harness onCreate={jest.fn()} />);
+    fillRequiredFields();
+    fireEvent.click(screen.getByRole("button", { name: "取消" }));
+    fireEvent.click(screen.getByRole("button", { name: "reopen" }));
+    expect(screen.getByRole("textbox", { name: "姓名" })).toHaveValue("");
   });
 });

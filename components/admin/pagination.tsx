@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 interface PaginationProps {
+  compact?: boolean;
   page: number;
   pageSize: number;
   total: number;
@@ -19,6 +20,7 @@ interface PaginationProps {
 const DEFAULT_PAGE_SIZE_OPTIONS = [20, 50, 100];
 
 export function Pagination({
+  compact = false,
   page,
   pageSize,
   total,
@@ -56,7 +58,7 @@ export function Pagination({
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-hairline py-4">
+    <div className={cn("flex flex-wrap items-center justify-between gap-x-4 border-t border-hairline", compact ? "gap-y-2 py-2 sm:gap-y-3 sm:py-4" : "gap-y-3 py-4")}>
       <div className="flex items-center gap-3 text-sm text-tertiary">
         <span>
           {total === 0 ? "共 0 条" : `共 ${total} 条，第 ${start}-${end} 条`}

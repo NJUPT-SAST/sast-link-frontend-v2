@@ -137,3 +137,11 @@ export function formatAdminDate(iso: string | null): string {
     minute: "2-digit",
   });
 }
+
+/** Plain-language labels shared by admin forms, filters, lists and details. */
+export const ADMIN_ROLE_LABELS: Record<string, string> = {
+  freshman: "新生", member: "成员", lecturer: "讲师", manager: "部长", admin: "管理员",
+};
+export const ADMIN_STATE_LABELS: Record<string, string> = {
+  njupter: "在校学生", on_sast: "SAST 成员", retired_sast: "已退休", is_deleted: "已注销",
+};

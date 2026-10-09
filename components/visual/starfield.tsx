@@ -1,5 +1,7 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+
 import { useEffect, useRef } from "react";
 
 import { generateStars, drawStars, type Star } from "@/lib/visual/starfield";
@@ -22,6 +24,8 @@ export function isLowEndDevice(): boolean {
  *  layers, white on dark / black on light. reduced-motion renders a single
  *  static frame with no listeners. */
 export function Starfield() {
+  const pathname = usePathname();
+  const immersive = pathname === "/" || pathname === "/home";
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -120,6 +124,7 @@ export function Starfield() {
       ref={canvasRef}
       aria-hidden="true"
       data-testid="starfield"
+      style={{ opacity: immersive ? 1 : 0.2 }}
       className="pointer-events-none fixed inset-0 -z-10"
     />
   );

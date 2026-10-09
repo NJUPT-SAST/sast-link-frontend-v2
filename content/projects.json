@@ -13,5 +13,9 @@
     "name": "SAST Link",
     "github_url": "https://github.com/NJUPT-SAST/sast-link-frontend-v2",
     "url": "https://link.sast.fun/"
+  },
+  {
+    "name": "SAST Shop",
+    "github_url": "https://github.com/NJUPT-SAST/sast-shop-v2"
   }
 ]

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { ROLE_LABELS, STATE_LABELS } from "@/lib/constants/profile";
+import { ADMIN_ROLE_LABELS as ROLE_LABELS, ADMIN_STATE_LABELS as STATE_LABELS } from "@/lib/constants/admin";
 import { useDepartmentOptions } from "@/hooks/use-departments";
 import type { Department } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";

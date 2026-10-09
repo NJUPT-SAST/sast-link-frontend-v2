@@ -1,9 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 
 import { TopBar } from "./top-bar";
 
 const mockPathname = jest.fn();
 const mockRole = jest.fn();
+const mockScrollDirection = jest.fn();
+jest.mock("@/hooks/use-scroll-direction", () => ({ useScrollDirection: () => mockScrollDirection() }));
 
 jest.mock("@/components/layout/theme-toggle", () => ({
   ThemeToggle: () => <button aria-label="主题模式" />,
@@ -69,4 +71,34 @@ describe("TopBar", () => {
     render(<TopBar />);
     expect(screen.getByRole("link", { name: "返回首页" })).toHaveAttribute("href", "/home");
   });
+});
+
+it("reveals a hidden header immediately while keyboard focus is inside", () => {
+  mockScrollDirection.mockReturnValue("down");
+  mockPathname.mockReturnValue("/profile/edit");
+  render(<TopBar />);
+  const header = screen.getByRole("banner");
+  expect(header).toHaveStyle({ transform: "translateY(-100%)" });
+  const home = screen.getByRole("link", { name: "返回首页" });
+  fireEvent.focus(home);
+  expect(header).toHaveStyle({ transform: "translateY(0)" });
+  expect(header.style.transitionDuration).toBe("0ms");
+  fireEvent.blur(home, { relatedTarget: screen.getByRole("link", { name: "设置" }) });
+  expect(header).toHaveStyle({ transform: "translateY(0)" });
+  fireEvent.blur(home, { relatedTarget: document.body });
+  expect(header).toHaveStyle({ transform: "translateY(-100%)" });
+});
+
+it("uses icon-only navigation while preserving accessible names and touch targets", () => {
+  mockRole.mockReturnValue("admin");
+  mockPathname.mockReturnValue("/settings");
+  mockScrollDirection.mockReturnValue("up");
+  render(<TopBar />);
+  for (const name of ["个人资料", "管理面板", "设置"]) {
+    const link = screen.getByRole("link", { name });
+    expect(link.textContent).toBe("");
+    expect(link.querySelector("svg")).toBeInTheDocument();
+    expect(link).toHaveClass("size-11", "items-center", "justify-center");
+  }
+  expect(screen.getByRole("button", { name: "主题模式" })).toBeInTheDocument();
 });

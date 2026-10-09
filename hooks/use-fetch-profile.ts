@@ -14,17 +14,20 @@ export function useFetchProfile() {
 
   const swr = useSWR(profileKey,
     async () => {
+      const requestedSession = profileKey();
       const response = await getUserProfile();
       const data = response.data.data;
       const profile = mapProfile(data);
 
-      setProfile(profile);
-      updateAccount({
-        userId: profile.id,
-        name: profile.nickname,
-        loginEmail: data.login_email,
-        avatar: profile.avatar,
-      });
+      if (requestedSession && requestedSession === profileKey()) {
+        setProfile(profile);
+        updateAccount({
+          userId: profile.id,
+          name: profile.nickname,
+          loginEmail: data.login_email,
+          avatar: profile.avatar,
+        });
+      }
       return profile;
     },
     { revalidateOnFocus: false },

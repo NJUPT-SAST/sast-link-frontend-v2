@@ -1,4 +1,22 @@
-import { canManageUsers, canWriteTargetUser } from "./permissions";
+import { canAccessAdminPath, canManageUsers, canWriteTargetUser } from "./permissions";
+
+describe("canAccessAdminPath", () => {
+  it("does not use the overview as permission for every admin subroute", () => {
+    expect(canAccessAdminPath("/admin", "manager")).toBe(true);
+    expect(canAccessAdminPath("/admin/users/edit", "manager")).toBe(true);
+    for (const path of ["/admin/oauth-clients", "/admin/audit-logs", "/admin/alumni-requests"]) {
+      expect(canAccessAdminPath(path, "manager")).toBe(false);
+      expect(canAccessAdminPath(path, "lecturer")).toBe(false);
+      expect(canAccessAdminPath(path, "admin")).toBe(true);
+    }
+  });
+  it("allows lecturer user details but no overview or unknown routes", () => {
+    expect(canAccessAdminPath("/admin/users/detail", "lecturer")).toBe(true);
+    expect(canAccessAdminPath("/admin", "lecturer")).toBe(false);
+    expect(canAccessAdminPath("/admin/unknown", "admin")).toBe(false);
+    expect(canAccessAdminPath("/admin/users-other", "manager")).toBe(false);
+  });
+});
 
 describe("canManageUsers", () => {
   it("admits admin and manager, refuses lecturer and student roles", () => {
