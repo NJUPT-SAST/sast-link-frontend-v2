@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { DotLoading } from "@/components/ui/dot-loading";
+import { NavigationGuard } from "@/components/navigation/navigation-guard";
 import { stashAuthNext } from "@/lib/auth-next";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useCompletionRedirect, useUserLayoutProfile } from "@/hooks/use-completion-redirect";
@@ -43,5 +44,5 @@ export default function UserLayout({
     );
   }
 
-  return <>{children}</>;
+  return <NavigationGuard>{children}</NavigationGuard>;
 }

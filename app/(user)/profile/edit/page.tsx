@@ -15,6 +15,7 @@ import { COLLEGES, type UpdateProfileRequest, type UserProfileType } from "@/lib
 import { DEPARTMENT_LABELS } from "@/lib/constants/admin";
 import { avatarFallbackChar, DEFAULT_AVATAR } from "@/lib/constants/profile";
 import { useUserProfileStore, type ProfileDraft } from "@/store/use-user-profile-store";
+import { useNavigationGuardStore } from "@/store/use-navigation-guard-store";
 import { useAvatarUpload } from "@/hooks/use-avatar-upload";
 import { useDepartmentOptions } from "@/hooks/use-departments";
 import { message } from "@/lib/message";
@@ -76,6 +77,15 @@ function useDirtyGuard(isDirty: boolean) {
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
+
+  // Feeds the (user) layout's SPA navigation guard. The guard state belongs to
+  // the mounted dirty page, so cleanup resets it on unmount — even on an
+  // unconfirmed exit — to keep the next page unguarded.
+  const setBlocked = useNavigationGuardStore((state) => state.setBlocked);
+  useEffect(() => {
+    setBlocked(isDirty);
+    return () => setBlocked(false);
+  }, [isDirty, setBlocked]);
 
   return (action: () => void) => {
     if (isDirty && !window.confirm("有未保存的修改，确定要离开吗？")) {

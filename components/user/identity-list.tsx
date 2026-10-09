@@ -199,6 +199,14 @@ function IdentityActions({ actionable, sessionKey }: IdentityListProps & { sessi
               ？
             </DialogDescription>
           </DialogHeader>
+          {/* Inform, don't block: the backend permits unbinding the last
+              identity whenever a login email exists, so the only frontend job
+              left is spelling out the consequence. */}
+          {identities.length === 1 && (
+            <p className="text-xs text-tertiary">
+              这是当前唯一的第三方绑定，解绑后将只能使用邮箱密码登录。
+            </p>
+          )}
           <form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); void handleUnbind(); }}>
             <AuthFormField
               label="当前密码"

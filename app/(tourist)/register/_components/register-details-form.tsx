@@ -222,6 +222,9 @@ export default function RegisterDetailsForm({
                   type="password"
                   autoComplete="new-password"
                   required
+                  // First field of the details step; the step switch remounts
+                  // this component so focus lands here.
+                  autoFocus
                   invalid={fieldState.invalid}
                   error={fieldState.error?.message}
                 />

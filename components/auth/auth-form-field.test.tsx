@@ -26,3 +26,37 @@ describe("AuthFormField password visibility", () => {
     expect(screen.queryByRole("button", { name: /密码/ })).not.toBeInTheDocument();
   });
 });
+
+describe("AuthFormField error and description semantics", () => {
+  it("links the input to a role=alert message node when an error is set", () => {
+    render(<AuthFormField id="pwd" label="密码" type="password" error="出错了" invalid />);
+
+    const input = screen.getByLabelText("密码");
+    expect(input).toHaveAttribute("aria-describedby", "pwd-message");
+    const message = document.getElementById("pwd-message");
+    expect(message).toHaveAttribute("role", "alert");
+    expect(message).toHaveTextContent("出错了");
+  });
+
+  it("lists both description and message ids in aria-describedby", () => {
+    render(
+      <AuthFormField
+        id="reset-code"
+        label="验证码"
+        description="6 位数字"
+        error="验证码错误"
+      />,
+    );
+
+    expect(screen.getByLabelText("验证码")).toHaveAttribute(
+      "aria-describedby",
+      "reset-code-description reset-code-message",
+    );
+  });
+
+  it("omits aria-describedby when there is no error or description", () => {
+    render(<AuthFormField id="plain" label="账户" />);
+
+    expect(screen.getByLabelText("账户")).not.toHaveAttribute("aria-describedby");
+  });
+});

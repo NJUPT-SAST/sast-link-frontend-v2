@@ -41,6 +41,18 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Full-height layouts use `min-h-dvh` instead of `min-h-screen` (~19 spots), so centered content no longer sits below the fold while a mobile browser's URL bar is expanded
 
 - The top bar no longer disappears under mobile elastic edges: rubber-banding (iOS pull-to-bounce, Android overscroll) reports scrollY outside the document — negative above the top, past the end below the bottom — and the bounce-back registered as a downward scroll, hiding the bar while the page sat at its top with no further scrolling to bring it back (the fixed header carries the only navigation). The scroll-direction hook now pins the bar visible whenever the reported position sits at or beyond a document boundary and clamps its bookmark so the bounce cannot leak into the next comparison; the same rewrite replaces the per-scroll listener resubscription with a ref and cancels the pending rAF on cleanup
+=======
+- Unsaved profile edits survive SPA navigation: the edit page guarded only `beforeunload` and its own back button, so a TopBar link or browser back silently dropped every unsaved change mid-edit. A layout-level navigation guard (zustand store + capture-phase link interception in the `(user)` layout) now asks for confirmation on in-app link clicks and cancels browser-back by restoring the guarded URL; the dirty page feeds the guard and resets it on unmount
+
+- The change-password and login forms no longer blame the password field for every backend failure: only 40105（密码错误） lands under the password input — network errors, rate limits and 5xx go to a form-level root error so a correct password is never "re-typed" at a server problem
+
+- Screen-reader a11y on the shared auth field: error copy is now linked to its input via generated `aria-describedby` ids and announced through `role="alert"` (descriptions link too), and each wizard step (login password, register details, reset code) autofocuses its first field so keyboard/AT users are not dropped back to the document root on step change
+
+- The doubled select arrow is gone: the global CSS background arrow and `ui/select`'s ChevronDown icon were both rendering at nearly the same spot (two implementations from one commit); the icon wins, the global block is removed, and the component keeps the old right padding
+
+### Added
+
+- Unbinding the last third-party identity now says so: the dialog warns 「这是当前唯一的第三方绑定，解绑后将只能使用邮箱密码登录。」（the backend deliberately allows it whenever a login email exists）
 
 - Cross-account SWR cache bleed on sign-in switch: the per-account cache keys (profile, identities, badge, OAuth grants) fingerprinted the session by `accessToken.slice(0, 16)`, but the backend's access tokens are EdDSA JWTs whose header bytes are identical for every account — the "fingerprint" was the constant `eyJhbGciOiJFZERT…`, so switching accounts in the same tab hit the previous account's cached data (the grants key carried no fingerprint at all). Keys now fingerprint the JWT `sub` claim (the account id, falling back to the whole token when it does not parse as a JWT), and the three session-establishment/logout legs drop the whole SWR cache so a newly signed-in account never flashes the previous one's identities, grants, or badge
 

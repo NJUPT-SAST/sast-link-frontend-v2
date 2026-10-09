@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { forwardRef, useState } from "react";
+import { forwardRef, useId, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -40,7 +40,18 @@ export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
     // even as undefined) or render their own <FormMessage /> sibling. Only the
     // former reserves height here, so the latter keeps its own single spacer.
     const ownsMessageRow = "error" in allProps;
-    const inputId = id ?? props.name;
+    // Assistive tech needs stable ids to link the input to its description and
+    // error copy, so a field without an explicit id still gets one via useId.
+    const generatedId = useId();
+    const inputId = id ?? props.name ?? generatedId;
+    const messageId = `${inputId}-message`;
+    const descriptionId = `${inputId}-description`;
+    const describedBy = [
+      description ? descriptionId : null,
+      error ? messageId : null,
+    ]
+      .filter(Boolean)
+      .join(" ");
     const isPassword = type === "password";
     const [passwordVisible, setPasswordVisible] = useState(false);
 
@@ -63,6 +74,7 @@ export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
             type={isPassword && passwordVisible ? "text" : type}
             aria-label={label}
             aria-invalid={invalid}
+            aria-describedby={describedBy || undefined}
             className={cn(
               "h-12 w-full rounded-lg border bg-card px-3.5 text-base transition-colors placeholder:text-tertiary focus-visible:outline-none",
               "[&:-webkit-autofill]:[box-shadow:inset_0_0_0_100px_var(--card)]",
@@ -100,10 +112,16 @@ export const AuthFormField = forwardRef<HTMLInputElement, AuthFormFieldProps>(
           ) : null}
         </div>
         {description ? (
-          <p className="mt-1 text-xs leading-4 text-tertiary">{description}</p>
+          <p id={descriptionId} className="mt-1 text-xs leading-4 text-tertiary">
+            {description}
+          </p>
         ) : null}
         {ownsMessageRow ? (
-          <p className="mt-1 min-h-4 text-xs text-destructive">{error ?? ""}</p>
+          // role="alert" so a message that appears after submit is announced
+          // by screen readers instead of silently appearing visually only.
+          <p id={messageId} role="alert" className="mt-1 min-h-4 text-xs text-destructive">
+            {error ?? ""}
+          </p>
         ) : null}
       </div>
     );

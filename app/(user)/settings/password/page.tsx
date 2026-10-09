@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 
 import { changePassword } from "@/lib/api/auth";
+import { CODE_PASSWORD_INVALID } from "@/lib/api/error-codes";
 import { toApiError } from "@/lib/api/errors";
 import { passwordSchema } from "@/lib/validations/auth";
 import { message } from "@/lib/message";
@@ -14,6 +15,7 @@ import { useUserListStore } from "@/store/use-user-list-store";
 import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { AuthFormField } from "@/components/auth/auth-form-field";
 import { BackButton } from "@/components/navigation/back-button";
+import { FormError } from "@/components/ui/form-error";
 import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
 
@@ -57,7 +59,15 @@ export default function SettingsPasswordPage() {
       message.success("密码已修改，请重新登录");
       router.replace("/login");
     } catch (error) {
-      setError("oldPassword", { message: toApiError(error).message });
+      const apiError = toApiError(error);
+      // Only a rejected current password belongs under its field; network
+      // failures, rate limits and 5xx are not "wrong password" and must not
+      // send the user re-typing a password that was correct.
+      if (apiError.code === CODE_PASSWORD_INVALID) {
+        setError("oldPassword", { message: apiError.message });
+      } else {
+        setError("root", { message: apiError.message });
+      }
     } finally {
       setLoading(false);
     }
@@ -99,6 +109,7 @@ export default function SettingsPasswordPage() {
             invalid={!!errors.confirmPassword}
             error={errors.confirmPassword?.message}
           />
+          <FormError message={errors.root?.message} />
           <div>
             <Button type="submit" disabled={loading}>
               {loading ? <DotLoading /> : "更新密码"}
