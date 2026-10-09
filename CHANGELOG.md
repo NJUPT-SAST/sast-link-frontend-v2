@@ -24,6 +24,8 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Fixed
 
+- The admin user list's 关键词 box sits back on the row's baseline: its label uses `sr-only xl:not-sr-only`, and Tailwind's `not-sr-only` reset (`margin: 0`) lands later in the stylesheet than any margin utility — the shared 6px label gap (`mb-1.5`) was silently overridden at xl, lifting the keyword input 6px above 角色/状态/部门/资料状态. The gap now lives on the input (`xl:mt-1.5`), where no utility-order reset can eat it; the alignment test asserts the applied contract instead of the overridden class
+
 - Follow-up role audit (F17, G01, G02): inactive project links are removed from the Tab order and focused carousel controls keep autoplay paused; keyboard focus immediately reveals the auto-hiding top bar; OAuth client registration keeps the pending dialog open, preserves failed form input for retry, and requires explicit acknowledgement of a one-time secret before dismissal.
 - Admin role/state labels now use consistent Chinese wording. The mobile user directory combines filter actions into a compact row, and short landscape profile editors reduce avatar/header spacing so the first field is visible without scrolling.
 
