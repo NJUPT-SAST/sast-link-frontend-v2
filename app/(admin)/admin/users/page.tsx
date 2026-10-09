@@ -205,7 +205,7 @@ function AdminUsersContent() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 sm:gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="type-title2">用户管理</h1>
@@ -243,6 +243,8 @@ function AdminUsersContent() {
 
       {!isLoading && !error && data && (
         <>
+          <div className="flex flex-col gap-2 sm:gap-4">
+          <div className="order-2 xl:order-1">
           <UserList
             users={data.users}
             loading={mutationLoading}
@@ -253,7 +255,10 @@ function AdminUsersContent() {
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
           />
+          </div>
+          <div className="order-1 xl:order-2">
           <Pagination
+            compact
             page={data.page}
             pageSize={data.page_size}
             total={data.total}
@@ -261,6 +266,8 @@ function AdminUsersContent() {
             onPageSizeChange={handlePageSizeChange}
             pageSizeOptions={PAGE_SIZE_OPTIONS}
           />
+          </div>
+          </div>
         </>
       )}
 

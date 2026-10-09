@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSWRConfig } from "swr";
 
 import type {
@@ -41,6 +41,8 @@ export default function AdminOAuthClientsPage() {
   // in the same frame would fire twice (a second rotate returns a second, now
   // invalid secret). Ref guard makes repeat confirms no-ops.
   const mutatingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const formBusy = submitting || mutationLoading;
   const [secretDialog, setSecretDialog] = useState<{
     open: boolean;
     name: string;
@@ -54,25 +56,35 @@ export default function AdminOAuthClientsPage() {
   });
 
   const handleSubmit = async (data: AdminCreateOAuthClientRequest | AdminUpdateOAuthClientRequest) => {
-    if (editingClient) {
-      const updateData = data as AdminUpdateOAuthClientRequest;
-      if (Object.keys(updateData).length === 0) {
-        // Nothing actually changed — the backend rejects an empty payload with a
-        // 400, so just close instead of showing a confusing error.
+    if (mutatingRef.current) return;
+    mutatingRef.current = true;
+    setSubmitting(true);
+    try {
+      if (editingClient) {
+        const updateData = data as AdminUpdateOAuthClientRequest;
+        if (Object.keys(updateData).length === 0) {
+          // Nothing actually changed — the backend rejects an empty payload with a
+          // 400, so just close instead of showing a confusing error.
+          setEditingClient(undefined);
+          setFormOpen(false);
+          return;
+        }
+        await updateOAuthClient(editingClient.id, updateData);
         setEditingClient(undefined);
         setFormOpen(false);
-        return;
+      } else {
+        const createData = data as AdminCreateOAuthClientRequest;
+        const secret = await createOAuthClient(createData);
+        setFormOpen(false);
+        if (secret) {
+          setSecretDialog({ open: true, name: createData.client_name, secret, mode: "create" });
+        }
       }
-      await updateOAuthClient(editingClient.id, updateData);
-      setEditingClient(undefined);
-      setFormOpen(false);
-    } else {
-      const createData = data as AdminCreateOAuthClientRequest;
-      const secret = await createOAuthClient(createData);
-      setFormOpen(false);
-      if (secret) {
-        setSecretDialog({ open: true, name: createData.client_name, secret, mode: "create" });
-      }
+    } catch {
+      // The mutation hook displays the error; retain the form for an explicit retry.
+    } finally {
+      mutatingRef.current = false;
+      setSubmitting(false);
     }
   };
 
@@ -133,6 +145,7 @@ export default function AdminOAuthClientsPage() {
   };
 
   const handleOpenChange = (open: boolean) => {
+    if (mutatingRef.current || formBusy) return;
     setFormOpen(open);
     if (!open) {
       // Let the dialog finish its close animation before the form's `client`
@@ -140,6 +153,16 @@ export default function AdminOAuthClientsPage() {
       window.setTimeout(() => setEditingClient(undefined), 250);
     }
   };
+
+  useEffect(() => {
+    if (!formBusy && !secretDialog.open) return;
+    const preventUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", preventUnload);
+    return () => window.removeEventListener("beforeunload", preventUnload);
+  }, [formBusy, secretDialog.open]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -169,18 +192,25 @@ export default function AdminOAuthClientsPage() {
       )}
 
       <Dialog open={formOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[560px]">
+        <DialogContent
+          className="max-h-[85vh] overflow-y-auto sm:max-w-[560px]"
+          showCloseButton={!formBusy}
+          onEscapeKeyDown={(event) => { if (mutatingRef.current || formBusy) event.preventDefault(); }}
+          onInteractOutside={(event) => { if (mutatingRef.current || formBusy) event.preventDefault(); }}
+          aria-busy={formBusy}
+        >
           <DialogHeader>
             <DialogTitle className="type-title3">
               {editingClient ? "编辑客户端" : "注册客户端"}
             </DialogTitle>
           </DialogHeader>
+          {formBusy && <p role="status" className="text-sm text-muted-foreground">正在提交，请等待结果后再离开；客户端密钥仅显示一次。</p>}
           <OAuthClientForm
             key={editingClient?.id ?? "create"}
             mode={editingClient ? "edit" : "create"}
             client={editingClient}
             onSubmit={handleSubmit}
-            loading={mutationLoading}
+            loading={formBusy}
             onRotateSecret={handleRotateSecret}
           />
         </DialogContent>
@@ -241,7 +271,7 @@ export default function AdminOAuthClientsPage() {
 
       <OAuthClientSecretDialog
         open={secretDialog.open}
-        onOpenChange={(open) => setSecretDialog((prev) => ({ ...prev, open }))}
+        onOpenChange={(open) => setSecretDialog((prev) => ({ ...prev, open, secret: open ? prev.secret : "" }))}
         clientName={secretDialog.name}
         clientSecret={secretDialog.secret}
         mode={secretDialog.mode}

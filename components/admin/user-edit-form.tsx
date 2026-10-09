@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { useUserProfileStore } from "@/store/use-user-profile-store";
+import { useAdminUserDraftStore } from "@/store/use-admin-user-draft-store";
 
 import type { AdminUpdateUserRequest, UserProfileData } from "@/lib/api/types";
 import { COLLEGES } from "@/lib/api/types";
@@ -128,13 +130,19 @@ interface UserEditFormProps {
   cancelFallback?: string;
 }
 
-export function UserEditForm({
+export function UserEditForm(props: UserEditFormProps) {
+  const viewerId = useUserProfileStore((state) => state.profile.id);
+  return <UserEditor key={`${viewerId}:${props.user.id}`} {...props} viewerId={viewerId} />;
+}
+
+function UserEditor({
   user,
   onSubmit,
   loading = false,
   viewerRole = "admin",
   cancelFallback = "/admin/users",
-}: UserEditFormProps) {
+  viewerId,
+}: UserEditFormProps & { viewerId: number }) {
   const router = useRouter();
   const departmentOptions = useDepartmentOptions();
   const form = useForm<AdminUpdateUserFormValues>({
@@ -143,12 +151,39 @@ export function UserEditForm({
   });
 
   useEffect(() => {
-    form.reset(toFormValues(user), { keepDirtyValues: true });
-  }, [user, form]);
+    const defaults = toFormValues(user);
+    const draft = useAdminUserDraftStore.getState().getDraft(viewerId, user.id);
+    form.reset(defaults);
+    if (draft) form.reset({ ...defaults, ...draft }, { keepDefaultValues: true });
+  }, [user, viewerId, form]);
+
+  useEffect(() => {
+    if (!form.formState.isDirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [form.formState.isDirty]);
+
+  const clearDraft = () => useAdminUserDraftStore.getState().setDraft(viewerId, user.id, null);
+  const preserveDraft = () => {
+    const values = form.getValues();
+    const defaults = toFormValues(user);
+    const draft = Object.fromEntries(
+      (Object.keys(defaults) as (keyof AdminUpdateUserFormValues)[])
+        .filter((key) => values[key] !== defaults[key])
+        .map((key) => [key, values[key]]),
+    );
+    useAdminUserDraftStore.getState().setDraft(viewerId, user.id, draft);
+  };
 
   const handleValid = async (values: AdminUpdateUserFormValues) => {
     try {
       await onSubmit(toRequest(values, viewerRole));
+      clearDraft();
+      form.reset(values);
     } catch (error) {
       // Server-side failures (e.g. a login_email already bound to another
       // account) render in the form's root <FormError /> instead of a toast,
@@ -190,7 +225,12 @@ export function UserEditForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={submit} className="flex max-w-[640px] flex-col gap-6">
+      <form onSubmit={submit} onChange={preserveDraft} className="flex max-w-[640px] flex-col gap-6">
+        {form.formState.isDirty && (
+          <p role="status" className="text-sm text-muted-foreground">
+            有未保存的修改，离开页面后可返回继续编辑。刷新或关闭页面会丢失草稿。
+          </p>
+        )}
         <section aria-label="基本信息">
           <h2 className="type-tech mb-3 text-tertiary">基本信息</h2>
           <div className="flex flex-col gap-4">
@@ -434,6 +474,9 @@ export function UserEditForm({
             type="button"
             variant="outline"
             onClick={() => {
+              if (form.formState.isDirty && !window.confirm("确定放弃未保存的修改吗？")) return;
+              clearDraft();
+              form.reset(toFormValues(user));
               // Direct visits have no history to go back to; fall back to the list
               // instead of leaving the site.
               if (window.history.length > 1) router.back();

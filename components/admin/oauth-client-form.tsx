@@ -72,8 +72,8 @@ const SCOPE_OPTIONS = [
 }>;
 
 const CLIENT_TYPE_OPTIONS = [
-  { value: "first_party", label: "first_party" },
-  { value: "third_party", label: "third_party" },
+  { value: "first_party", label: "内部应用（first_party）" },
+  { value: "third_party", label: "第三方应用（third_party）" },
 ] as const;
 
 const selectClass =

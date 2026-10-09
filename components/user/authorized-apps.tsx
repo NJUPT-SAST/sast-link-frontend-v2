@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 
 import { getGrants, revokeGrant, type OAuthGrant } from "@/lib/api/oauth";
 import { toApiError } from "@/lib/api/errors";
-import { sessionAccountKey } from "@/lib/api/session-keys";
+import { accountKey } from "@/lib/api/profile";
 import { message } from "@/lib/message";
 import { describeOAuthScopes } from "@/lib/constants/oauth";
 import { CLIENT_TYPE_LABELS } from "@/lib/constants/admin";
-import { getSession } from "@/lib/token";
 import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
+import { AccountLoadError } from "@/components/user/account-load-error";
 import {
   Dialog,
   DialogContent,
@@ -33,16 +33,13 @@ function Field({ label, value }: { label: string; value?: string }) {
 /** "已授权应用" — the applications the user signed into via SAST Link's OAuth,
  *  with a detail view and a one-tap revoke. */
 export function AuthorizedApps() {
-  // Function key gated on the session (null → no fetch), fingerprinted by the
-  // JWT sub (account id) so switching accounts invalidates the previous
-  // account's grant list instead of flashing it.
-  const { data, mutate } = useSWR(
-    () => {
-      const session = getSession();
-      if (!session) return null;
-      return `user:oauth:grants:${sessionAccountKey(session)}`;
-    },
-    () => getGrants().then((r) => r.data.data.grants),
+  const sessionKey = accountKey("user:oauth:grants");
+  return <AccountAuthorizedApps key={sessionKey} sessionKey={sessionKey} />;
+}
+
+function AccountAuthorizedApps({ sessionKey }: { sessionKey: string | null }) {
+  const { data, error, isValidating, mutate } = useSWR(sessionKey, () =>
+    getGrants().then((r) => r.data.data.grants),
   );
   const [detail, setDetail] = useState<OAuthGrant | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<{
@@ -50,29 +47,46 @@ export function AuthorizedApps() {
     name: string;
   } | null>(null);
   const [revokingId, setRevokingId] = useState<number | null>(null);
-  const grants = data ?? [];
+  const busy = useRef(false);
+  const mounted = useRef(false);
+  const detailOpener = useRef<HTMLButtonElement | null>(null);
+  const confirmOpener = useRef<HTMLButtonElement | null>(null);
+  const list = useRef<HTMLDivElement>(null);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+
+  const restoreFocus = (opener: HTMLButtonElement | null) => {
+    if (opener?.isConnected && !opener.disabled) opener.focus();
+    else list.current?.focus();
+  };
 
   const revoke = async (clientId: number, name: string) => {
+    if (busy.current) return;
+    busy.current = true;
     setRevokingId(clientId);
+    const current = () => mounted.current && sessionKey === accountKey("user:oauth:grants");
     try {
       await revokeGrant(clientId);
+      if (!current()) return;
       message.success(`已撤销 ${name} 的授权`);
+      setConfirmTarget(null);
       setDetail(null);
-      mutate();
+      void mutate((grants) => grants?.filter((grant) => grant.client_id !== clientId));
     } catch (error) {
-      message.error(toApiError(error).message);
+      if (current()) message.error(toApiError(error).message);
     } finally {
-      setRevokingId(null);
+      busy.current = false;
+      if (current()) setRevokingId(null);
     }
   };
 
   return (
-    <div className="border-t border-hairline">
-      {grants.length === 0 ? (
+    <div ref={list} tabIndex={-1} className="border-t border-hairline">
+      {error && <AccountLoadError title="已授权应用加载失败" error={error} retrying={isValidating} onRetry={mutate} />}
+      {!sessionKey ? <p role="status" className="py-4 text-sm text-muted-foreground">请先登录后查看已授权应用</p> : data === undefined ? (!error && <p role="status" className="py-4 text-sm text-muted-foreground">正在加载已授权应用…</p>) : data.length === 0 ? (
         <p className="py-4 text-sm text-muted-foreground">你还没有授权任何应用</p>
       ) : (
         <ul>
-          {grants.map((grant) => (
+          {data.map((grant) => (
             <li
               key={grant.client_id}
               className="flex items-center justify-between gap-4 border-b border-hairline py-3 text-sm last:border-b-0"
@@ -84,18 +98,19 @@ export function AuthorizedApps() {
                 </div>
               </div>
               <div className="flex shrink-0 gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setDetail(grant)}>
+                <Button variant="ghost" size="sm" onClick={(event) => { detailOpener.current = event.currentTarget; setDetail(grant); }}>
                   查看
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
+                  onClick={(event) => {
+                    confirmOpener.current = event.currentTarget;
                     setConfirmTarget({
                       clientId: grant.client_id,
                       name: grant.client_name,
-                    })
-                  }
+                    });
+                  }}
                   disabled={revokingId === grant.client_id}
                 >
                   {revokingId === grant.client_id ? <DotLoading /> : "撤销授权"}
@@ -107,7 +122,8 @@ export function AuthorizedApps() {
       )}
 
       <Dialog open={detail !== null} onOpenChange={(open) => { if (!open) setDetail(null); }}>
-        <DialogContent aria-describedby={undefined} className="border-border/60 bg-card/95 sm:max-w-md">
+        <DialogContent aria-describedby={undefined} className="border-border/60 bg-card/95 sm:max-w-md"
+          onCloseAutoFocus={(event) => { event.preventDefault(); restoreFocus(detailOpener.current); }}>
           <DialogHeader>
             <DialogTitle className="type-title3">{detail?.client_name}</DialogTitle>
           </DialogHeader>
@@ -138,12 +154,13 @@ export function AuthorizedApps() {
             </Button>
             {detail && (
               <Button
-                onClick={() =>
+                onClick={(event) => {
+                  confirmOpener.current = event.currentTarget;
                   setConfirmTarget({
                     clientId: detail.client_id,
                     name: detail.client_name,
-                  })
-                }
+                  });
+                }}
                 disabled={revokingId === detail.client_id}
               >
                 {revokingId === detail.client_id ? <DotLoading /> : "撤销授权"}
@@ -157,10 +174,11 @@ export function AuthorizedApps() {
       <Dialog
         open={confirmTarget !== null}
         onOpenChange={(open) => {
-          if (!open) setConfirmTarget(null);
+          if (!open && !busy.current) setConfirmTarget(null);
         }}
       >
-        <DialogContent className="border-border/60 bg-card/95 sm:max-w-md">
+        <DialogContent className="border-border/60 bg-card/95 sm:max-w-md" showCloseButton={revokingId === null}
+          onCloseAutoFocus={(event) => { event.preventDefault(); restoreFocus(confirmOpener.current); }}>
           <DialogHeader>
             <DialogTitle>撤销授权</DialogTitle>
             <DialogDescription>
@@ -168,14 +186,13 @@ export function AuthorizedApps() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmTarget(null)}>
+            <Button variant="outline" disabled={revokingId !== null} onClick={() => setConfirmTarget(null)}>
               取消
             </Button>
             <Button
               onClick={() => {
                 if (!confirmTarget) return;
                 const target = confirmTarget;
-                setConfirmTarget(null);
                 void revoke(target.clientId, target.name);
               }}
               disabled={revokingId === confirmTarget?.clientId}

@@ -8,7 +8,7 @@ import { getSession } from "@/lib/token";
 
 /** Shared SWR cache for the current user's bound third-party identities. */
 export function useIdentities() {
-  const { data, mutate } = useSWR(
+  const { data, error, isValidating, mutate } = useSWR(
     () => {
       const session = getSession();
       if (!session) return null;
@@ -25,6 +25,6 @@ export function useIdentities() {
   // SWR's own `isLoading` is false on the server (no fetch runs there) but true
   // on the first client render — that would mismatch hydration. `data ===
   // undefined` holds on both, so the loading state is server/client-consistent.
-  const isLoading = data === undefined;
-  return { identities, isLoading, mutate };
+  const isLoading = data === undefined && !error;
+  return { identities, isLoading, error, isValidating, mutate };
 }

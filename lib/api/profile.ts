@@ -13,3 +13,9 @@ export function profileKey(): string | null {
   if (!session) return null;
   return `user-profile:${sessionAccountKey(session)}`;
 }
+
+/** Resource key sharing the existing JWT-account cache identity. */
+export function accountKey(resource: string): string | null {
+  const session = getSession();
+  return session ? `${resource}:${sessionAccountKey(session)}` : null;
+}

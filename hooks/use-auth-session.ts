@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 
+import { useUserProfileStore } from "@/store/use-user-profile-store";
 import { refreshFromCookie } from "@/lib/api/auth";
 import { clearSession, createSession, getSession, setSession } from "@/lib/token";
 import { onAuthInvalidated } from "@/lib/auth-cross-tab";
@@ -147,6 +148,7 @@ export function useAuthSession(): AuthSessionStatus {
   useEffect(() => {
     return onAuthInvalidated(() => {
       clearSession();
+      useUserProfileStore.getState().resetProfile();
       setStatus("loading");
       resolve();
     });

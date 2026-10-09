@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { canManageUsers, canWriteTargetUser } from "@/components/admin/permissions";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { UserDetailCard } from "@/components/admin/user-detail-card";
+import { UserLoadError } from "@/components/admin/user-load-error";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { avatarFallbackChar, DEFAULT_AVATAR } from "@/lib/constants/profile";
 import { BackButton } from "@/components/navigation/back-button";
@@ -24,7 +25,7 @@ export function AdminUserDetailContent() {
   // Carried over from the list so 返回/注销后跳转 lands on the same filtered page.
   const listQuery = parseAdminUsersListQuery(searchParams);
   const listHref = adminUsersListHref(listQuery);
-  const { data: user, isLoading, error } = useAdminUser(id);
+  const { data: user, isLoading, error, mutate } = useAdminUser(id);
   const { deleteUser, restoreUser, isLoading: mutationLoading } = useAdminMutations();
   const viewerRole = useUserProfileStore((state) => state.profile.role);
   const canManage = canManageUsers(viewerRole);
@@ -45,10 +46,7 @@ export function AdminUserDetailContent() {
 
   if (id === null || error || !user && !isLoading) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-4">
-        <p className="text-tertiary">用户不存在或链接无效</p>
-        <Button variant="outline" asChild><Link href={listHref}>返回用户列表</Link></Button>
-      </div>
+      <UserLoadError error={error} listHref={listHref} onRetry={() => void mutate().catch(() => undefined)} />
     );
   }
 

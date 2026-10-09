@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState, type DragEvent, type WheelEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent, type WheelEvent } from "react";
 import AvatarEditor from "react-avatar-editor";
 import { Camera, ZoomIn, ZoomOut } from "lucide-react";
 
 import { uploadAvatar } from "@/lib/api/user";
+import { accountKey } from "@/lib/api/profile";
 import { toApiError } from "@/lib/api/errors";
 import { message } from "@/lib/message";
 import { DEFAULT_AVATAR, MAX_AVATAR_SOURCE_BYTES } from "@/lib/constants/profile";
@@ -55,13 +56,19 @@ function acceptFile(
   onAccept(file);
 }
 
-export function AvatarCropperDialog({
+export function AvatarCropperDialog(props: AvatarCropperDialogProps) {
+  const sessionKey = accountKey("avatar-upload");
+  return props.open ? <AvatarCropSession key={sessionKey} {...props} sessionKey={sessionKey} /> : null;
+}
+
+function AvatarCropSession({
   open,
   onOpenChange,
   avatarUrl,
   fallbackChar,
   onUploaded,
-}: AvatarCropperDialogProps) {
+  sessionKey,
+}: AvatarCropperDialogProps & { sessionKey: string | null }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const cropperRef = useRef<React.ComponentRef<typeof AvatarEditor> | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -69,6 +76,12 @@ export function AvatarCropperDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [position, setPosition] = useState({ x: 0.5, y: 0.5 });
+  const submitting = useRef(false);
+  const mounted = useRef(false);
+  const opener = useRef<HTMLElement | null>(null);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const current = () => mounted.current && sessionKey === accountKey("avatar-upload");
 
   const close = () => {
     setFile(null);
@@ -80,9 +93,11 @@ export function AvatarCropperDialog({
   };
 
   const onAccept = (f: File) => {
+    if (submitting.current) return;
     setError("");
     setFile(f);
     setScale(SCALE_MIN);
+    setPosition({ x: 0.5, y: 0.5 });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,55 +113,69 @@ export function AvatarCropperDialog({
   };
 
   const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
-    if (!file) return;
+    if (!file || submitting.current) return;
     e.preventDefault();
     setScale((s) => clampScale(s + (e.deltaY < 0 ? 1 : -1) * WHEEL_STEP));
   };
 
   const uploadBlob = (blob: Blob | null) => {
+    if (!current()) return;
     if (!blob) {
+      submitting.current = false;
       setLoading(false);
       setError("图片处理失败，请重试");
       return;
     }
     uploadAvatar(blob)
       .then((res) => {
+        if (!current()) return;
         message.success("头像已更新");
         onUploaded(res.data.data.avatar_url);
         close();
       })
-      .catch((err) => setError(toApiError(err).message))
-      .finally(() => setLoading(false));
+      .catch((err) => { if (current()) setError(toApiError(err).message); })
+      .finally(() => { submitting.current = false; if (current()) setLoading(false); });
   };
 
   const handleUpload = () => {
-    if (!cropperRef.current) return;
+    if (!cropperRef.current || submitting.current) return;
+    submitting.current = true;
     setLoading(true);
     setError("");
-    const canvas = cropperRef.current.getImageScaledToCanvas();
-    // WebP 最小且支持透明。不支持的浏览器（部分 Safari）要么返回 null，要么
-    // 悄悄回退成 PNG，靠 blob.type 判定并回退 PNG。
-    canvas.toBlob((blob) => {
-      if (blob && blob.type === "image/webp") {
-        uploadBlob(blob);
-      } else {
-        canvas.toBlob(uploadBlob, "image/png");
-      }
-    }, "image/webp", 0.9);
+    try {
+      const canvas = cropperRef.current.getImageScaledToCanvas();
+      // WebP 最小且支持透明。不支持的浏览器（部分 Safari）要么返回 null，要么
+      // 悄悄回退成 PNG，靠 blob.type 判定并回退 PNG。
+      canvas.toBlob((blob) => {
+        if (blob && blob.type === "image/webp") {
+          uploadBlob(blob);
+        } else {
+          canvas.toBlob(uploadBlob, "image/png");
+        }
+      }, "image/webp", 0.9);
+    } catch {
+      submitting.current = false;
+      setLoading(false);
+      setError("图片处理失败，请重新选择图片");
+    }
   };
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) close();
+        if (!next && !submitting.current) close();
       }}
     >
-      <DialogContent className="border-border/60 bg-card/95 sm:max-w-md">
+      <DialogContent className="border-border/60 bg-card/95 sm:max-w-md" showCloseButton={!loading}
+        onOpenAutoFocus={() => { opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
+        onCloseAutoFocus={(event) => { event.preventDefault(); if (opener.current?.isConnected) opener.current.focus(); }}
+        onEscapeKeyDown={(event) => { if (loading) event.preventDefault(); }}
+        onInteractOutside={(event) => { if (loading) event.preventDefault(); }}>
         <DialogHeader>
           <DialogTitle>{file ? "裁剪头像" : "更换头像"}</DialogTitle>
           <DialogDescription>
-            {file ? "拖动和缩放以调整头像" : "选择或拖入一张图片"}
+            {file ? "拖动和缩放以调整头像，也可聚焦裁剪区后用方向键移动，Home 键居中。" : "选择或拖入一张图片"}
           </DialogDescription>
         </DialogHeader>
 
@@ -161,7 +190,18 @@ export function AvatarCropperDialog({
 
         {file ? (
           <div className="flex flex-col items-center gap-4">
-            <div onWheel={handleWheel} className="flex justify-center">
+            <div onWheel={handleWheel} role="group" tabIndex={loading ? -1 : 0} aria-label="头像裁剪位置"
+              onKeyDown={(event) => {
+                if (loading) return;
+                const moves: Record<string, [number, number]> = { ArrowLeft: [-0.05, 0], ArrowRight: [0.05, 0], ArrowUp: [0, -0.05], ArrowDown: [0, 0.05] };
+                if (event.key === "Home") { event.preventDefault(); setPosition({ x: 0.5, y: 0.5 }); }
+                else if (moves[event.key]) {
+                  event.preventDefault();
+                  const [x, y] = moves[event.key];
+                  setPosition((p) => ({ x: Math.max(0, Math.min(1, p.x + x)), y: Math.max(0, Math.min(1, p.y + y)) }));
+                }
+              }}
+              className={`flex justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${loading ? "pointer-events-none" : ""}`}>
               <AvatarEditor
                 ref={cropperRef}
                 image={file}
@@ -172,6 +212,8 @@ export function AvatarCropperDialog({
                 // and leak out-of-crop pixels into the uploaded square.
                 border={0}
                 scale={scale}
+                position={position}
+                onPositionChange={setPosition}
                 rotate={0}
                 borderRadius={100}
               />
@@ -179,6 +221,8 @@ export function AvatarCropperDialog({
             <div className="flex w-full items-center gap-3 px-4">
               <ZoomOut size={16} className="shrink-0 text-muted-foreground" />
               <Slider
+                aria-label="头像缩放"
+                disabled={loading}
                 min={SCALE_MIN}
                 max={SCALE_MAX}
                 step={SCALE_STEP}
@@ -223,8 +267,9 @@ export function AvatarCropperDialog({
         )}
 
         {error && (
-          <p className="text-center text-xs text-destructive">{error}</p>
+          <p role="alert" className="text-center text-xs text-destructive">{error}</p>
         )}
+        {loading && <p role="status" className="text-center text-xs text-muted-foreground">正在上传头像，请稍候…</p>}
 
         <DialogFooter>
           {file ? (

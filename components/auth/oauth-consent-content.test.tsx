@@ -131,7 +131,7 @@ describe("OAuthConsentContent", () => {
 
   it("shows an error state when the pending request is invalid or expired", async () => {
     setup("request_id=ar_999");
-    mockGetConsentInfo.mockRejectedValue(new Error("not found"));
+    mockGetConsentInfo.mockRejectedValue({ response: { status: 404, data: { code: 40400, message: "not found" } } });
     render(<OAuthConsentContent />);
 
     expect(await screen.findByRole("heading", { name: "授权请求无效" })).toBeInTheDocument();
@@ -150,5 +150,26 @@ describe("OAuthConsentContent", () => {
     await waitFor(() => {
       expect(screen.getByText("授权请求已过期")).toBeInTheDocument();
     });
+  });
+
+  it.each([503, 429, 0])("retries a temporary metadata failure (%s) with the same request id", async (status) => {
+    setup("request_id=ar_retry");
+    mockGetConsentInfo.mockRejectedValueOnce(status
+      ? { response: { status, data: { code: status * 100, message: "请稍后重试" } } }
+      : new Error("offline"));
+    render(<OAuthConsentContent />);
+    expect(await screen.findByRole("heading", { name: "暂时无法加载授权信息" })).toBeInTheDocument();
+    expect(screen.queryByText(/该请求已过期/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "重试" }));
+    expect(await screen.findByRole("heading", { name: "Evento" })).toBeInTheDocument();
+    expect(mockGetConsentInfo).toHaveBeenNthCalledWith(2, "ar_retry");
+  });
+
+  it("explains a forbidden request without a pointless retry", async () => {
+    setup("request_id=ar_forbidden");
+    mockGetConsentInfo.mockRejectedValue({ response: { status: 403, data: { code: 40300, message: "权限不足" } } });
+    render(<OAuthConsentContent />);
+    expect(await screen.findByRole("heading", { name: "无法访问此授权请求" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "重试" })).not.toBeInTheDocument();
   });
 });

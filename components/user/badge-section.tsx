@@ -20,6 +20,8 @@ import { toApiError } from "@/lib/api/errors";
 import { Button } from "@/components/ui/button";
 import { DotLoading } from "@/components/ui/dot-loading";
 import { Switch } from "@/components/ui/switch";
+import { AccountLoadError } from "@/components/user/account-load-error";
+import { AuthFormField } from "@/components/auth/auth-form-field";
 import {
   Dialog,
   DialogContent,
@@ -130,13 +132,14 @@ function OptionGroup<T extends string>({
  * on the right. The share URL is a capability — copying it is the whole point,
  * so nothing here treats it as a secret. */
 export function BadgeSection() {
-  const { badge, isLoading, mutate } = useBadge();
+  const { badge, isLoading, error, isValidating, mutate } = useBadge();
   const profile = useUserProfileStore((state) => state.profile);
   const [busy, setBusy] = useState(false);
   const [confirmingDisable, setConfirmingDisable] = useState(false);
   const [size] = useState<BadgeSize>("sm");
   const [theme, setTheme] = useState<BadgeTheme>("auto");
   const [target, setTarget] = useState<BadgeTarget>("blog");
+  const [copyFallback, setCopyFallback] = useState(false);
 
   const enabled = badge?.enabled ?? false;
   const url = enabled && badge?.key ? badgeUrl(badge.key, size, theme, target) : null;
@@ -192,11 +195,15 @@ export function BadgeSection() {
     if (!absoluteUrl) return;
     const ok = await copyText(absoluteUrl);
     if (ok) {
+      setCopyFallback(false);
       message.success("链接已复制");
     } else {
+      setCopyFallback(true);
       message.error("复制失败，请手动选择复制");
     }
   };
+
+  if (error && !badge) return <AccountLoadError title="徽标状态加载失败" error={error} retrying={isValidating} onRetry={mutate} />;
 
   if (isLoading) {
     return (
@@ -209,6 +216,7 @@ export function BadgeSection() {
 
   return (
     <>
+      {error && <AccountLoadError title="徽标状态更新失败" error={error} retrying={isValidating} onRetry={mutate} />}
       <div className="flex flex-col gap-6 pt-4 sm:flex-row sm:gap-8">
         {/* Left: the sharing switch above the preview controls. While the
             badge is off, the controls stay visible but inert — the shape of
@@ -227,7 +235,7 @@ export function BadgeSection() {
             </span>
           </div>
 
-          <div className={enabled ? "flex flex-col gap-4" : "flex flex-col gap-4 opacity-50"}>
+          <div className="flex flex-col gap-4">
             <OptionGroup
               label="尺寸"
               value={size}
@@ -257,6 +265,8 @@ export function BadgeSection() {
             >
               复制链接
             </Button>
+            {copyFallback && absoluteUrl && <AuthFormField label="徽标分享链接" readOnly value={absoluteUrl}
+              onFocus={(event) => event.currentTarget.select()} description="可选择并复制此链接。" />}
           </div>
         </div>
 

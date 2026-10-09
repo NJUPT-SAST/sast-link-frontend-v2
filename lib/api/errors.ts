@@ -43,6 +43,7 @@ export class ApiError extends Error {
 }
 
 export function toApiError(error: unknown): ApiError {
+  if (error instanceof ApiError) return error;
   if (error === null || error === undefined) {
     return new ApiError("网络错误", 0);
   }

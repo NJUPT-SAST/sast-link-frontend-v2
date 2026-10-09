@@ -79,7 +79,7 @@ describe("AuthorizedApps", () => {
     mockGetSession.mockReturnValue(null);
     render(<AuthorizedApps />);
 
-    expect(await screen.findByText("你还没有授权任何应用")).toBeInTheDocument();
+    expect(await screen.findByText("请先登录后查看已授权应用")).toBeInTheDocument();
     expect(mockGetGrants).not.toHaveBeenCalled();
   });
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Mail } from "lucide-react";
 
+import { AccountLoadError } from "@/components/user/account-load-error";
 import { useIdentities } from "@/hooks/use-identities";
 import { message } from "@/lib/message";
 import { toApiError } from "@/lib/api/errors";
@@ -22,7 +23,7 @@ type Mode =
   | { kind: "unbind"; identity: OtherEmailIdentity };
 
 export function BoundEmailSection() {
-  const { identities, mutate } = useIdentities();
+  const { identities, mutate, isLoading, error: loadError, isValidating } = useIdentities();
 
   const others: OtherEmailIdentity[] = identities
     .filter((i) => i.provider === "other_mail")
@@ -101,6 +102,9 @@ export function BoundEmailSection() {
       setLoading(false);
     }
   };
+
+  if (loadError) return <AccountLoadError title="绑定邮箱加载失败" error={loadError} retrying={isValidating} onRetry={mutate} />;
+  if (isLoading) return <p role="status" className="text-sm text-muted-foreground">正在加载绑定邮箱…</p>;
 
   return (
     <div className="border-t border-hairline">

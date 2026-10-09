@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, type Ref } from "react";
 import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ type Domain = (typeof DOMAINS)[number];
 const OTHER_EMAIL = "其他邮箱";
 
 export interface LoginAccountFieldProps {
+  inputRef?: Ref<HTMLInputElement>;
   value: { localPart: string; domain: Domain };
   onChange: (value: { localPart: string; domain: Domain }) => void;
   label?: string;
@@ -39,6 +40,7 @@ export interface LoginAccountFieldProps {
 
 export function LoginAccountField({
   value,
+  inputRef,
   onChange,
   label = "账户",
   error,
@@ -137,6 +139,7 @@ export function LoginAccountField({
         )}
       >
         <input
+          ref={inputRef}
           id={inputId}
           type="text"
           inputMode="email"

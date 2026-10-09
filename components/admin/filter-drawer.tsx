@@ -19,6 +19,7 @@ interface FilterDrawerProps {
   rowClass: string;
   /** Accessible name for the toggle button. */
   toggleLabel?: string;
+  compact?: boolean;
 }
 
 /**
@@ -40,19 +41,20 @@ export function FilterDrawer({
   activeCount,
   rowClass,
   toggleLabel = "筛选",
+  compact = false,
 }: FilterDrawerProps) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className={cn("flex flex-col gap-3", rowClass)}>
-      {lead}
+    <div className={cn(compact ? "grid grid-cols-2 gap-2" : "flex flex-col gap-3", rowClass)}>
+      {compact ? <div className="col-span-2 xl:contents">{lead}</div> : lead}
       <Button
         type="button"
         variant="outline"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls="admin-filter-panel"
-        className="h-11 w-full xl:hidden"
+        className={cn("h-11 w-full xl:hidden", compact && "col-start-1 row-start-2")}
       >
         <SlidersHorizontalIcon className="size-4" />
         {toggleLabel}
@@ -69,11 +71,12 @@ export function FilterDrawer({
         className={cn(
           open ? "flex flex-col gap-3" : "hidden",
           "xl:contents",
+          compact && "col-span-2 row-start-3",
         )}
       >
         {children}
       </div>
-      {actions}
+      {compact ? <div className="col-start-2 row-start-2 xl:contents">{actions}</div> : actions}
     </div>
   );
 }

@@ -24,6 +24,12 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Fixed
 
+- Follow-up role audit (F17, G01, G02): inactive project links are removed from the Tab order and focused carousel controls keep autoplay paused; keyboard focus immediately reveals the auto-hiding top bar; OAuth client registration keeps the pending dialog open, preserves failed form input for retry, and requires explicit acknowledgement of a one-time secret before dismissal.
+- Admin role/state labels now use consistent Chinese wording. The mobile user directory combines filter actions into a compact row, and short landscape profile editors reduce avatar/header spacing so the first field is visible without scrolling.
+
+- Browser audit F01–F16 and F18–F20: isolate and reset dialog results; prevent pending mutation dismissal; enforce per-section admin access; provide retryable account, grant and consent errors; preserve account-scoped editing drafts; clarify college clearing; expose selectable badge URLs, keyboard submission, named avatar controls and login error focus. Respect reduced-motion autoplay and improve text contrast.
+- Compact mobile profile editing with persistent save actions, top pagination on mobile user lists, accessible icon-only mobile navigation and quieter starfield behind forms; retain the monochrome square-corner visual style.
+
 - Form inputs no longer trip iOS focus zoom: every text input, textarea and select carried a 15px font (the shared auth field and every admin form's control class), and the pagination jump box inherited an unlayered `type-tech` 11px that beat its own utility class — all of them now render at 16px+ (iOS zooms any focused input under 16px, bouncing the whole page on every tap into login/register/password fields)
 
 - The change-password and reset forms declare `autoComplete` (`current-password` / `new-password`) so iOS and password managers can save and fill them; the one-time-code field already did

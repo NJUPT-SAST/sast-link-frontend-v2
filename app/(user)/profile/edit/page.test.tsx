@@ -1,9 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+import { initialProfile, useUserProfileStore } from "@/store/use-user-profile-store";
 import type { UserProfileType } from "@/lib/api/types";
 import EditPage from "./page";
 
 const profile = {
+  ...initialProfile,
   id: 1,
   nickname: "Alice",
   name: "张三",
@@ -11,7 +13,7 @@ const profile = {
   email: "display@example.com",
   phoneNumber: "13800138000",
   qqNumber: "1234567890",
-  college: "计算机学院、软件学院、网络空间安全学院",
+  college: "计算机学院、软件学院、网络空间安全学院" as const,
   major: "软件工程",
   role: "member" as UserProfileType["role"],
   state: "njupter" as const,
@@ -26,7 +28,8 @@ const profile = {
 };
 
 const mockUpdateUserProfile = jest.fn();
-const mockSetProfile = jest.fn();
+const realSetProfile = useUserProfileStore.getState().setProfile;
+const mockSetProfile = jest.fn(realSetProfile);
 const mockMutate = jest.fn();
 const mockRouterPush = jest.fn();
 const mockRouterBack = jest.fn();
@@ -34,17 +37,10 @@ const mockRouterReplace = jest.fn();
 const mockScrollToFirstError = jest.fn();
 const mockMapProfile = jest.fn((data) => data);
 
-const mockProfileState = { profile };
-
-jest.mock("@/store/use-user-profile-store", () => ({
-  useUserProfileStore: (selector: (state: unknown) => unknown) => {
-    const state = {
-      profile: mockProfileState.profile,
-      setProfile: mockSetProfile,
-    };
-    return selector(state);
-  },
-}));
+const mockProfileState = {
+  get profile() { return useUserProfileStore.getState().profile; },
+  set profile(value: UserProfileType) { useUserProfileStore.setState({profile: value}); }
+};
 
 jest.mock("@/hooks/use-departments", () => ({
   useDepartmentOptions: () => [
@@ -80,6 +76,7 @@ jest.mock("@/lib/api/mappers", () => ({
 
 jest.mock("@/lib/api/profile", () => ({
   profileKey: () => "user-profile:test",
+  accountKey: () => "account:test",
 }));
 
 jest.mock("@/hooks/use-avatar-upload", () => ({
@@ -94,7 +91,8 @@ describe("EditPage", () => {
   beforeEach(() => {
     mockProfileState.profile = profile;
     mockUpdateUserProfile.mockReset();
-    mockSetProfile.mockReset();
+    mockSetProfile.mockReset().mockImplementation(realSetProfile);
+    useUserProfileStore.setState({ profile, profileDraft: null, setProfile: mockSetProfile });
     mockMutate.mockReset();
     mockRouterPush.mockReset();
     mockRouterBack.mockReset();
@@ -452,5 +450,29 @@ describe("EditPage", () => {
       "blogUrl",
       "githubUrl",
     ]);
+  });
+});
+
+
+describe("profile editing draft lifecycle", () => {
+  beforeEach(() => useUserProfileStore.setState({ profile, profileDraft: null, setProfile: realSetProfile }));
+  it("restores edited fields after SPA navigation, refreshes untouched fields, and discards explicitly", () => {
+    const first = render(<EditPage />);
+    fireEvent.change(screen.getByLabelText(/昵称/), { target: { value: "草稿昵称" } });
+    first.unmount();
+    act(() => useUserProfileStore.getState().setProfile({ ...profile, major: "新专业" }));
+    render(<EditPage />);
+    expect(screen.getByLabelText(/昵称/)).toHaveValue("草稿昵称");
+    expect(screen.getByLabelText(/专业/)).toHaveValue("新专业");
+    fireEvent.click(screen.getByRole("button", { name: "放弃修改" }));
+    expect(screen.getByLabelText(/昵称/)).toHaveValue("Alice");
+    expect(useUserProfileStore.getState().profileDraft).toBeNull();
+  });
+  it("does not move a draft into another account", () => {
+    render(<EditPage />);
+    fireEvent.change(screen.getByLabelText(/昵称/), { target: { value: "私有草稿" } });
+    act(() => useUserProfileStore.getState().setProfile({ ...profile, id: 2, nickname: "另一个人" }));
+    expect(screen.getByLabelText(/昵称/)).toHaveValue("另一个人");
+    expect(useUserProfileStore.getState().profileDraft).toBeNull();
   });
 });

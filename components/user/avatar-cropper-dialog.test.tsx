@@ -1,4 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { clearSession, setSession } from "@/lib/token";
 
 import { AvatarCropperDialog } from "./avatar-cropper-dialog";
 
@@ -8,7 +11,7 @@ let mockWebpSupported = true;
 
 jest.mock("react-avatar-editor", () => {
   const { forwardRef, useImperativeHandle } = jest.requireActual("react");
-  const FakeEditor = forwardRef((_props: unknown, ref: unknown) => {
+  const FakeEditor = forwardRef((props: { position?: { x: number; y: number } }, ref: unknown) => {
     useImperativeHandle(ref, () => ({
       getImageScaledToCanvas: () => ({
         toBlob: (cb: (b: Blob | null) => void, type?: string) => {
@@ -24,7 +27,7 @@ jest.mock("react-avatar-editor", () => {
         },
       }),
     }));
-    return <div data-testid="avatar-editor" />;
+    return <div data-testid="avatar-editor" data-position={JSON.stringify(props.position)} />;
   });
   return { __esModule: true, default: FakeEditor };
 });
@@ -66,9 +69,54 @@ function pngFile(name: string, size: number) {
 
 describe("AvatarCropperDialog", () => {
   beforeEach(() => {
+    clearSession();
     mockWebpSupported = true;
     mockUploadAvatar.mockReset();
     mockMessageSuccess.mockReset();
+  });
+
+  it("blocks closing while uploading and ignores a result after the session changes", async () => {
+    let finish!: (value: unknown) => void;
+    mockUploadAvatar.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    const onUploaded = jest.fn();
+    const onOpenChange = jest.fn();
+    const user = userEvent.setup();
+    render(<AvatarCropperDialog open onOpenChange={onOpenChange} avatarUrl={null} fallbackChar="A" onUploaded={onUploaded} />);
+    pickFile(pngFile("first.png", 100));
+    await user.click(screen.getByRole("button", { name: "确认提交" }));
+    await user.keyboard("{Escape}");
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "裁剪头像" })).toBeInTheDocument();
+    expect(screen.getByRole("slider", { name: "头像缩放" })).toHaveAttribute("data-disabled");
+    setSession({ accessToken: "different-account", expiresAt: Date.now() + 100000 });
+    await act(async () => { finish({ data: { data: { avatar_url: "/old.png" } } }); });
+    expect(onUploaded).not.toHaveBeenCalled();
+    expect(mockMessageSuccess).not.toHaveBeenCalled();
+    clearSession();
+  });
+
+  it("supports named zoom and keyboard crop positioning", () => {
+    render(<AvatarCropperDialog open onOpenChange={jest.fn()} avatarUrl={null} fallbackChar="A" onUploaded={jest.fn()} />);
+    pickFile(pngFile("first.png", 100));
+    expect(screen.getByRole("slider", { name: "头像缩放" })).toBeInTheDocument();
+    const crop = screen.getByRole("group", { name: "头像裁剪位置" });
+    fireEvent.keyDown(crop, { key: "ArrowRight" });
+    expect(screen.getByTestId("avatar-editor")).toHaveAttribute("data-position", '{"x":0.55,"y":0.5}');
+    fireEvent.keyDown(crop, { key: "Home" });
+    expect(screen.getByTestId("avatar-editor")).toHaveAttribute("data-position", '{"x":0.5,"y":0.5}');
+  });
+
+  it("restores focus to the opener on close", async () => {
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return <><button onClick={() => setOpen(true)}>打开头像</button><AvatarCropperDialog open={open} onOpenChange={setOpen} avatarUrl={null} fallbackChar="A" onUploaded={jest.fn()} /></>;
+    }
+    const user = userEvent.setup();
+    render(<Harness />);
+    const opener = screen.getByRole("button", { name: "打开头像" });
+    await user.click(opener);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(opener).toHaveFocus());
   });
 
   it("shows current avatar and pick entry in idle mode", () => {

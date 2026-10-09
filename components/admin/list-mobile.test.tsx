@@ -6,9 +6,9 @@ import type { AdminAuditLog, AdminUserListItem } from "@/lib/api/types";
 
 /**
  * Both lists are one grid that switches between a desktop table and a mobile card.
- * The fixed columns only fit from lg (the user table's nine columns already add up
- * to ~968px before the flexible name column), and every cell needs the matching
- * data-label + admin-cell-label-lg pair, since that ::before label is the only
+ * The user list switches at xl (its name column collapsed at 1024px); the
+ * audit list retains lg. Every cell needs the matching
+ * data-label + breakpoint-specific utility, since that ::before label is the only
  * thing identifying a field once the row becomes a card.
  *
  * Regression guard: the user list used to switch at sm (640px), where the content
@@ -58,7 +58,7 @@ function log(overrides: Partial<AdminAuditLog> = {}): AdminAuditLog {
 
 /** The row element that carries the responsive grid definition. */
 function dataRow(container: HTMLElement) {
-  return container.querySelector('[class*="lg:grid-cols-"]') as HTMLElement;
+  return container.querySelector('[class*="lg:grid-cols-"], [class*="xl:grid-cols-"]') as HTMLElement;
 }
 
 function labelledCells(row: HTMLElement) {
@@ -78,41 +78,42 @@ describe("admin list mobile layout", () => {
       ["时间", "用户 ID", "操作", "资源", "结果", "信息", "JSON"],
     ],
   ])("%s", (_name, renderList, expectedLabels) => {
-    it("switches to the table only from lg, never at sm", () => {
+    const breakpoint = _name === "user list" ? "xl" : "lg";
+    it("switches to the table only at the content-fitting breakpoint, never at sm", () => {
       const { container } = renderList();
       const row = dataRow(container);
 
-      expect(row.className).toMatch(/\blg:grid-cols-\[/);
+      expect(row.className).toContain(`${breakpoint}:grid-cols-[`);
       // sm:/md: variants would re-introduce the squeezed mid-width table.
       expect(row.className).not.toMatch(/\bsm:grid-cols-/);
       expect(row.className).not.toMatch(/\bmd:grid-cols-/);
     });
 
-    it("lays the row out as a two-column card below lg", () => {
+    it("lays the row out as a two-column card below the table breakpoint", () => {
       const { container } = renderList();
 
       // grid-cols-1 would stack every field into one undifferentiated column.
       expect(dataRow(container).className).toMatch(/\bgrid-cols-2\b/);
     });
 
-    it("labels every cell with the lg-scoped label utility", () => {
+    it("labels every cell with the breakpoint-scoped label utility", () => {
       const { container } = renderList();
       const cells = labelledCells(dataRow(container));
 
       expect(cells.map((cell) => cell.dataset.label)).toEqual(expectedLabels);
       for (const cell of cells) {
         // -sm hides the label at 640px, which is exactly the range that needs it.
-        expect(cell.className).toContain("admin-cell-label-lg");
+        expect(cell.className).toContain(`admin-cell-label-${breakpoint}`);
         expect(cell.className).not.toContain("admin-cell-label-sm");
       }
     });
 
-    it("keeps the header row hidden until lg", () => {
+    it("keeps the header row hidden until the table breakpoint", () => {
       const { container } = renderList();
-      const header = container.querySelector('[class*="lg:grid"]') as HTMLElement;
+      const header = container.querySelector(`[class*="${breakpoint}:grid"]`) as HTMLElement;
 
       expect(header.className).toMatch(/\bhidden\b/);
-      expect(header.className).toMatch(/\blg:grid\b/);
+      expect(header.className).toContain(`${breakpoint}:grid`);
     });
   });
 
@@ -124,7 +125,7 @@ describe("admin list mobile layout", () => {
     ) as HTMLElement;
 
     expect(checkbox.className).toMatch(/\babsolute\b/);
-    expect(checkbox.className).toMatch(/\blg:static\b/);
+    expect(checkbox.className).toMatch(/\bxl:static\b/);
   });
 
   it("omits the checkbox entirely in read-only mode", () => {

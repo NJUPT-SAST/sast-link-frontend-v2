@@ -35,4 +35,18 @@ describe("useFetchProfile", () => {
     expect(setProfile).toHaveBeenCalledWith(expect.objectContaining({ id: 1, nickname: "Alice", email: "alice@example.com" }));
     expect(updateAccount).toHaveBeenCalledWith(expect.objectContaining({ userId: 1, loginEmail: "alice@njupt.edu.cn" }));
   });
+
+  it("does not apply a late response after the account session changed", async () => {
+    getSession.mockReturnValue({ accessToken: "shared-jwt-header.account-a" });
+    let resolve!: (value: unknown) => void;
+    getUserProfile.mockReturnValue(new Promise((done) => { resolve = done; }));
+    mockSWR.mockImplementation((key, fetcher) => ({ fetcher: () => fetcher(key()) }));
+    const { result } = renderHook(() => useFetchProfile());
+    const pending = (result.current as unknown as { fetcher: () => Promise<unknown> }).fetcher();
+    getSession.mockReturnValue({ accessToken: "shared-jwt-header.account-b" });
+    resolve({ data: { data } });
+    await pending;
+    expect(setProfile).not.toHaveBeenCalled();
+    expect(updateAccount).not.toHaveBeenCalled();
+  });
 });

@@ -51,7 +51,7 @@ const labelClass = "mb-1.5 block text-xs text-muted-foreground";
 // At xl the buttons sit next to labelled controls, so they need the label's height
 // (text-xs line-height 16px + mb-1.5 6px) as top margin to line up. On mobile
 // there is no label above them, so no offset.
-const buttonRowClass = "h-11 flex-1 xl:mt-[22px] xl:flex-none";
+const buttonRowClass = "h-11 min-w-0 px-2 xl:px-4 flex-1 xl:mt-[22px] xl:flex-none";
 
 // Below xl the secondary filters collapse into FilterDrawer, so the row is a
 // simple column; from xl it becomes one grid row where the five filters share
@@ -134,11 +134,12 @@ export function UserFilters({ value, onChange }: UserFiltersProps) {
   return (
     <form onSubmit={submit}>
       <FilterDrawer
+        compact
         rowClass={rowClass}
         activeCount={activeCount}
         lead={
           <div className={fieldClass}>
-            <label htmlFor="keyword" className={labelClass}>
+            <label htmlFor="keyword" className={cn(labelClass, "sr-only xl:not-sr-only")}>
               关键词
             </label>
             <input
@@ -151,7 +152,7 @@ export function UserFilters({ value, onChange }: UserFiltersProps) {
           </div>
         }
         actions={
-          <div className="flex gap-3 xl:contents">
+          <div className="flex gap-2 xl:contents">
             <Button type="submit" className={buttonRowClass}>搜索</Button>
             <Button type="button" variant="outline" onClick={reset} className={buttonRowClass}>重置</Button>
           </div>

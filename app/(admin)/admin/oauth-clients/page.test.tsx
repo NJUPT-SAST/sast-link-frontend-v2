@@ -1,0 +1,36 @@
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import Page from "./page";
+const mockCreate = jest.fn();
+jest.mock("swr", () => ({ useSWRConfig: () => ({ mutate: jest.fn() }) }));
+jest.mock("@/hooks/use-admin-oauth-clients", () => ({ useAdminOAuthClients: () => ({ data: [], isLoading: false }), ADMIN_OAUTH_CLIENTS_KEY: "clients" }));
+jest.mock("@/hooks/use-admin-mutations", () => ({ useAdminMutations: () => ({ createOAuthClient: mockCreate, isLoading: false }) }));
+jest.mock("@/components/admin/oauth-client-form", () => ({ OAuthClientForm: ({ onSubmit }: { onSubmit: (data: unknown) => Promise<void> }) => <button onClick={() => void onSubmit({ client_name: "Test client", client_type: "third_party" }).catch(() => undefined)}>submit fixture</button> }));
+beforeEach(() => mockCreate.mockReset());
+it("keeps the form open on Escape while creation is pending and delivers the one-time secret", async () => {
+  let resolve!: (secret: string) => void;
+  mockCreate.mockImplementation(() => new Promise<string>(r => { resolve = r; }));
+  render(<Page />);
+  fireEvent.click(screen.getByRole("button", { name: "注册客户端" }));
+  fireEvent.click(screen.getByRole("button", { name: "submit fixture" }));
+  await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+  fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "关闭" })).not.toBeInTheDocument();
+  await act(async () => resolve("fixture-secret"));
+  expect(await screen.findByDisplayValue("fixture-secret")).toBeInTheDocument();
+  fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+  expect(screen.getByDisplayValue("fixture-secret")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "我知道了" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+it("keeps a failed creation open and allows an explicit retry", async () => {
+  mockCreate.mockRejectedValueOnce(new Error("503")).mockResolvedValueOnce("retry-secret");
+  render(<Page />);
+  fireEvent.click(screen.getByRole("button", { name: "注册客户端" }));
+  fireEvent.click(screen.getByRole("button", { name: "submit fixture" }));
+  await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+  await act(async () => {});
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "submit fixture" }));
+  expect(await screen.findByDisplayValue("retry-secret")).toBeInTheDocument();
+});

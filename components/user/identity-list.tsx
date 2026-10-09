@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
 
 import { CODE_PASSWORD_INVALID } from "@/lib/api/error-codes";
 import { IDENTITY_PROVIDERS } from "@/lib/constants/providers";
 import { useIdentities } from "@/hooks/use-identities";
+import { accountKey } from "@/lib/api/profile";
+import { AccountLoadError } from "@/components/user/account-load-error";
 import { message } from "@/lib/message";
 import { toApiError } from "@/lib/api/errors";
 import { buildBindOAuthUrl } from "@/lib/api/oauth";
@@ -34,7 +36,12 @@ interface IdentityListProps {
  * (read-only) and the settings page (with bind/unbind actions).
  */
 export function IdentityList({ actionable }: IdentityListProps) {
-  const { identities, isLoading, mutate } = useIdentities();
+  const sessionKey = accountKey("identity-actions");
+  return <IdentityActions key={sessionKey} actionable={actionable} sessionKey={sessionKey} />;
+}
+
+function IdentityActions({ actionable, sessionKey }: IdentityListProps & { sessionKey: string | null }) {
+  const { identities, isLoading, error: loadError, isValidating, mutate } = useIdentities();
   const [unbindTarget, setUnbindTarget] = useState<Identity | null>(null);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,6 +51,10 @@ export function IdentityList({ actionable }: IdentityListProps) {
   // set-initial-password endpoint, so the only passwordless way back in is the
   // email-code reset flow — worth pointing at instead of a retry loop.
   const [passwordInvalid, setPasswordInvalid] = useState(false);
+  const submitting = useRef(false);
+  const mounted = useRef(false);
+  const opener = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const closeUnbind = () => {
     setUnbindTarget(null);
@@ -64,26 +75,34 @@ export function IdentityList({ actionable }: IdentityListProps) {
   };
 
   const handleUnbind = async () => {
-    if (!unbindTarget) return;
+    if (!unbindTarget || submitting.current) return;
     if (!password) {
       setError("请输入当前密码");
       return;
     }
+    submitting.current = true;
     setLoading(true);
     setError("");
+    const current = () => mounted.current && sessionKey === accountKey("identity-actions");
     try {
       await unbindIdentity(unbindTarget.id, password);
+      if (!current()) return;
       message.success("已解绑");
       mutate();
       closeUnbind();
     } catch (error) {
+      if (current()) {
       const apiError = toApiError(error);
       setError(apiError.message);
       setPasswordInvalid(apiError.code === CODE_PASSWORD_INVALID);
+      }
     } finally {
-      setLoading(false);
+      submitting.current = false;
+      if (current()) setLoading(false);
     }
   };
+
+  if (loadError) return <AccountLoadError title="第三方账号加载失败" error={loadError} retrying={isValidating} onRetry={mutate} />;
 
   return (
     <>
@@ -139,7 +158,8 @@ export function IdentityList({ actionable }: IdentityListProps) {
                   disabled={isLoading}
                   onClick={
                     bound
-                      ? () => {
+                      ? (event) => {
+                          opener.current = event.currentTarget;
                           setPassword("");
                           setError("");
                           setPasswordInvalid(false);
@@ -160,10 +180,13 @@ export function IdentityList({ actionable }: IdentityListProps) {
       <Dialog
         open={unbindTarget !== null}
         onOpenChange={(open) => {
-          if (!open) closeUnbind();
+          if (!open && !submitting.current) closeUnbind();
         }}
       >
-        <DialogContent className="border-border/60 bg-card/95 sm:max-w-md">
+        <DialogContent className="border-border/60 bg-card/95 sm:max-w-md" showCloseButton={!loading}
+          onEscapeKeyDown={(event) => { if (loading) event.preventDefault(); }}
+          onInteractOutside={(event) => { if (loading) event.preventDefault(); }}
+          onCloseAutoFocus={(event) => { event.preventDefault(); opener.current?.focus(); }}>
           <DialogHeader>
             <DialogTitle>解绑第三方账号</DialogTitle>
             <DialogDescription>
@@ -176,7 +199,7 @@ export function IdentityList({ actionable }: IdentityListProps) {
               ？
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-4">
+          <form className="flex flex-col gap-4" onSubmit={(event) => { event.preventDefault(); void handleUnbind(); }}>
             <AuthFormField
               label="当前密码"
               type="password"
@@ -188,6 +211,7 @@ export function IdentityList({ actionable }: IdentityListProps) {
                 setPasswordInvalid(false);
               }}
               error={error}
+              disabled={loading}
             />
             {passwordInvalid && (
               <p className="text-xs text-tertiary">
@@ -197,15 +221,15 @@ export function IdentityList({ actionable }: IdentityListProps) {
                 </Link>
               </p>
             )}
-          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={closeUnbind}>
+            <Button type="button" variant="outline" onClick={closeUnbind} disabled={loading}>
               取消
             </Button>
-            <Button onClick={handleUnbind} disabled={loading}>
+            <Button type="submit" disabled={loading}>
               {loading ? <DotLoading /> : "确认解绑"}
             </Button>
           </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </>

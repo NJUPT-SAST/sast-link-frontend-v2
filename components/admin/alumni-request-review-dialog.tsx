@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
@@ -50,13 +50,23 @@ type Mode = "review" | "confirm-approve" | "reject" | "approved";
  *  password). Anything wrong with the data is grounds for rejection with a
  *  reason, not a silent edit here.
  */
-export function AlumniRequestReviewDialog({
+export function AlumniRequestReviewDialog(props: AlumniRequestReviewDialogProps) {
+  return <ReviewDialogSession key={props.request?.id ?? "empty"} {...props} />;
+}
+
+function ReviewDialogSession({
   request,
   open,
   onOpenChange,
   onApprove,
   onReject,
 }: AlumniRequestReviewDialogProps) {
+  const mounted = useRef(false);
+  const submitting = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   const [mode, setMode] = useState<Mode>("review");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
@@ -81,22 +91,30 @@ export function AlumniRequestReviewDialog({
     rejectForm.reset({ reject_reason: "", silent: false });
   };
 
+  const close = () => {
+    reset();
+    onOpenChange(false);
+  };
+
   const handleApprove = async () => {
-    if (!request) return;
+    if (!request || submitting.current) return;
+    submitting.current = true;
     setLoading(true);
     setError(undefined);
     try {
       const data = await onApprove(request.id);
+      if (!mounted.current) return;
       setResult(data);
       setMode("approved");
     } catch (caught) {
+      if (!mounted.current) return;
       const apiError = toApiError(caught);
       // Someone else already ruled on this ticket (or the button was double
       // clicked). Nothing here can succeed on retry, so close and let the list
       // refresh show the verdict that won.
       if (apiError.code === CODE_ALUMNI_REQUEST_REVIEWED) {
         message.warning("该申请已被处理，请查看最新状态");
-        onOpenChange(false);
+        close();
         return;
       }
       // Recover approval failures — the backend answers with two flavours of
@@ -105,7 +123,7 @@ export function AlumniRequestReviewDialog({
       // (refresh / reject), so act on the account is never silently repeated.
       if (apiError.code === CODE_ALUMNI_ACCOUNT_MISSING) {
         message.warning("该学号当前没有对应账号，数据可能已变化，请刷新后重新核对");
-        onOpenChange(false);
+        close();
         return;
       }
       if (apiError.code === CODE_ALUMNI_BOUND_EMAIL_LIMIT) {
@@ -124,39 +142,52 @@ export function AlumniRequestReviewDialog({
         setError(apiError.message);
       }
     } finally {
-      setLoading(false);
+      submitting.current = false;
+      if (mounted.current) setLoading(false);
     }
   };
 
-  const handleReject = rejectForm.handleSubmit(async ({ reject_reason, silent }) => {
-    if (!request) return;
+  const reject = async ({ reject_reason, silent }: AlumniRejectFormValues) => {
+    if (!request || submitting.current) return;
+    submitting.current = true;
     setLoading(true);
     setError(undefined);
     try {
       await onReject(request.id, reject_reason, silent);
-      onOpenChange(false);
+      if (mounted.current) close();
     } catch (caught) {
+      if (!mounted.current) return;
       const apiError = toApiError(caught);
       if (apiError.code === CODE_ALUMNI_REQUEST_REVIEWED) {
         message.warning("该申请已被处理，请查看最新状态");
-        onOpenChange(false);
+        close();
         return;
       }
       setError(apiError.message);
     } finally {
-      setLoading(false);
+      submitting.current = false;
+      if (mounted.current) setLoading(false);
     }
-  });
+  };
+  const handleReject = (event: React.FormEvent<HTMLFormElement>) => {
+    void rejectForm.handleSubmit(reject)(event);
+  };
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) reset();
-        onOpenChange(next);
+        if (submitting.current) return;
+        if (!next) close();
+        else onOpenChange(true);
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        className="sm:max-w-lg"
+        showCloseButton={!loading}
+        onEscapeKeyDown={(event) => { if (loading) event.preventDefault(); }}
+        onInteractOutside={(event) => { if (loading) event.preventDefault(); }}
+      >
         {mode === "approved" && result ? (
           <>
             <DialogHeader>
@@ -181,7 +212,7 @@ export function AlumniRequestReviewDialog({
               )}
             </div>
             <DialogFooter>
-              <Button type="button" className="w-full" onClick={() => onOpenChange(false)}>
+              <Button type="button" className="w-full" onClick={close}>
                 我知道了
               </Button>
             </DialogFooter>

@@ -42,6 +42,9 @@ describe("UserDetailCard", () => {
     );
 
     expect(screen.getByText("注销时间")).toBeInTheDocument();
+    expect(screen.getByText("已注销")).toBeInTheDocument();
+    expect(screen.getByText("成员")).toBeInTheDocument();
+    expect(screen.queryByText("滚木")).not.toBeInTheDocument();
     expect(screen.getByText(/超过宽限期后数据将被永久删除/)).toBeInTheDocument();
   });
 
