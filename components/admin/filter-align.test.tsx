@@ -44,8 +44,20 @@ function expectUniformRow(ids: string[]) {
     // Same control height everywhere in the row.
     expect(control?.className).toMatch(/\bh-11\b/);
     expect(control?.className).not.toMatch(/\bh-12\b/);
-    // Same label metrics, so the labels sit on one baseline.
-    expect(label).toHaveClass(...LABEL_CLASS.split(" "));
+    // Same label metrics, so the labels sit on one baseline — except 关键词,
+    // whose label is sr-only below xl and loses any bottom margin to
+    // `not-sr-only`'s margin reset at xl (the reset sits later in the
+    // stylesheet than any margin utility, so mb-1.5 silently loses). The 6px
+    // rhythm lives on the input instead (xl:mt-1.5) where nothing resets it;
+    // the old class-presence check asserted an mb-1.5 the browser never
+    // applied.
+    if (id === "keyword") {
+      expect(label).toHaveClass("sr-only", "xl:not-sr-only");
+      expect(label).not.toHaveClass("mb-1.5");
+      expect(control?.className).toMatch(/\bxl:mt-1\.5\b/);
+    } else {
+      expect(label).toHaveClass(...LABEL_CLASS.split(" "));
+    }
   }
 }
 

@@ -139,14 +139,21 @@ export function UserFilters({ value, onChange }: UserFiltersProps) {
         activeCount={activeCount}
         lead={
           <div className={fieldClass}>
-            <label htmlFor="keyword" className={cn(labelClass, "sr-only xl:not-sr-only")}>
+            {/* No margin on this label: at xl `not-sr-only` resets margin to 0
+                and, being later in the stylesheet than any margin utility, it
+                silently eats the shared labelClass rhythm — the 6px gap moves
+                to the input below (xl:mt-1.5), where nothing resets it. */}
+            <label
+              htmlFor="keyword"
+              className="block text-xs text-muted-foreground sr-only xl:not-sr-only"
+            >
               关键词
             </label>
             <input
               id="keyword"
               type="text"
               placeholder="姓名 / 学号 / 邮箱"
-              className={controlClass}
+              className={cn(controlClass, "xl:mt-1.5")}
               {...form.register("keyword")}
             />
           </div>
