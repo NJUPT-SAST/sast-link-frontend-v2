@@ -6,6 +6,10 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
+### Security
+
+- Dependency rollup superseding dependabot PRs #169–#173: `next` 16.3.8 → 16.4.2 picks up the 16.4.1 security fixes — two critical unauthenticated RCEs (GHSA-673q-mjm6-r5xr in `use cache` functions returning typed arrays, GHSA-2464-fhr4-w9xw in the Image Optimization API with SVG files) and a high-severity App Router Server Actions DoS (GHSA-p3m5-59mp-jv5r); `react`/`react-dom` 19.3.1, `radix-ui` 1.8.1 (form-nested control event fixes), `react-hook-form` 7.90.0, `zod` 4.6.7, `lucide-react` 1.58.0, plus dev-side `msw` 3.0.3, `eslint-config-next` 16.4.2, `@types/node` 26.6.5 and `@testing-library/user-event` 14.6.8
+
 ### Added
 
 - The unbind dialog now points at the password reset flow when the password check fails: 40105（密码错误） renders a 「忘记了密码？通过邮箱验证码重置」 link to /reset — the backend offers no set-initial-password endpoint, and the email-code reset is the only passwordless exit (it can also target a bound `other_mail`). The /oauth/error page's retryable-code set now reads from `error-codes.ts` instead of magic strings, with 42900 officially joining the catalog: rate limiting and account lockout share it (HTTP 429 + `Retry-After`), alongside 50000 and 50300
